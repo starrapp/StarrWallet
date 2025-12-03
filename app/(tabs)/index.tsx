@@ -82,7 +82,11 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => initializeWallet()}
+              onPress={() => {
+                initializeWallet().catch((error) => {
+                  console.error('[HomeScreen] Wallet retry failed:', error);
+                });
+              }}
             >
               <Text variant="titleSmall" color={colors.gold.pure}>
                 Retry

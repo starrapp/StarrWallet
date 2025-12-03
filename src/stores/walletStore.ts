@@ -123,8 +123,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         mnemonicPhrase = mnemonic;
       } else if (isExisting) {
         // Existing wallet - get mnemonic from keychain
-        // Skip auth on auto-init - wallet is unlocked via device unlock
-        // Sensitive operations (backup view, send) require separate auth
+        // Skip auth on auto-init - device unlock provides security
+        // Sensitive operations (backup view, large sends) require separate auth
         mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
       } else {
         throw new Error('No wallet found. Please create or import a wallet.');
