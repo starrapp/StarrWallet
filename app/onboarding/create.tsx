@@ -48,8 +48,11 @@ export default function CreateWalletScreen() {
     try {
       // Store the seed phrase
       await KeychainService.storeSeedPhrase(mnemonic.join(' '));
-      // Continue to backup verification
-      router.push('/onboarding/backup');
+      // Continue to backup verification - pass mnemonic for verification
+      router.push({
+        pathname: '/onboarding/backup',
+        params: { mnemonic: mnemonic.join(',') }
+      });
     } catch (error) {
       console.error('Failed to store seed:', error);
     }

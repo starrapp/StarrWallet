@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -15,21 +15,25 @@ import { colors, spacing, layout } from '@/theme';
 
 export default function BackupVerificationScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ mnemonic?: string }>();
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndices, setCorrectIndices] = useState<number[]>([]);
   const [correctWords, setCorrectWords] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock mnemonic - in production, get from secure storage
-  const mockMnemonic = [
-    'abandon', 'ability', 'able', 'about', 'above', 'absent',
-    'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident',
-    'account', 'accuse', 'achieve', 'acid', 'acoustic', 'acquire',
-    'across', 'act', 'action', 'actor', 'actress', 'actual',
-  ];
+  // Get mnemonic from navigation params (passed from create screen)
+  const mnemonicWords: string[] = params.mnemonic 
+    ? params.mnemonic.split(',') 
+    : [];
 
   useEffect(() => {
+    if (mnemonicWords.length !== 24) {
+      console.error('Invalid mnemonic passed to backup screen');
+      router.back();
+      return;
+    }
+
     // Select 3 random indices to verify
     const indices: number[] = [];
     while (indices.length < 3) {
@@ -41,14 +45,14 @@ export default function BackupVerificationScreen() {
     indices.sort((a, b) => a - b);
     setCorrectIndices(indices);
     
-    const correct = indices.map((i) => mockMnemonic[i]);
+    const correct = indices.map((i) => mnemonicWords[i]);
     setCorrectWords(correct);
 
     // Generate options: include correct words + random decoys
     const allOptions = new Set<string>(correct);
     
     // Add more words from the mnemonic as decoys (more realistic)
-    const otherWords = mockMnemonic.filter((_, i) => !indices.includes(i));
+    const otherWords = mnemonicWords.filter((_, i) => !indices.includes(i));
     while (allOptions.size < 9 && otherWords.length > 0) {
       const randomIdx = Math.floor(Math.random() * otherWords.length);
       allOptions.add(otherWords[randomIdx]);
@@ -58,7 +62,7 @@ export default function BackupVerificationScreen() {
     // Shuffle the options
     const shuffled = [...allOptions].sort(() => Math.random() - 0.5);
     setOptions(shuffled);
-  }, []);
+  }, [params.mnemonic]);
 
   const handleWordSelect = (word: string) => {
     if (selectedWords.includes(word)) {

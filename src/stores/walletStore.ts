@@ -109,34 +109,30 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   settings: defaultSettings,
 
   // Initialize wallet with Breez SDK
-  initializeWallet: async (seed?: Uint8Array) => {
+  initializeWallet: async (mnemonic?: string) => {
     set({ isInitializing: true, initError: null });
 
     try {
       // Check if wallet exists
       const isExisting = await KeychainService.isWalletInitialized();
 
-      let seedBytes: Uint8Array;
+      let mnemonicPhrase: string;
 
-      if (seed) {
-        // New wallet with provided seed
-        seedBytes = seed;
+      if (mnemonic) {
+        // New wallet with provided mnemonic
+        mnemonicPhrase = mnemonic;
       } else if (isExisting) {
-        // Existing wallet - get seed from keychain
-        seedBytes = await KeychainService.getSeedBytes(true);
+        // Existing wallet - get mnemonic from keychain
+        mnemonicPhrase = await KeychainService.getMnemonicForBackup();
       } else {
-        throw new Error('No wallet found and no seed provided');
+        throw new Error('No wallet found and no mnemonic provided');
       }
 
-      // Initialize Breez SDK
-      await BreezService.initialize(
-        {
-          apiKey: BREEZ_CONFIG.API_KEY,
-          workingDir: BREEZ_CONFIG.WORKING_DIR,
-          network: BREEZ_CONFIG.NETWORK,
-        },
-        seedBytes
-      );
+      // Initialize Breez SDK with mnemonic
+      await BreezService.initialize(mnemonicPhrase, {
+        workingDir: BREEZ_CONFIG.WORKING_DIR,
+        network: BREEZ_CONFIG.NETWORK,
+      });
 
       // Initialize backup service
       await BackupService.initialize();

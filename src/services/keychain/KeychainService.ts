@@ -20,6 +20,7 @@ import { Buffer } from 'buffer';
 // Storage keys
 const KEYS = {
   SEED_ENCRYPTED: 'starr_seed_encrypted',
+  MNEMONIC_ENCRYPTED: 'starr_mnemonic_encrypted',
   SEED_HASH: 'starr_seed_hash',
   PIN_HASH: 'starr_pin_hash',
   WALLET_INITIALIZED: 'starr_wallet_initialized',
@@ -105,8 +106,10 @@ class KeychainServiceImpl {
       mnemonic
     );
 
-    // Store encrypted seed and hash
+    // Store encrypted seed, mnemonic, and hash
+    // Note: Mnemonic is stored separately for Breez SDK which requires it
     await SecureStore.setItemAsync(KEYS.SEED_ENCRYPTED, seedHex, SECURE_OPTIONS);
+    await SecureStore.setItemAsync(KEYS.MNEMONIC_ENCRYPTED, mnemonic, SECURE_OPTIONS);
     await SecureStore.setItemAsync(KEYS.SEED_HASH, hash, SECURE_OPTIONS);
     await SecureStore.setItemAsync(KEYS.WALLET_INITIALIZED, 'true', SECURE_OPTIONS);
 
@@ -140,28 +143,26 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Retrieve the mnemonic for backup purposes
-   * CRITICAL: Only expose this for explicit user backup actions
+   * Retrieve the mnemonic for Breez SDK initialization
+   * Requires authentication
    */
-  async getMnemonicForBackup(): Promise<string> {
-    // Always require fresh biometric auth for seed exposure
-    const authenticated = await this.authenticateBiometric(
-      'Authenticate to view recovery phrase'
-    );
-    if (!authenticated) {
-      throw new Error('Biometric authentication required');
+  async getMnemonicForBackup(requireAuth: boolean = true): Promise<string> {
+    if (requireAuth) {
+      // Require fresh biometric auth for seed exposure
+      const authenticated = await this.authenticateBiometric(
+        'Authenticate to access wallet'
+      );
+      if (!authenticated) {
+        throw new Error('Biometric authentication required');
+      }
     }
 
-    // For security, we need to regenerate mnemonic from the stored seed
-    // This requires storing the mnemonic itself, which we do encrypted
-    const seedHex = await SecureStore.getItemAsync(KEYS.SEED_ENCRYPTED, SECURE_OPTIONS);
-    if (!seedHex) {
-      throw new Error('No seed found');
+    const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC_ENCRYPTED, SECURE_OPTIONS);
+    if (!mnemonic) {
+      throw new Error('No mnemonic found');
     }
 
-    // Note: In production, you'd want to store the mnemonic separately
-    // or use a derivation method to recover it from the seed
-    throw new Error('Mnemonic recovery not implemented - store mnemonic during initial creation');
+    return mnemonic;
   }
 
   /**
@@ -283,6 +284,7 @@ class KeychainServiceImpl {
   async clearAllData(): Promise<void> {
     await Promise.all([
       SecureStore.deleteItemAsync(KEYS.SEED_ENCRYPTED),
+      SecureStore.deleteItemAsync(KEYS.MNEMONIC_ENCRYPTED),
       SecureStore.deleteItemAsync(KEYS.SEED_HASH),
       SecureStore.deleteItemAsync(KEYS.PIN_HASH),
       SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED),
