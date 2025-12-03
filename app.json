@@ -53,6 +53,14 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Allow Starr to access your camera to scan QR codes"
