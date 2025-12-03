@@ -29,6 +29,8 @@ export default function HomeScreen() {
     payments,
     isLoadingBalance,
     isLoadingPayments,
+    isInitializing,
+    initError,
     refreshBalance,
     refreshPayments,
     initializeWallet,
@@ -36,11 +38,13 @@ export default function HomeScreen() {
   } = useWalletStore();
 
   useEffect(() => {
-    if (!isInitialized) {
+    if (!isInitialized && !isInitializing && !initError) {
       // Initialize wallet on mount
-      initializeWallet().catch(console.error);
+      initializeWallet().catch((error) => {
+        console.error('[HomeScreen] Wallet initialization failed:', error);
+      });
     }
-  }, []);
+  }, [isInitialized, isInitializing, initError]);
 
   const handleRefresh = async () => {
     await Promise.all([refreshBalance(), refreshPayments()]);
@@ -57,6 +61,59 @@ export default function HomeScreen() {
   };
 
   const recentTransactions = payments.slice(0, 5);
+
+  // Show error state if initialization failed
+  if (initError) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[colors.background.secondary, colors.background.primary]}
+          locations={[0, 0.3]}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="warning" size={64} color={colors.status.error} />
+            <Text variant="headlineSmall" color={colors.text.primary} align="center">
+              Failed to Initialize Wallet
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+              {initError}
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => initializeWallet()}
+            >
+              <Text variant="titleSmall" color={colors.gold.pure}>
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  // Show loading state during initialization
+  if (isInitializing) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[colors.background.secondary, colors.background.primary]}
+          locations={[0, 0.3]}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <Ionicons name="star" size={48} color={colors.gold.pure} />
+            <Text variant="titleMedium" color={colors.text.primary}>
+              Connecting to Lightning Network...
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -302,6 +359,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
     gap: spacing.sm,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  retryButton: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.gold.glow,
+    borderRadius: layout.radius.md,
+    borderWidth: 1,
+    borderColor: colors.gold.pure,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
   },
 });
 

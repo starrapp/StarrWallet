@@ -123,9 +123,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         mnemonicPhrase = mnemonic;
       } else if (isExisting) {
         // Existing wallet - get mnemonic from keychain
-        mnemonicPhrase = await KeychainService.getMnemonicForBackup();
+        // Skip auth on auto-init - wallet is unlocked via device unlock
+        // Sensitive operations (backup view, send) require separate auth
+        mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
       } else {
-        throw new Error('No wallet found and no mnemonic provided');
+        throw new Error('No wallet found. Please create or import a wallet.');
       }
 
       // Initialize Breez SDK with mnemonic
@@ -301,4 +303,3 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 }));
-
