@@ -2,6 +2,7 @@
   "expo": {
     "name": "Starr",
     "slug": "starr-wallet",
+    "owner": "jspeigner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,10 +19,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.starwallet",
-      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Starr needs camera access to scan QR codes for Lightning payments",
-        "NSFaceIDUsageDescription": "Use Face ID to unlock your wallet and authorize payments"
+        "NSFaceIDUsageDescription": "Allow Starr to use Face ID for secure authentication",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -30,13 +31,16 @@
         "backgroundColor": "#0A0A0F"
       },
       "package": "com.starwallet",
-      "versionCode": 1,
       "permissions": [
         "CAMERA",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "web": {
@@ -45,6 +49,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       "expo-secure-store",
       [
@@ -68,9 +73,8 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "33ff6a1d-a370-4804-847c-f61ec945b0e2"
       }
     }
   }
 }
-

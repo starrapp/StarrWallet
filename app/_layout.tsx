@@ -4,6 +4,9 @@
  * Main app layout with navigation structure.
  */
 
+// Polyfills must be imported first
+import '@/polyfills';
+
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

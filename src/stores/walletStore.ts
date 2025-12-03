@@ -10,6 +10,7 @@ import { BreezService } from '@/services/breez';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { LSPManager } from '@/services/lsp';
+import { BREEZ_CONFIG } from '@/config';
 import type {
   Balance,
   LightningPayment,
@@ -128,12 +129,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       }
 
       // Initialize Breez SDK
-      // Note: You'll need to get an API key from https://breez.technology/sdk/
       await BreezService.initialize(
         {
-          apiKey: 'YOUR_BREEZ_API_KEY', // Replace with actual key
-          workingDir: '', // Will use app's document directory
-          network: 'bitcoin',
+          apiKey: BREEZ_CONFIG.API_KEY,
+          workingDir: BREEZ_CONFIG.WORKING_DIR,
+          network: BREEZ_CONFIG.NETWORK,
         },
         seedBytes
       );

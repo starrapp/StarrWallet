@@ -15,6 +15,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
 import * as bip39 from 'bip39';
+import { Buffer } from 'buffer';
 
 // Storage keys
 const KEYS = {

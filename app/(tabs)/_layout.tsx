@@ -4,13 +4,16 @@
  * Main navigation tabs for the wallet.
  */
 
-import { Tabs } from 'expo-router';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { colors, layout } from '@/theme';
 
 export default function TabLayout() {
+  const router = useRouter();
+
   return (
     <Tabs
       screenOptions={{
@@ -49,11 +52,29 @@ export default function TabLayout() {
         name="scan"
         options={{
           title: '',
-          tabBarIcon: () => (
-            <View style={styles.scanButton}>
-              <Ionicons name="scan" size={28} color={colors.background.primary} />
-            </View>
+          tabBarButton: (props) => (
+            <Pressable
+              {...props}
+              style={styles.scanButtonContainer}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push('/scan');
+              }}
+            >
+              <View style={styles.scanButton}>
+                <Ionicons name="scan" size={28} color={colors.background.primary} />
+              </View>
+            </Pressable>
           ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            // Prevent default tab navigation
+            e.preventDefault();
+            // Navigate to scan modal
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push('/scan');
+          },
         }}
       />
       <Tabs.Screen
@@ -99,6 +120,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 4,
   },
+  scanButtonContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scanButton: {
     width: 56,
     height: 56,
@@ -114,4 +140,3 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 });
-

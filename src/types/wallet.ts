@@ -107,10 +107,15 @@ export interface WalletError {
   details?: unknown;
 }
 
+// Currency types
+export type BitcoinUnit = 'BTC' | 'SATS';
+export type FiatCurrency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY' | 'INR' | 'MXN' | 'BRL' | 'KRW';
+export type Currency = BitcoinUnit | FiatCurrency;
+
 // Settings
 export interface WalletSettings {
   // Display
-  currency: 'BTC' | 'SATS' | 'USD' | 'EUR';
+  currency: Currency;
   theme: 'dark' | 'light' | 'system';
   
   // Security

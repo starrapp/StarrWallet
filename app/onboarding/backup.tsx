@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,29 +40,32 @@ export default function BackupVerificationScreen() {
     }
     indices.sort((a, b) => a - b);
     setCorrectIndices(indices);
-    setCorrectWords(indices.map((i) => mockMnemonic[i]));
-
-    // Generate options with correct answers plus decoys
-    const allOptions = new Set<string>();
-    indices.forEach((i) => allOptions.add(mockMnemonic[i]));
     
-    // Add random decoys
-    const decoys = [
-      'apple', 'banana', 'cherry', 'dragon', 'eagle', 'falcon',
-      'grape', 'honey', 'island', 'jungle', 'karma', 'lemon',
-    ];
-    while (allOptions.size < 9) {
-      const decoy = decoys[Math.floor(Math.random() * decoys.length)];
-      allOptions.add(decoy);
+    const correct = indices.map((i) => mockMnemonic[i]);
+    setCorrectWords(correct);
+
+    // Generate options: include correct words + random decoys
+    const allOptions = new Set<string>(correct);
+    
+    // Add more words from the mnemonic as decoys (more realistic)
+    const otherWords = mockMnemonic.filter((_, i) => !indices.includes(i));
+    while (allOptions.size < 9 && otherWords.length > 0) {
+      const randomIdx = Math.floor(Math.random() * otherWords.length);
+      allOptions.add(otherWords[randomIdx]);
+      otherWords.splice(randomIdx, 1);
     }
     
-    setOptions([...allOptions].sort(() => Math.random() - 0.5));
+    // Shuffle the options
+    const shuffled = [...allOptions].sort(() => Math.random() - 0.5);
+    setOptions(shuffled);
   }, []);
 
   const handleWordSelect = (word: string) => {
     if (selectedWords.includes(word)) {
+      // Deselect the word
       setSelectedWords(selectedWords.filter((w) => w !== word));
     } else if (selectedWords.length < 3) {
+      // Select the word
       setSelectedWords([...selectedWords, word]);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -71,21 +74,26 @@ export default function BackupVerificationScreen() {
 
   const handleVerify = () => {
     // Check if selected words match in order
-    const isCorrect = selectedWords.every((word, i) => word === correctWords[i]);
+    const isCorrect = selectedWords.length === 3 && 
+      selectedWords.every((word, i) => word === correctWords[i]);
     
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push('/onboarding/security');
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('Incorrect words. Please check your recovery phrase and try again.');
+      setError('Incorrect words or wrong order. Please check your recovery phrase and try again.');
       setSelectedWords([]);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
@@ -95,67 +103,78 @@ export default function BackupVerificationScreen() {
             Verify Your Backup
           </Text>
           <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-            Select the correct words in order to verify you've saved your recovery phrase
+            Select the correct words in the order shown to verify you've saved your recovery phrase
           </Text>
         </View>
 
-        {/* Word prompts */}
+        {/* Word prompts - what we're asking for */}
         <View style={styles.promptsContainer}>
+          <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+            SELECT THESE WORDS IN ORDER:
+          </Text>
           {correctIndices.map((index, i) => (
             <View key={index} style={styles.promptItem}>
-              <View style={styles.promptNumber}>
-                <Text variant="labelMedium" color={colors.text.muted}>
-                  Word #{index + 1}
-                </Text>
-              </View>
-              <View style={[
-                styles.promptSlot,
-                selectedWords[i] && styles.promptSlotFilled,
-              ]}>
-                {selectedWords[i] ? (
-                  <Text variant="titleMedium" color={colors.gold.pure}>
-                    {selectedWords[i]}
+              <View style={styles.promptRow}>
+                <View style={styles.promptNumber}>
+                  <Text variant="titleSmall" color={colors.gold.pure}>
+                    #{index + 1}
                   </Text>
-                ) : (
-                  <Text variant="bodyMedium" color={colors.text.muted}>
-                    Select word...
-                  </Text>
-                )}
+                </View>
+                <View style={[
+                  styles.promptSlot,
+                  selectedWords[i] && styles.promptSlotFilled,
+                ]}>
+                  {selectedWords[i] ? (
+                    <Text variant="titleMedium" color={colors.gold.pure}>
+                      {selectedWords[i]}
+                    </Text>
+                  ) : (
+                    <Text variant="bodyMedium" color={colors.text.muted}>
+                      Tap a word below...
+                    </Text>
+                  )}
+                </View>
               </View>
             </View>
           ))}
         </View>
 
-        {/* Word options */}
-        <View style={styles.optionsContainer}>
-          {options.map((word) => {
-            const isSelected = selectedWords.includes(word);
-            return (
-              <TouchableOpacity
-                key={word}
-                style={[
-                  styles.optionButton,
-                  isSelected && styles.optionButtonSelected,
-                ]}
-                onPress={() => handleWordSelect(word)}
-                disabled={selectedWords.length >= 3 && !isSelected}
-              >
-                <Text
-                  variant="titleSmall"
-                  color={isSelected ? colors.gold.pure : colors.text.primary}
+        {/* Word options to choose from */}
+        <View style={styles.optionsSection}>
+          <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+            CHOOSE FROM THESE WORDS:
+          </Text>
+          <View style={styles.optionsContainer}>
+            {options.map((word) => {
+              const isSelected = selectedWords.includes(word);
+              const selectionOrder = selectedWords.indexOf(word) + 1;
+              return (
+                <TouchableOpacity
+                  key={word}
+                  style={[
+                    styles.optionButton,
+                    isSelected && styles.optionButtonSelected,
+                  ]}
+                  onPress={() => handleWordSelect(word)}
+                  activeOpacity={0.7}
                 >
-                  {word}
-                </Text>
-                {isSelected && (
-                  <View style={styles.selectedBadge}>
-                    <Text variant="labelSmall" color={colors.background.primary}>
-                      {selectedWords.indexOf(word) + 1}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    variant="titleSmall"
+                    color={isSelected ? colors.gold.pure : colors.text.primary}
+                  >
+                    {word}
+                  </Text>
+                  {isSelected && (
+                    <View style={styles.selectedBadge}>
+                      <Text variant="labelSmall" color={colors.background.primary}>
+                        {selectionOrder}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Error */}
@@ -169,9 +188,17 @@ export default function BackupVerificationScreen() {
             </View>
           </Card>
         )}
-      </View>
 
-      {/* Actions */}
+        {/* Hint */}
+        <View style={styles.hintContainer}>
+          <Ionicons name="information-circle" size={16} color={colors.text.muted} />
+          <Text variant="bodySmall" color={colors.text.muted}>
+            Tap words in the correct order. Tap again to deselect.
+          </Text>
+        </View>
+      </ScrollView>
+
+      {/* Actions - Fixed at bottom */}
       <View style={styles.actions}>
         <Button
           title="Verify & Continue"
@@ -196,14 +223,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   header: {
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   iconContainer: {
     width: 64,
@@ -214,19 +244,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
+  sectionLabel: {
+    marginBottom: spacing.sm,
+  },
   promptsContainer: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   promptItem: {
-    gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  promptNumber: {},
+  promptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  promptNumber: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.gold.glow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   promptSlot: {
-    height: 52,
+    flex: 1,
+    height: 48,
     backgroundColor: colors.background.secondary,
     borderRadius: layout.radius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border.subtle,
     borderStyle: 'dashed',
     alignItems: 'center',
@@ -236,6 +281,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gold.pure,
     borderStyle: 'solid',
     backgroundColor: colors.gold.glow,
+  },
+  optionsSection: {
+    marginBottom: spacing.lg,
   },
   optionsContainer: {
     flexDirection: 'row',
@@ -247,9 +295,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     backgroundColor: colors.background.secondary,
     borderRadius: layout.radius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border.subtle,
     position: 'relative',
+    minWidth: 80,
+    alignItems: 'center',
   },
   optionButtonSelected: {
     borderColor: colors.gold.pure,
@@ -257,17 +307,17 @@ const styles = StyleSheet.create({
   },
   selectedBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -10,
+    right: -10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.gold.pure,
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorCard: {
-    marginTop: spacing.lg,
+    marginBottom: spacing.md,
     borderColor: colors.status.error,
   },
   errorContent: {
@@ -275,9 +325,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  hintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+  },
   actions: {
     padding: spacing.lg,
+    paddingTop: spacing.md,
     gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+    backgroundColor: colors.background.primary,
   },
 });
-
