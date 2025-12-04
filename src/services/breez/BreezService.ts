@@ -124,16 +124,24 @@ class BreezServiceImpl {
       const seed = await mnemonicToSeed(mnemonic);
 
       // Get default config and customize
+      // Greenlight requires either an invite code or partner credentials
+      // For development, use staging environment and provide invite code
       const nodeConfig = {
         type: NodeConfigVariant.GREENLIGHT,
         config: {
-          partnerCredentials: null,
-          inviteCode: null,
+          partnerCredentials: undefined,
+          inviteCode: BREEZ_CONFIG.INVITE_CODE || undefined,
         },
       };
 
+      // Use staging for development (doesn't require invite code)
+      // Use production for mainnet (requires invite code or partner credentials)
+      const environment = BREEZ_CONFIG.ENVIRONMENT === 'production' 
+        ? EnvironmentType.PRODUCTION 
+        : EnvironmentType.STAGING;
+
       const sdkConfig = await defaultConfig(
-        EnvironmentType.PRODUCTION,
+        environment,
         BREEZ_CONFIG.API_KEY,
         nodeConfig
       );
@@ -168,8 +176,22 @@ class BreezServiceImpl {
       this.emit('connection', true);
       console.log('[BreezService] Initialized successfully');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[BreezService] Initialization failed:', error);
+      
+      // Provide helpful error message for Greenlight registration issues
+      if (error?.message?.includes('invite code') || error?.message?.includes('not authorized')) {
+        const helpfulError = new Error(
+          'Greenlight node registration requires an invite code. ' +
+          'Get one from: https://bit.ly/glinvites\n\n' +
+          'Add it to your .env file:\n' +
+          'EXPO_PUBLIC_BREEZ_INVITE_CODE=your_invite_code_here\n\n' +
+          'Or use staging environment (already configured) which may not require an invite code.'
+        );
+        helpfulError.cause = error;
+        throw helpfulError;
+      }
+      
       throw error;
     }
   }
