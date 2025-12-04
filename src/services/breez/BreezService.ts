@@ -124,13 +124,29 @@ class BreezServiceImpl {
       const seed = await mnemonicToSeed(mnemonic);
 
       // Get default config and customize
-      // Greenlight requires either an invite code or partner credentials
-      // For development, use staging environment and provide invite code
+      // Greenlight requires either partner credentials (developer certificate) or an invite code
+      // Partner credentials are preferred for production apps
+      const partnerCredentials = BREEZ_CONFIG.getPartnerCredentials();
+      const inviteCode = BREEZ_CONFIG.INVITE_CODE || undefined;
+      
+      if (!partnerCredentials && !inviteCode) {
+        throw new Error(
+          'Greenlight node registration requires either:\n' +
+          '1. Partner credentials (developer certificate) - Get from: https://blockstream.github.io/greenlight/getting-started/certs/\n' +
+          '2. An invite code - Get from: https://bit.ly/glinvites\n\n' +
+          'Add them to your .env file as:\n' +
+          'EXPO_PUBLIC_BREEZ_DEV_CERT_BASE64=... (base64 encoded client.crt)\n' +
+          'EXPO_PUBLIC_BREEZ_DEV_KEY_BASE64=... (base64 encoded client-key.pem)\n' +
+          'OR\n' +
+          'EXPO_PUBLIC_BREEZ_INVITE_CODE=...'
+        );
+      }
+      
       const nodeConfig = {
         type: NodeConfigVariant.GREENLIGHT,
         config: {
-          partnerCredentials: undefined,
-          inviteCode: BREEZ_CONFIG.INVITE_CODE || undefined,
+          partnerCredentials: partnerCredentials,
+          inviteCode: inviteCode,
         },
       };
 
