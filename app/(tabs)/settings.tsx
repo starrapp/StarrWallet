@@ -269,6 +269,20 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* Developer Section */}
+          <View style={styles.section}>
+            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+              DEVELOPER
+            </Text>
+
+            <SettingsItem
+              icon="flask"
+              title="Test Breez SDK"
+              subtitle="Test all SDK functions and API key"
+              onPress={() => router.push('/test-breez')}
+            />
+          </View>
+
           {/* About Section */}
           <View style={styles.section}>
             <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>

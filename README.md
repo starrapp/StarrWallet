@@ -120,12 +120,50 @@ starr/
 To use Starr, you'll need a Breez SDK API key:
 
 1. Register at [https://breez.technology/sdk/](https://breez.technology/sdk/)
-2. Add your API key to the environment:
+2. Create a `.env` file in the root directory:
 
 ```bash
-# Create .env file
-BREEZ_API_KEY=your_api_key_here
+# .env file
+EXPO_PUBLIC_BREEZ_API_KEY=your_api_key_here
+EXPO_PUBLIC_NETWORK=bitcoin  # or 'testnet' for testing
 ```
+
+3. Restart your development server after adding the API key
+
+### Testing Breez SDK
+
+Starr includes a comprehensive test screen to verify all Breez SDK functions:
+
+1. **Access the Test Screen**: 
+   - Open the app and navigate to **Settings**
+   - Scroll to the **Developer** section
+   - Tap **"Test Breez SDK"**
+
+2. **What Gets Tested**:
+   - ✅ API key configuration validation
+   - ✅ Native module availability (mock mode detection)
+   - ✅ SDK initialization
+   - ✅ Balance retrieval
+   - ✅ Node information
+   - ✅ Invoice creation and parsing
+   - ✅ Payment history
+   - ✅ LSP information and selection
+   - ✅ Node synchronization
+   - ✅ Backup functions
+   - ✅ SDK shutdown
+
+3. **Running Tests**:
+   - Tap **"Run All Tests"** to execute the full test suite
+   - Or use individual test buttons for specific functions
+   - Results show success/error status with detailed data
+
+4. **Troubleshooting**:
+   - If tests show "Mock Mode", rebuild the app with native modules:
+     ```bash
+     eas build --profile development --platform ios
+     ```
+   - If API key tests fail, verify your `.env` file is properly configured
+   - Check console logs for detailed error messages
 
 ### Bundle Identifiers
 
