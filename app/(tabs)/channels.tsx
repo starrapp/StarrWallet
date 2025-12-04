@@ -19,20 +19,40 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
 import { LSPManager } from '@/services/lsp';
+import { useWalletStore } from '@/stores/walletStore';
 import { colors, spacing, layout } from '@/theme';
 import type { LSPInfo } from '@/types/wallet';
 
 export default function ChannelsScreen() {
+  const { isInitialized, isInitializing } = useWalletStore();
   const [currentLSP, setCurrentLSP] = useState<LSPInfo | null>(null);
   const [availableLSPs, setAvailableLSPs] = useState<LSPInfo[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Only load data if wallet is initialized
+    if (isInitialized && !isInitializing) {
+      loadData();
+    } else if (!isInitializing && !isInitialized) {
+      // Wallet not initialized yet
+      setIsLoading(false);
+      setLoadError('Wallet not initialized');
+    }
+  }, [isInitialized, isInitializing]);
 
   const loadData = async () => {
+    if (!isInitialized) {
+      setLoadError('Wallet not initialized');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(null);
+    
     try {
       const [current, available] = await Promise.all([
         LSPManager.getCurrentLSP(),
@@ -42,6 +62,9 @@ export default function ChannelsScreen() {
       setAvailableLSPs(available);
     } catch (error) {
       console.error('Failed to load LSP data:', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load LSP data');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -92,6 +115,59 @@ export default function ChannelsScreen() {
       ]
     );
   };
+
+  // Show loading state while wallet is initializing
+  if (isInitializing || isLoading) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <Text variant="headlineMedium" color={colors.text.primary}>
+              Channels & LSPs
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.secondary}>
+              Manage your Lightning liquidity
+            </Text>
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.gold.pure} />
+            <Text variant="bodyMedium" color={colors.text.secondary} style={styles.loadingText}>
+              {isInitializing ? 'Initializing wallet...' : 'Loading LSP data...'}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  // Show error state if wallet not initialized
+  if (!isInitialized || loadError) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <Text variant="headlineMedium" color={colors.text.primary}>
+              Channels & LSPs
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.secondary}>
+              Manage your Lightning liquidity
+            </Text>
+          </View>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={48} color={colors.status.error} />
+            <Text variant="titleMedium" color={colors.text.primary} style={styles.errorTitle}>
+              {!isInitialized ? 'Wallet Not Initialized' : 'Failed to Load'}
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.secondary} align="center" style={styles.errorText}>
+              {!isInitialized 
+                ? 'Please initialize your wallet first to view LSP information.'
+                : loadError || 'An error occurred while loading LSP data.'}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -415,6 +491,29 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     gap: spacing.xs,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    marginTop: spacing.sm,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  errorTitle: {
+    marginTop: spacing.sm,
+  },
+  errorText: {
+    marginTop: spacing.xs,
+    maxWidth: 300,
   },
 });
 
