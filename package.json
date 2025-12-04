@@ -15,7 +15,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@breeztech/react-native-breez-sdk": "^0.6.0",
+    "@breeztech/react-native-breez-sdk": "^0.8.0",
     "@expo/html-elements": "^0.13.7",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",

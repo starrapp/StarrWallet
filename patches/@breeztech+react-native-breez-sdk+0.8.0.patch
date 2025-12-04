@@ -1,8 +1,8 @@
 diff --git a/node_modules/@breeztech/react-native-breez-sdk/android/src/main/java/com/breezsdk/BreezSDKMapper.kt b/node_modules/@breeztech/react-native-breez-sdk/android/src/main/java/com/breezsdk/BreezSDKMapper.kt
-index 558a323..949cc77 100644
+index ee57dca..d4c39b0 100644
 --- a/node_modules/@breeztech/react-native-breez-sdk/android/src/main/java/com/breezsdk/BreezSDKMapper.kt
 +++ b/node_modules/@breeztech/react-native-breez-sdk/android/src/main/java/com/breezsdk/BreezSDKMapper.kt
-@@ -33,7 +33,7 @@ fun asAesSuccessActionDataDecryptedList(arr: ReadableArray): List<AesSuccessActi
+@@ -30,7 +30,7 @@ fun asAesSuccessActionDataDecryptedList(arr: ReadableArray): List<AesSuccessActi
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asAesSuccessActionDataDecrypted(value)!!)
@@ -11,7 +11,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -65,7 +65,7 @@ fun asBackupFailedDataList(arr: ReadableArray): List<BackupFailedData> {
+@@ -60,7 +60,7 @@ fun asBackupFailedDataList(arr: ReadableArray): List<BackupFailedData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asBackupFailedData(value)!!)
@@ -20,7 +20,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -100,7 +100,7 @@ fun asBackupStatusList(arr: ReadableArray): List<BackupStatus> {
+@@ -92,7 +92,7 @@ fun asBackupStatusList(arr: ReadableArray): List<BackupStatus> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asBackupStatus(value)!!)
@@ -29,7 +29,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -145,7 +145,7 @@ fun asBitcoinAddressDataList(arr: ReadableArray): List<BitcoinAddressData> {
+@@ -131,7 +131,7 @@ fun asBitcoinAddressDataList(arr: ReadableArray): List<BitcoinAddressData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asBitcoinAddressData(value)!!)
@@ -38,7 +38,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -190,7 +190,7 @@ fun asBuyBitcoinRequestList(arr: ReadableArray): List<BuyBitcoinRequest> {
+@@ -172,7 +172,7 @@ fun asBuyBitcoinRequestList(arr: ReadableArray): List<BuyBitcoinRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asBuyBitcoinRequest(value)!!)
@@ -47,7 +47,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -232,7 +232,7 @@ fun asBuyBitcoinResponseList(arr: ReadableArray): List<BuyBitcoinResponse> {
+@@ -211,7 +211,7 @@ fun asBuyBitcoinResponseList(arr: ReadableArray): List<BuyBitcoinResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asBuyBitcoinResponse(value)!!)
@@ -56,7 +56,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -272,7 +272,7 @@ fun asCheckMessageRequestList(arr: ReadableArray): List<CheckMessageRequest> {
+@@ -247,7 +247,7 @@ fun asCheckMessageRequestList(arr: ReadableArray): List<CheckMessageRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asCheckMessageRequest(value)!!)
@@ -65,7 +65,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -304,7 +304,7 @@ fun asCheckMessageResponseList(arr: ReadableArray): List<CheckMessageResponse> {
+@@ -277,7 +277,7 @@ fun asCheckMessageResponseList(arr: ReadableArray): List<CheckMessageResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asCheckMessageResponse(value)!!)
@@ -74,7 +74,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -364,7 +364,7 @@ fun asClosedChannelPaymentDetailsList(arr: ReadableArray): List<ClosedChannelPay
+@@ -332,7 +332,7 @@ fun asClosedChannelPaymentDetailsList(arr: ReadableArray): List<ClosedChannelPay
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asClosedChannelPaymentDetails(value)!!)
@@ -83,7 +83,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -433,7 +433,7 @@ fun asConfigList(arr: ReadableArray): List<Config> {
+@@ -401,7 +401,7 @@ fun asConfigList(arr: ReadableArray): List<Config> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asConfig(value)!!)
@@ -92,7 +92,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -472,7 +472,7 @@ fun asConfigureNodeRequestList(arr: ReadableArray): List<ConfigureNodeRequest> {
+@@ -438,7 +438,7 @@ fun asConfigureNodeRequestList(arr: ReadableArray): List<ConfigureNodeRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asConfigureNodeRequest(value)!!)
@@ -101,7 +101,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -511,7 +511,7 @@ fun asConnectRequestList(arr: ReadableArray): List<ConnectRequest> {
+@@ -473,7 +473,7 @@ fun asConnectRequestList(arr: ReadableArray): List<ConnectRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asConnectRequest(value)!!)
@@ -110,7 +110,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -564,7 +564,7 @@ fun asCurrencyInfoList(arr: ReadableArray): List<CurrencyInfo> {
+@@ -518,7 +518,7 @@ fun asCurrencyInfoList(arr: ReadableArray): List<CurrencyInfo> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asCurrencyInfo(value)!!)
@@ -119,7 +119,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -600,7 +600,7 @@ fun asFiatCurrencyList(arr: ReadableArray): List<FiatCurrency> {
+@@ -551,7 +551,7 @@ fun asFiatCurrencyList(arr: ReadableArray): List<FiatCurrency> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asFiatCurrency(value)!!)
@@ -128,7 +128,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -636,7 +636,7 @@ fun asGreenlightCredentialsList(arr: ReadableArray): List<GreenlightCredentials>
+@@ -584,7 +584,7 @@ fun asGreenlightCredentialsList(arr: ReadableArray): List<GreenlightCredentials>
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asGreenlightCredentials(value)!!)
@@ -137,7 +137,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -668,7 +668,7 @@ fun asGreenlightDeviceCredentialsList(arr: ReadableArray): List<GreenlightDevice
+@@ -614,7 +614,7 @@ fun asGreenlightDeviceCredentialsList(arr: ReadableArray): List<GreenlightDevice
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asGreenlightDeviceCredentials(value)!!)
@@ -146,7 +146,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -712,7 +712,7 @@ fun asGreenlightNodeConfigList(arr: ReadableArray): List<GreenlightNodeConfig> {
+@@ -655,7 +655,7 @@ fun asGreenlightNodeConfigList(arr: ReadableArray): List<GreenlightNodeConfig> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asGreenlightNodeConfig(value)!!)
@@ -155,7 +155,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -751,7 +751,7 @@ fun asInvoicePaidDetailsList(arr: ReadableArray): List<InvoicePaidDetails> {
+@@ -690,7 +690,7 @@ fun asInvoicePaidDetailsList(arr: ReadableArray): List<InvoicePaidDetails> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asInvoicePaidDetails(value)!!)
@@ -164,7 +164,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -824,7 +824,7 @@ fun asLnInvoiceList(arr: ReadableArray): List<LnInvoice> {
+@@ -763,7 +763,7 @@ fun asLnInvoiceList(arr: ReadableArray): List<LnInvoice> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnInvoice(value)!!)
@@ -173,7 +173,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -904,7 +904,7 @@ fun asListPaymentsRequestList(arr: ReadableArray): List<ListPaymentsRequest> {
+@@ -835,7 +835,7 @@ fun asListPaymentsRequestList(arr: ReadableArray): List<ListPaymentsRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asListPaymentsRequest(value)!!)
@@ -182,7 +182,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -946,7 +946,7 @@ fun asListSwapsRequestList(arr: ReadableArray): List<ListSwapsRequest> {
+@@ -871,7 +871,7 @@ fun asListSwapsRequestList(arr: ReadableArray): List<ListSwapsRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asListSwapsRequest(value)!!)
@@ -191,7 +191,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1069,7 +1069,7 @@ fun asLnPaymentDetailsList(arr: ReadableArray): List<LnPaymentDetails> {
+@@ -994,7 +994,7 @@ fun asLnPaymentDetailsList(arr: ReadableArray): List<LnPaymentDetails> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnPaymentDetails(value)!!)
@@ -200,7 +200,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1112,7 +1112,7 @@ fun asLnUrlAuthRequestDataList(arr: ReadableArray): List<LnUrlAuthRequestData> {
+@@ -1032,7 +1032,7 @@ fun asLnUrlAuthRequestDataList(arr: ReadableArray): List<LnUrlAuthRequestData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlAuthRequestData(value)!!)
@@ -209,7 +209,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1144,7 +1144,7 @@ fun asLnUrlErrorDataList(arr: ReadableArray): List<LnUrlErrorData> {
+@@ -1062,7 +1062,7 @@ fun asLnUrlErrorDataList(arr: ReadableArray): List<LnUrlErrorData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlErrorData(value)!!)
@@ -218,7 +218,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1180,7 +1180,7 @@ fun asLnUrlPayErrorDataList(arr: ReadableArray): List<LnUrlPayErrorData> {
+@@ -1095,7 +1095,7 @@ fun asLnUrlPayErrorDataList(arr: ReadableArray): List<LnUrlPayErrorData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlPayErrorData(value)!!)
@@ -227,7 +227,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1238,7 +1238,7 @@ fun asLnUrlPayRequestList(arr: ReadableArray): List<LnUrlPayRequest> {
+@@ -1146,7 +1146,7 @@ fun asLnUrlPayRequestList(arr: ReadableArray): List<LnUrlPayRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlPayRequest(value)!!)
@@ -236,7 +236,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1300,7 +1300,7 @@ fun asLnUrlPayRequestDataList(arr: ReadableArray): List<LnUrlPayRequestData> {
+@@ -1208,7 +1208,7 @@ fun asLnUrlPayRequestDataList(arr: ReadableArray): List<LnUrlPayRequestData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlPayRequestData(value)!!)
@@ -245,7 +245,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1342,7 +1342,7 @@ fun asLnUrlPaySuccessDataList(arr: ReadableArray): List<LnUrlPaySuccessData> {
+@@ -1247,7 +1247,7 @@ fun asLnUrlPaySuccessDataList(arr: ReadableArray): List<LnUrlPaySuccessData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlPaySuccessData(value)!!)
@@ -254,7 +254,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1381,7 +1381,7 @@ fun asLnUrlWithdrawRequestList(arr: ReadableArray): List<LnUrlWithdrawRequest> {
+@@ -1282,7 +1282,7 @@ fun asLnUrlWithdrawRequestList(arr: ReadableArray): List<LnUrlWithdrawRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlWithdrawRequest(value)!!)
@@ -263,7 +263,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1429,7 +1429,7 @@ fun asLnUrlWithdrawRequestDataList(arr: ReadableArray): List<LnUrlWithdrawReques
+@@ -1324,7 +1324,7 @@ fun asLnUrlWithdrawRequestDataList(arr: ReadableArray): List<LnUrlWithdrawReques
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlWithdrawRequestData(value)!!)
@@ -272,7 +272,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1461,7 +1461,7 @@ fun asLnUrlWithdrawSuccessDataList(arr: ReadableArray): List<LnUrlWithdrawSucces
+@@ -1354,7 +1354,7 @@ fun asLnUrlWithdrawSuccessDataList(arr: ReadableArray): List<LnUrlWithdrawSucces
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlWithdrawSuccessData(value)!!)
@@ -281,7 +281,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1500,7 +1500,7 @@ fun asLocaleOverridesList(arr: ReadableArray): List<LocaleOverrides> {
+@@ -1389,7 +1389,7 @@ fun asLocaleOverridesList(arr: ReadableArray): List<LocaleOverrides> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLocaleOverrides(value)!!)
@@ -290,7 +290,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1536,7 +1536,7 @@ fun asLocalizedNameList(arr: ReadableArray): List<LocalizedName> {
+@@ -1422,7 +1422,7 @@ fun asLocalizedNameList(arr: ReadableArray): List<LocalizedName> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLocalizedName(value)!!)
@@ -299,7 +299,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1572,7 +1572,7 @@ fun asLogEntryList(arr: ReadableArray): List<LogEntry> {
+@@ -1455,7 +1455,7 @@ fun asLogEntryList(arr: ReadableArray): List<LogEntry> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLogEntry(value)!!)
@@ -308,7 +308,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1644,7 +1644,7 @@ fun asLspInformationList(arr: ReadableArray): List<LspInformation> {
+@@ -1527,7 +1527,7 @@ fun asLspInformationList(arr: ReadableArray): List<LspInformation> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLspInformation(value)!!)
@@ -317,7 +317,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1676,7 +1676,7 @@ fun asMessageSuccessActionDataList(arr: ReadableArray): List<MessageSuccessActio
+@@ -1557,7 +1557,7 @@ fun asMessageSuccessActionDataList(arr: ReadableArray): List<MessageSuccessActio
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asMessageSuccessActionData(value)!!)
@@ -326,7 +326,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1712,7 +1712,7 @@ fun asMetadataFilterList(arr: ReadableArray): List<MetadataFilter> {
+@@ -1590,7 +1590,7 @@ fun asMetadataFilterList(arr: ReadableArray): List<MetadataFilter> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asMetadataFilter(value)!!)
@@ -335,7 +335,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1748,7 +1748,7 @@ fun asMetadataItemList(arr: ReadableArray): List<MetadataItem> {
+@@ -1623,7 +1623,7 @@ fun asMetadataItemList(arr: ReadableArray): List<MetadataItem> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asMetadataItem(value)!!)
@@ -344,7 +344,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1828,7 +1828,7 @@ fun asNodeStateList(arr: ReadableArray): List<NodeState> {
+@@ -1703,7 +1703,7 @@ fun asNodeStateList(arr: ReadableArray): List<NodeState> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asNodeState(value)!!)
@@ -353,7 +353,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1868,7 +1868,7 @@ fun asOnchainPaymentLimitsResponseList(arr: ReadableArray): List<OnchainPaymentL
+@@ -1739,7 +1739,7 @@ fun asOnchainPaymentLimitsResponseList(arr: ReadableArray): List<OnchainPaymentL
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asOnchainPaymentLimitsResponse(value)!!)
@@ -362,7 +362,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1910,7 +1910,7 @@ fun asOpenChannelFeeRequestList(arr: ReadableArray): List<OpenChannelFeeRequest>
+@@ -1778,7 +1778,7 @@ fun asOpenChannelFeeRequestList(arr: ReadableArray): List<OpenChannelFeeRequest>
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asOpenChannelFeeRequest(value)!!)
@@ -371,7 +371,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1945,7 +1945,7 @@ fun asOpenChannelFeeResponseList(arr: ReadableArray): List<OpenChannelFeeRespons
+@@ -1810,7 +1810,7 @@ fun asOpenChannelFeeResponseList(arr: ReadableArray): List<OpenChannelFeeRespons
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asOpenChannelFeeResponse(value)!!)
@@ -380,7 +380,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -1997,7 +1997,7 @@ fun asOpeningFeeParamsList(arr: ReadableArray): List<OpeningFeeParams> {
+@@ -1855,7 +1855,7 @@ fun asOpeningFeeParamsList(arr: ReadableArray): List<OpeningFeeParams> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asOpeningFeeParams(value)!!)
@@ -389,7 +389,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2029,7 +2029,7 @@ fun asOpeningFeeParamsMenuList(arr: ReadableArray): List<OpeningFeeParamsMenu> {
+@@ -1885,7 +1885,7 @@ fun asOpeningFeeParamsMenuList(arr: ReadableArray): List<OpeningFeeParamsMenu> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asOpeningFeeParamsMenu(value)!!)
@@ -398,7 +398,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2065,7 +2065,7 @@ fun asPayOnchainRequestList(arr: ReadableArray): List<PayOnchainRequest> {
+@@ -1918,7 +1918,7 @@ fun asPayOnchainRequestList(arr: ReadableArray): List<PayOnchainRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPayOnchainRequest(value)!!)
@@ -407,7 +407,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2097,7 +2097,7 @@ fun asPayOnchainResponseList(arr: ReadableArray): List<PayOnchainResponse> {
+@@ -1948,7 +1948,7 @@ fun asPayOnchainResponseList(arr: ReadableArray): List<PayOnchainResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPayOnchainResponse(value)!!)
@@ -416,7 +416,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2162,7 +2162,7 @@ fun asPaymentList(arr: ReadableArray): List<Payment> {
+@@ -2002,7 +2002,7 @@ fun asPaymentList(arr: ReadableArray): List<Payment> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPayment(value)!!)
@@ -425,7 +425,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2204,7 +2204,7 @@ fun asPaymentFailedDataList(arr: ReadableArray): List<PaymentFailedData> {
+@@ -2039,7 +2039,7 @@ fun asPaymentFailedDataList(arr: ReadableArray): List<PaymentFailedData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPaymentFailedData(value)!!)
@@ -434,7 +434,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2244,7 +2244,7 @@ fun asPrepareOnchainPaymentRequestList(arr: ReadableArray): List<PrepareOnchainP
+@@ -2075,7 +2075,7 @@ fun asPrepareOnchainPaymentRequestList(arr: ReadableArray): List<PrepareOnchainP
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPrepareOnchainPaymentRequest(value)!!)
@@ -443,7 +443,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2300,7 +2300,7 @@ fun asPrepareOnchainPaymentResponseList(arr: ReadableArray): List<PrepareOnchain
+@@ -2123,7 +2123,7 @@ fun asPrepareOnchainPaymentResponseList(arr: ReadableArray): List<PrepareOnchain
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPrepareOnchainPaymentResponse(value)!!)
@@ -452,7 +452,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2336,7 +2336,7 @@ fun asPrepareRedeemOnchainFundsRequestList(arr: ReadableArray): List<PrepareRede
+@@ -2156,7 +2156,7 @@ fun asPrepareRedeemOnchainFundsRequestList(arr: ReadableArray): List<PrepareRede
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPrepareRedeemOnchainFundsRequest(value)!!)
@@ -461,7 +461,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2372,7 +2372,7 @@ fun asPrepareRedeemOnchainFundsResponseList(arr: ReadableArray): List<PrepareRed
+@@ -2189,7 +2189,7 @@ fun asPrepareRedeemOnchainFundsResponseList(arr: ReadableArray): List<PrepareRed
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPrepareRedeemOnchainFundsResponse(value)!!)
@@ -470,7 +470,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2412,7 +2412,7 @@ fun asPrepareRefundRequestList(arr: ReadableArray): List<PrepareRefundRequest> {
+@@ -2227,7 +2227,7 @@ fun asPrepareRefundRequestList(arr: ReadableArray): List<PrepareRefundRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPrepareRefundRequest(value)!!)
@@ -479,7 +479,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2448,7 +2448,7 @@ fun asPrepareRefundResponseList(arr: ReadableArray): List<PrepareRefundResponse>
+@@ -2260,7 +2260,7 @@ fun asPrepareRefundResponseList(arr: ReadableArray): List<PrepareRefundResponse>
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPrepareRefundResponse(value)!!)
@@ -488,7 +488,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2484,7 +2484,7 @@ fun asRateList(arr: ReadableArray): List<Rate> {
+@@ -2293,7 +2293,7 @@ fun asRateList(arr: ReadableArray): List<Rate> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRate(value)!!)
@@ -497,7 +497,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2525,7 +2525,7 @@ fun asReceiveOnchainRequestList(arr: ReadableArray): List<ReceiveOnchainRequest>
+@@ -2332,7 +2332,7 @@ fun asReceiveOnchainRequestList(arr: ReadableArray): List<ReceiveOnchainRequest>
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReceiveOnchainRequest(value)!!)
@@ -506,7 +506,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2603,7 +2603,7 @@ fun asReceivePaymentRequestList(arr: ReadableArray): List<ReceivePaymentRequest>
+@@ -2402,7 +2402,7 @@ fun asReceivePaymentRequestList(arr: ReadableArray): List<ReceivePaymentRequest>
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReceivePaymentRequest(value)!!)
@@ -515,7 +515,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2661,7 +2661,7 @@ fun asReceivePaymentResponseList(arr: ReadableArray): List<ReceivePaymentRespons
+@@ -2456,7 +2456,7 @@ fun asReceivePaymentResponseList(arr: ReadableArray): List<ReceivePaymentRespons
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReceivePaymentResponse(value)!!)
@@ -524,7 +524,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2709,7 +2709,7 @@ fun asRecommendedFeesList(arr: ReadableArray): List<RecommendedFees> {
+@@ -2498,7 +2498,7 @@ fun asRecommendedFeesList(arr: ReadableArray): List<RecommendedFees> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRecommendedFees(value)!!)
@@ -533,7 +533,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2745,7 +2745,7 @@ fun asRedeemOnchainFundsRequestList(arr: ReadableArray): List<RedeemOnchainFunds
+@@ -2531,7 +2531,7 @@ fun asRedeemOnchainFundsRequestList(arr: ReadableArray): List<RedeemOnchainFunds
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRedeemOnchainFundsRequest(value)!!)
@@ -542,7 +542,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2777,7 +2777,7 @@ fun asRedeemOnchainFundsResponseList(arr: ReadableArray): List<RedeemOnchainFund
+@@ -2561,7 +2561,7 @@ fun asRedeemOnchainFundsResponseList(arr: ReadableArray): List<RedeemOnchainFund
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRedeemOnchainFundsResponse(value)!!)
@@ -551,7 +551,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2817,7 +2817,7 @@ fun asRefundRequestList(arr: ReadableArray): List<RefundRequest> {
+@@ -2599,7 +2599,7 @@ fun asRefundRequestList(arr: ReadableArray): List<RefundRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRefundRequest(value)!!)
@@ -560,7 +560,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2849,7 +2849,7 @@ fun asRefundResponseList(arr: ReadableArray): List<RefundResponse> {
+@@ -2629,7 +2629,7 @@ fun asRefundResponseList(arr: ReadableArray): List<RefundResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRefundResponse(value)!!)
@@ -569,7 +569,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2884,7 +2884,7 @@ fun asReportPaymentFailureDetailsList(arr: ReadableArray): List<ReportPaymentFai
+@@ -2661,7 +2661,7 @@ fun asReportPaymentFailureDetailsList(arr: ReadableArray): List<ReportPaymentFai
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReportPaymentFailureDetails(value)!!)
@@ -578,7 +578,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2935,7 +2935,7 @@ fun asReverseSwapFeesRequestList(arr: ReadableArray): List<ReverseSwapFeesReques
+@@ -2709,7 +2709,7 @@ fun asReverseSwapFeesRequestList(arr: ReadableArray): List<ReverseSwapFeesReques
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReverseSwapFeesRequest(value)!!)
@@ -587,7 +587,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -2985,7 +2985,7 @@ fun asReverseSwapInfoList(arr: ReadableArray): List<ReverseSwapInfo> {
+@@ -2752,7 +2752,7 @@ fun asReverseSwapInfoList(arr: ReadableArray): List<ReverseSwapInfo> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReverseSwapInfo(value)!!)
@@ -596,7 +596,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3040,7 +3040,7 @@ fun asReverseSwapPairInfoList(arr: ReadableArray): List<ReverseSwapPairInfo> {
+@@ -2799,7 +2799,7 @@ fun asReverseSwapPairInfoList(arr: ReadableArray): List<ReverseSwapPairInfo> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReverseSwapPairInfo(value)!!)
@@ -605,7 +605,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3072,7 +3072,7 @@ fun asRouteHintList(arr: ReadableArray): List<RouteHint> {
+@@ -2829,7 +2829,7 @@ fun asRouteHintList(arr: ReadableArray): List<RouteHint> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRouteHint(value)!!)
@@ -614,7 +614,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3126,7 +3126,7 @@ fun asRouteHintHopList(arr: ReadableArray): List<RouteHintHop> {
+@@ -2883,7 +2883,7 @@ fun asRouteHintHopList(arr: ReadableArray): List<RouteHintHop> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asRouteHintHop(value)!!)
@@ -623,7 +623,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3168,7 +3168,7 @@ fun asSendPaymentRequestList(arr: ReadableArray): List<SendPaymentRequest> {
+@@ -2920,7 +2920,7 @@ fun asSendPaymentRequestList(arr: ReadableArray): List<SendPaymentRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSendPaymentRequest(value)!!)
@@ -632,7 +632,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3200,7 +3200,7 @@ fun asSendPaymentResponseList(arr: ReadableArray): List<SendPaymentResponse> {
+@@ -2950,7 +2950,7 @@ fun asSendPaymentResponseList(arr: ReadableArray): List<SendPaymentResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSendPaymentResponse(value)!!)
@@ -641,7 +641,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3253,7 +3253,7 @@ fun asSendSpontaneousPaymentRequestList(arr: ReadableArray): List<SendSpontaneou
+@@ -2998,7 +2998,7 @@ fun asSendSpontaneousPaymentRequestList(arr: ReadableArray): List<SendSpontaneou
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSendSpontaneousPaymentRequest(value)!!)
@@ -650,7 +650,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3285,7 +3285,7 @@ fun asServiceHealthCheckResponseList(arr: ReadableArray): List<ServiceHealthChec
+@@ -3028,7 +3028,7 @@ fun asServiceHealthCheckResponseList(arr: ReadableArray): List<ServiceHealthChec
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asServiceHealthCheckResponse(value)!!)
@@ -659,7 +659,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3317,7 +3317,7 @@ fun asSignMessageRequestList(arr: ReadableArray): List<SignMessageRequest> {
+@@ -3058,7 +3058,7 @@ fun asSignMessageRequestList(arr: ReadableArray): List<SignMessageRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSignMessageRequest(value)!!)
@@ -668,7 +668,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3349,7 +3349,7 @@ fun asSignMessageResponseList(arr: ReadableArray): List<SignMessageResponse> {
+@@ -3088,7 +3088,7 @@ fun asSignMessageResponseList(arr: ReadableArray): List<SignMessageResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSignMessageResponse(value)!!)
@@ -677,7 +677,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3381,7 +3381,7 @@ fun asStaticBackupRequestList(arr: ReadableArray): List<StaticBackupRequest> {
+@@ -3118,7 +3118,7 @@ fun asStaticBackupRequestList(arr: ReadableArray): List<StaticBackupRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asStaticBackupRequest(value)!!)
@@ -686,7 +686,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3420,7 +3420,7 @@ fun asStaticBackupResponseList(arr: ReadableArray): List<StaticBackupResponse> {
+@@ -3155,7 +3155,7 @@ fun asStaticBackupResponseList(arr: ReadableArray): List<StaticBackupResponse> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asStaticBackupResponse(value)!!)
@@ -695,7 +695,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3547,7 +3547,7 @@ fun asSwapInfoList(arr: ReadableArray): List<SwapInfo> {
+@@ -3282,7 +3282,7 @@ fun asSwapInfoList(arr: ReadableArray): List<SwapInfo> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSwapInfo(value)!!)
@@ -704,7 +704,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3586,7 +3586,7 @@ fun asSymbolList(arr: ReadableArray): List<Symbol> {
+@@ -3316,7 +3316,7 @@ fun asSymbolList(arr: ReadableArray): List<Symbol> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSymbol(value)!!)
@@ -713,7 +713,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3622,7 +3622,7 @@ fun asTlvEntryList(arr: ReadableArray): List<TlvEntry> {
+@@ -3349,7 +3349,7 @@ fun asTlvEntryList(arr: ReadableArray): List<TlvEntry> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asTlvEntry(value)!!)
@@ -722,7 +722,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3670,7 +3670,7 @@ fun asUnspentTransactionOutputList(arr: ReadableArray): List<UnspentTransactionO
+@@ -3391,7 +3391,7 @@ fun asUnspentTransactionOutputList(arr: ReadableArray): List<UnspentTransactionO
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asUnspentTransactionOutput(value)!!)
@@ -731,7 +731,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3710,7 +3710,7 @@ fun asUrlSuccessActionDataList(arr: ReadableArray): List<UrlSuccessActionData> {
+@@ -3427,7 +3427,7 @@ fun asUrlSuccessActionDataList(arr: ReadableArray): List<UrlSuccessActionData> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asUrlSuccessActionData(value)!!)
@@ -740,7 +740,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3750,7 +3750,7 @@ fun asAesSuccessActionDataResultList(arr: ReadableArray): List<AesSuccessActionD
+@@ -3467,7 +3467,7 @@ fun asAesSuccessActionDataResultList(arr: ReadableArray): List<AesSuccessActionD
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asAesSuccessActionDataResult(value)!!)
@@ -749,7 +749,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3841,7 +3841,7 @@ fun asBreezEventList(arr: ReadableArray): List<BreezEvent> {
+@@ -3565,7 +3565,7 @@ fun asBreezEventList(arr: ReadableArray): List<BreezEvent> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asBreezEvent(value)!!)
@@ -758,7 +758,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3854,7 +3854,7 @@ fun asBuyBitcoinProviderList(arr: ReadableArray): List<BuyBitcoinProvider> {
+@@ -3578,7 +3578,7 @@ fun asBuyBitcoinProviderList(arr: ReadableArray): List<BuyBitcoinProvider> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asBuyBitcoinProvider(value)!!)
@@ -767,7 +767,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3867,7 +3867,7 @@ fun asChannelStateList(arr: ReadableArray): List<ChannelState> {
+@@ -3591,7 +3591,7 @@ fun asChannelStateList(arr: ReadableArray): List<ChannelState> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asChannelState(value)!!)
@@ -776,7 +776,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3880,7 +3880,7 @@ fun asEnvironmentTypeList(arr: ReadableArray): List<EnvironmentType> {
+@@ -3604,7 +3604,7 @@ fun asEnvironmentTypeList(arr: ReadableArray): List<EnvironmentType> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asEnvironmentType(value)!!)
@@ -785,7 +785,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3893,7 +3893,7 @@ fun asFeeratePresetList(arr: ReadableArray): List<FeeratePreset> {
+@@ -3617,7 +3617,7 @@ fun asFeeratePresetList(arr: ReadableArray): List<FeeratePreset> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asFeeratePreset(value)!!)
@@ -794,7 +794,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3906,7 +3906,7 @@ fun asHealthCheckStatusList(arr: ReadableArray): List<HealthCheckStatus> {
+@@ -3630,7 +3630,7 @@ fun asHealthCheckStatusList(arr: ReadableArray): List<HealthCheckStatus> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asHealthCheckStatus(value)!!)
@@ -803,7 +803,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -3986,7 +3986,7 @@ fun asInputTypeList(arr: ReadableArray): List<InputType> {
+@@ -3720,7 +3720,7 @@ fun asInputTypeList(arr: ReadableArray): List<InputType> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asInputType(value)!!)
@@ -812,7 +812,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4023,7 +4023,7 @@ fun asLnUrlCallbackStatusList(arr: ReadableArray): List<LnUrlCallbackStatus> {
+@@ -3758,7 +3758,7 @@ fun asLnUrlCallbackStatusList(arr: ReadableArray): List<LnUrlCallbackStatus> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlCallbackStatus(value)!!)
@@ -821,7 +821,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4068,7 +4068,7 @@ fun asLnUrlPayResultList(arr: ReadableArray): List<LnUrlPayResult> {
+@@ -3806,7 +3806,7 @@ fun asLnUrlPayResultList(arr: ReadableArray): List<LnUrlPayResult> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlPayResult(value)!!)
@@ -830,7 +830,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4113,7 +4113,7 @@ fun asLnUrlWithdrawResultList(arr: ReadableArray): List<LnUrlWithdrawResult> {
+@@ -3854,7 +3854,7 @@ fun asLnUrlWithdrawResultList(arr: ReadableArray): List<LnUrlWithdrawResult> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asLnUrlWithdrawResult(value)!!)
@@ -839,7 +839,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4126,7 +4126,7 @@ fun asNetworkList(arr: ReadableArray): List<Network> {
+@@ -3867,7 +3867,7 @@ fun asNetworkList(arr: ReadableArray): List<Network> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asNetwork(value)!!)
@@ -848,7 +848,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4157,7 +4157,7 @@ fun asNodeConfigList(arr: ReadableArray): List<NodeConfig> {
+@@ -3899,7 +3899,7 @@ fun asNodeConfigList(arr: ReadableArray): List<NodeConfig> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asNodeConfig(value)!!)
@@ -857,7 +857,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4188,7 +4188,7 @@ fun asNodeCredentialsList(arr: ReadableArray): List<NodeCredentials> {
+@@ -3931,7 +3931,7 @@ fun asNodeCredentialsList(arr: ReadableArray): List<NodeCredentials> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asNodeCredentials(value)!!)
@@ -866,7 +866,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4226,7 +4226,7 @@ fun asPaymentDetailsList(arr: ReadableArray): List<PaymentDetails> {
+@@ -3971,7 +3971,7 @@ fun asPaymentDetailsList(arr: ReadableArray): List<PaymentDetails> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asPaymentDetails(value)!!)
@@ -875,7 +875,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4239,7 +4239,7 @@ fun asPaymentStatusList(arr: ReadableArray): List<PaymentStatus> {
+@@ -3984,7 +3984,7 @@ fun asPaymentStatusList(arr: ReadableArray): List<PaymentStatus> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asPaymentStatus(value)!!)
@@ -884,7 +884,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4252,7 +4252,7 @@ fun asPaymentTypeList(arr: ReadableArray): List<PaymentType> {
+@@ -3997,7 +3997,7 @@ fun asPaymentTypeList(arr: ReadableArray): List<PaymentType> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asPaymentType(value)!!)
@@ -893,7 +893,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4265,7 +4265,7 @@ fun asPaymentTypeFilterList(arr: ReadableArray): List<PaymentTypeFilter> {
+@@ -4010,7 +4010,7 @@ fun asPaymentTypeFilterList(arr: ReadableArray): List<PaymentTypeFilter> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asPaymentTypeFilter(value)!!)
@@ -902,7 +902,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4296,7 +4296,7 @@ fun asReportIssueRequestList(arr: ReadableArray): List<ReportIssueRequest> {
+@@ -4042,7 +4042,7 @@ fun asReportIssueRequestList(arr: ReadableArray): List<ReportIssueRequest> {
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asReportIssueRequest(value)!!)
@@ -911,7 +911,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4309,7 +4309,7 @@ fun asReverseSwapStatusList(arr: ReadableArray): List<ReverseSwapStatus> {
+@@ -4055,7 +4055,7 @@ fun asReverseSwapStatusList(arr: ReadableArray): List<ReverseSwapStatus> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asReverseSwapStatus(value)!!)
@@ -920,7 +920,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4354,7 +4354,7 @@ fun asSuccessActionProcessedList(arr: ReadableArray): List<SuccessActionProcesse
+@@ -4103,7 +4103,7 @@ fun asSuccessActionProcessedList(arr: ReadableArray): List<SuccessActionProcesse
      for (value in arr.toArrayList()) {
          when (value) {
              is ReadableMap -> list.add(asSuccessActionProcessed(value)!!)
@@ -929,7 +929,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4367,7 +4367,7 @@ fun asSwapAmountTypeList(arr: ReadableArray): List<SwapAmountType> {
+@@ -4116,7 +4116,7 @@ fun asSwapAmountTypeList(arr: ReadableArray): List<SwapAmountType> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asSwapAmountType(value)!!)
@@ -938,7 +938,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4380,7 +4380,7 @@ fun asSwapStatusList(arr: ReadableArray): List<SwapStatus> {
+@@ -4129,7 +4129,7 @@ fun asSwapStatusList(arr: ReadableArray): List<SwapStatus> {
      for (value in arr.toArrayList()) {
          when (value) {
              is String -> list.add(asSwapStatus(value)!!)
@@ -947,7 +947,7 @@ index 558a323..949cc77 100644
          }
      }
      return list
-@@ -4436,7 +4436,7 @@ fun pushToArray(
+@@ -4185,7 +4185,7 @@ fun pushToArray(
          is UnspentTransactionOutput -> array.pushMap(readableMapOf(value))
          is Array<*> -> array.pushArray(readableArrayOf(value.asIterable()))
          is List<*> -> array.pushArray(readableArrayOf(value))
@@ -956,7 +956,7 @@ index 558a323..949cc77 100644
      }
  }
  
-@@ -4462,7 +4462,7 @@ fun pushToMap(
+@@ -4211,7 +4211,7 @@ fun pushToMap(
          is ULong -> map.putDouble(key, value.toDouble())
          is Array<*> -> map.putArray(key, readableArrayOf(value.asIterable()))
          is List<*> -> map.putArray(key, readableArrayOf(value))
@@ -965,7 +965,7 @@ index 558a323..949cc77 100644
      }
  }
  
-@@ -4484,7 +4484,7 @@ fun asUByteList(arr: ReadableArray): List<UByte> {
+@@ -4233,7 +4233,7 @@ fun asUByteList(arr: ReadableArray): List<UByte> {
              is Double -> list.add(value.toInt().toUByte())
              is Int -> list.add(value.toUByte())
              is UByte -> list.add(value)
