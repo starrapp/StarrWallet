@@ -504,6 +504,35 @@ class BreezServiceImpl {
   }
 
   /**
+   * Select/connect to a specific LSP
+   * Note: Breez SDK typically handles LSP selection automatically.
+   * This method is provided for manual LSP management if needed.
+   */
+  async selectLSP(lspId: string): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Breez SDK not initialized');
+    }
+
+    if (this.mockMode) {
+      console.log('[BreezService] Mock mode - LSP selection simulated:', lspId);
+      return;
+    }
+
+    try {
+      // Breez SDK manages LSP connections automatically
+      // The connectLsp function would be used here if manual control is needed
+      // For now, we log the selection as Breez handles this internally
+      console.log('[BreezService] LSP selection requested:', lspId);
+      
+      // Sync to ensure we're connected to the LSP
+      await this.syncNode();
+    } catch (error) {
+      console.error('[BreezService] Failed to select LSP:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Trigger a backup
    */
   async triggerBackup(): Promise<void> {

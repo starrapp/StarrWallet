@@ -12,12 +12,15 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
+import { ThemeProvider, useTheme } from '@/contexts';
 import { colors } from '@/theme';
 
 // Keep splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayoutInner() {
+  const { colors: themeColors, isDark } = useTheme();
+
   useEffect(() => {
     // Hide splash screen after a short delay
     const hideSplash = async () => {
@@ -28,12 +31,12 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: themeColors.background.primary }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.background.primary },
+          contentStyle: { backgroundColor: themeColors.background.primary },
           animation: 'fade',
         }}
       >
@@ -64,8 +67,37 @@ export default function RootLayout() {
             presentation: 'fullScreenModal',
           }} 
         />
+        <Stack.Screen 
+          name="recovery-phrase" 
+          options={{ 
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }} 
+        />
+        <Stack.Screen 
+          name="delete-wallet" 
+          options={{ 
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }} 
+        />
+        <Stack.Screen 
+          name="change-pin" 
+          options={{ 
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }} 
+        />
       </Stack>
     </View>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutInner />
+    </ThemeProvider>
   );
 }
 

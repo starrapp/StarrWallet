@@ -12,15 +12,18 @@ import {
   Alert,
   Modal,
   Pressable,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { useWalletStore } from '@/stores/walletStore';
+import { useTheme } from '@/contexts';
 import { colors, spacing, layout } from '@/theme';
 
 // Currency options
@@ -44,12 +47,25 @@ const FIAT_CURRENCIES = [
   { value: 'KRW', label: 'South Korean Won', symbol: '₩' },
 ];
 
+// External links - replace these with your actual URLs
+const EXTERNAL_LINKS = {
+  TERMS: 'https://starr.app/terms',
+  PRIVACY: 'https://starr.app/privacy',
+  SUPPORT: 'https://starr.app/support',
+  GITHUB: 'https://github.com/starr-wallet/starr',
+};
+
+// Get app version from expo constants
+const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings, performBackup, backupState } = useWalletStore();
+  const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     checkBiometric();
@@ -87,7 +103,7 @@ export default function SettingsScreen() {
       'You will need to authenticate to view your recovery phrase. Never share it with anyone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', onPress: () => {/* Show recovery phrase */} },
+        { text: 'Continue', onPress: () => router.push('/recovery-phrase') },
       ]
     );
   };
@@ -113,6 +129,43 @@ export default function SettingsScreen() {
     const fiat = FIAT_CURRENCIES.find(c => c.value === settings.currency);
     if (fiat) return fiat.label;
     return settings.currency;
+  };
+
+  const openExternalLink = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Unable to open this link.');
+      }
+    } catch (error) {
+      console.error('Failed to open link:', error);
+      Alert.alert('Error', 'Failed to open link.');
+    }
+  };
+
+  const handleAbout = () => {
+    Alert.alert(
+      'About Starr',
+      `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.\n\nPowered by Breez SDK.`,
+      [
+        { text: 'View on GitHub', onPress: () => openExternalLink(EXTERNAL_LINKS.GITHUB) },
+        { text: 'OK' },
+      ]
+    );
+  };
+
+  const handleSupport = () => {
+    Alert.alert(
+      'Get Support',
+      'How would you like to get help?',
+      [
+        { text: 'Visit Support Page', onPress: () => openExternalLink(EXTERNAL_LINKS.SUPPORT) },
+        { text: 'Email Support', onPress: () => Linking.openURL('mailto:support@starr.app') },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   return (
@@ -163,7 +216,7 @@ export default function SettingsScreen() {
               icon="lock-closed"
               title="Change PIN"
               subtitle="Update your wallet PIN"
-              onPress={() => {}}
+              onPress={() => router.push('/change-pin')}
             />
           </View>
 
@@ -209,10 +262,10 @@ export default function SettingsScreen() {
             />
 
             <SettingsItem
-              icon="moon"
+              icon={isDark ? 'moon' : 'sunny'}
               title="Theme"
-              subtitle="Dark"
-              onPress={() => {}}
+              subtitle={themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}
+              onPress={() => setShowThemeModal(true)}
             />
           </View>
 
@@ -225,27 +278,27 @@ export default function SettingsScreen() {
             <SettingsItem
               icon="information-circle"
               title="About Starr"
-              subtitle="Version 1.0.0"
-              onPress={() => {}}
+              subtitle={`Version ${APP_VERSION}`}
+              onPress={handleAbout}
             />
 
             <SettingsItem
               icon="document-text"
               title="Terms of Service"
-              onPress={() => {}}
+              onPress={() => openExternalLink(EXTERNAL_LINKS.TERMS)}
             />
 
             <SettingsItem
               icon="shield"
               title="Privacy Policy"
-              onPress={() => {}}
+              onPress={() => openExternalLink(EXTERNAL_LINKS.PRIVACY)}
             />
 
             <SettingsItem
               icon="help-circle"
               title="Support"
               subtitle="Get help with Starr"
-              onPress={() => {}}
+              onPress={handleSupport}
             />
           </View>
 
@@ -255,7 +308,10 @@ export default function SettingsScreen() {
               DANGER ZONE
             </Text>
 
-            <TouchableOpacity style={styles.dangerButton}>
+            <TouchableOpacity 
+              style={styles.dangerButton}
+              onPress={() => router.push('/delete-wallet')}
+            >
               <Ionicons name="trash" size={20} color={colors.status.error} />
               <Text variant="titleSmall" color={colors.status.error}>
                 Delete Wallet
@@ -351,6 +407,74 @@ export default function SettingsScreen() {
                     </View>
                     {settings.currency === currency.value && (
                       <Ionicons name="checkmark-circle" size={24} color={colors.accent.cyan} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={showThemeModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <SafeAreaView style={styles.modalSafeArea}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text variant="headlineSmall" color={colors.text.primary}>
+                Select Theme
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowThemeModal(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {/* Theme Options */}
+              <View style={styles.modalSection}>
+                {[
+                  { value: 'dark' as const, label: 'Dark', icon: 'moon' as const, description: 'Deep space dark theme' },
+                  { value: 'light' as const, label: 'Light', icon: 'sunny' as const, description: 'Clean and bright theme' },
+                  { value: 'system' as const, label: 'System', icon: 'phone-portrait' as const, description: 'Follow device settings' },
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.currencyOption,
+                      themeMode === option.value && styles.currencyOptionSelected,
+                    ]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setThemeMode(option.value);
+                      setShowThemeModal(false);
+                    }}
+                  >
+                    <View style={styles.themeOptionIcon}>
+                      <Ionicons 
+                        name={option.icon} 
+                        size={24} 
+                        color={themeMode === option.value ? colors.gold.pure : colors.text.secondary} 
+                      />
+                    </View>
+                    <View style={styles.currencyInfo}>
+                      <Text variant="titleMedium" color={colors.text.primary}>
+                        {option.label}
+                      </Text>
+                      <Text variant="bodySmall" color={colors.text.muted}>
+                        {option.description}
+                      </Text>
+                    </View>
+                    {themeMode === option.value && (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.gold.pure} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -528,5 +652,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  themeOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
   },
 });

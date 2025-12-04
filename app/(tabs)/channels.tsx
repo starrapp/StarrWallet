@@ -11,9 +11,12 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
 import { LSPManager } from '@/services/lsp';
 import { colors, spacing, layout } from '@/theme';
@@ -23,6 +26,7 @@ export default function ChannelsScreen() {
   const [currentLSP, setCurrentLSP] = useState<LSPInfo | null>(null);
   const [availableLSPs, setAvailableLSPs] = useState<LSPInfo[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -45,6 +49,48 @@ export default function ChannelsScreen() {
     setIsRefreshing(true);
     await loadData();
     setIsRefreshing(false);
+  };
+
+  const handleSelectLSP = async (lsp: LSPInfo) => {
+    // If already the current LSP, do nothing
+    if (currentLSP?.id === lsp.id) {
+      Alert.alert('Already Connected', `You are already connected to ${lsp.name}.`);
+      return;
+    }
+
+    Alert.alert(
+      'Switch Provider',
+      `Switch to ${lsp.name}?\n\nBase Fee: ${lsp.baseFeeSats} sats\nFee Rate: ${(lsp.feeRate / 10000).toFixed(2)}%`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Switch',
+          onPress: async () => {
+            try {
+              setIsConnecting(lsp.id);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              
+              const success = await LSPManager.connectToLSP(lsp.id);
+              
+              if (success) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                await loadData();
+                Alert.alert('Connected', `Successfully connected to ${lsp.name}.`);
+              } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert('Connection Failed', `Failed to connect to ${lsp.name}. Please try again.`);
+              }
+            } catch (error) {
+              console.error('Failed to connect to LSP:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert('Error', 'An error occurred while switching providers.');
+            } finally {
+              setIsConnecting(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -151,26 +197,60 @@ export default function ChannelsScreen() {
             </View>
 
             <View style={styles.lspList}>
-              {availableLSPs.map((lsp) => (
-                <TouchableOpacity
-                  key={lsp.id}
-                  style={styles.lspListItem}
-                  onPress={() => {/* Select LSP */}}
-                >
-                  <View style={styles.lspListIcon}>
-                    <Ionicons name="server" size={20} color={colors.accent.cyan} />
-                  </View>
-                  <View style={styles.lspListInfo}>
-                    <Text variant="titleSmall" color={colors.text.primary}>
-                      {lsp.name}
-                    </Text>
-                    <Text variant="bodySmall" color={colors.text.muted}>
-                      Fee: {lsp.baseFeeSats} + {(lsp.feeRate / 10000).toFixed(2)}%
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-                </TouchableOpacity>
-              ))}
+              {availableLSPs.map((lsp) => {
+                const isCurrentLSP = currentLSP?.id === lsp.id;
+                const isConnectingThis = isConnecting === lsp.id;
+                
+                return (
+                  <TouchableOpacity
+                    key={lsp.id}
+                    style={[
+                      styles.lspListItem,
+                      isCurrentLSP && styles.lspListItemActive,
+                    ]}
+                    onPress={() => handleSelectLSP(lsp)}
+                    disabled={isConnecting !== null}
+                  >
+                    <View style={[
+                      styles.lspListIcon,
+                      isCurrentLSP && styles.lspListIconActive,
+                    ]}>
+                      {isConnectingThis ? (
+                        <ActivityIndicator size="small" color={colors.gold.pure} />
+                      ) : (
+                        <Ionicons 
+                          name={isCurrentLSP ? 'flash' : 'server'} 
+                          size={20} 
+                          color={isCurrentLSP ? colors.gold.pure : colors.accent.cyan} 
+                        />
+                      )}
+                    </View>
+                    <View style={styles.lspListInfo}>
+                      <View style={styles.lspListHeader}>
+                        <Text variant="titleSmall" color={colors.text.primary}>
+                          {lsp.name}
+                        </Text>
+                        {isCurrentLSP && (
+                          <View style={styles.currentBadge}>
+                            <Text variant="labelSmall" color={colors.gold.pure}>
+                              Current
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text variant="bodySmall" color={colors.text.muted}>
+                        Fee: {lsp.baseFeeSats} + {(lsp.feeRate / 10000).toFixed(2)}%
+                      </Text>
+                    </View>
+                    {!isCurrentLSP && (
+                      <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                    )}
+                    {isCurrentLSP && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.gold.pure} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -304,6 +384,25 @@ const styles = StyleSheet.create({
   },
   lspListInfo: {
     flex: 1,
+  },
+  lspListHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  lspListItemActive: {
+    borderWidth: 1.5,
+    borderColor: colors.gold.pure,
+    backgroundColor: colors.gold.glow,
+  },
+  lspListIconActive: {
+    backgroundColor: colors.gold.glow,
+  },
+  currentBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    backgroundColor: colors.gold.pure + '20',
+    borderRadius: layout.radius.sm,
   },
   infoCard: {
     padding: spacing.md,
