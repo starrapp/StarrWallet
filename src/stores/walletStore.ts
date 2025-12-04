@@ -56,7 +56,7 @@ interface WalletState {
   settings: WalletSettings;
 
   // Actions
-  initializeWallet: (seed?: Uint8Array) => Promise<void>;
+  initializeWallet: (mnemonic?: string) => Promise<void>;
   unlockWallet: () => Promise<boolean>;
   lockWallet: () => void;
   

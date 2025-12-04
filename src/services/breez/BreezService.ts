@@ -37,6 +37,8 @@ const {
   mnemonicToSeed,
 } = BreezSDK || {};
 
+import { DeviceEventEmitter } from 'react-native';
+
 import type {
   Balance,
   LightningPayment,
@@ -141,11 +143,25 @@ class BreezServiceImpl {
         sdkConfig.workingDir = config.workingDir;
       }
 
-      // Connect to the SDK
-      await connect(sdkConfig, seed);
-
-      // Subscribe to events
-      this.subscribeToEvents();
+      // Connect to the SDK with event listener
+      // The connect function requires an EventListener callback as the second parameter
+      // It returns an EmitterSubscription that we store for cleanup
+      this.eventSubscription = await connect(
+        {
+          config: sdkConfig,
+          seed: seed,
+        },
+        (breezEvent: any) => {
+          // Handle Breez SDK events
+          // Event types: 'invoicePaid', 'paymentSucceed', 'synced', etc.
+          if (breezEvent.type === 'invoicePaid' || breezEvent.type === 'paymentSucceed') {
+            // Map to our payment event
+            this.emit('payment', breezEvent.details);
+          } else if (breezEvent.type === 'synced') {
+            this.emit('sync');
+          }
+        }
+      );
 
       this.isInitialized = true;
       this.mockMode = false;
@@ -162,8 +178,55 @@ class BreezServiceImpl {
    * Subscribe to Breez SDK events
    */
   private subscribeToEvents(): void {
-    // The Breez SDK emits events through a callback system
-    // We'll handle payment updates, syncs, etc.
+    if (this.mockMode || !isNativeModuleAvailable) {
+      return;
+    }
+
+    // Clean up any existing subscriptions
+    if (this.eventSubscription) {
+      DeviceEventEmitter.removeAllListeners('breezSdkEvent');
+      this.eventSubscription = null;
+    }
+
+    // Set up event listener for Breez SDK events
+    // The SDK emits events through React Native's DeviceEventEmitter
+    // We need to provide a valid function to prevent the EventEmitter error
+    this.eventSubscription = DeviceEventEmitter.addListener(
+      'breezSdkEvent',
+      (event: any) => {
+        try {
+          // Handle different event types from Breez SDK
+          if (event.type === 'payment') {
+            // Convert SDK payment event to our format
+            const payment: LightningPayment = {
+              id: event.payment?.id || event.id,
+              type: event.payment?.paymentType === 'sent' ? 'send' : 'receive',
+              status: this.mapPaymentStatus(event.payment?.status || 'pending'),
+              amountSats: event.payment?.amountMsat 
+                ? Number(BigInt(event.payment.amountMsat) / 1000n)
+                : 0,
+              feeSats: event.payment?.feeMsat
+                ? Number(BigInt(event.payment.feeMsat) / 1000n)
+                : undefined,
+              description: event.payment?.description || '',
+              paymentHash: event.payment?.id || event.id,
+              timestamp: event.payment?.paymentTime
+                ? new Date(event.payment.paymentTime * 1000)
+                : new Date(),
+            };
+            this.emit('payment', payment);
+          } else if (event.type === 'sync') {
+            this.emit('sync');
+          } else if (event.type === 'connection') {
+            this.emit('connection', event.connected || false);
+          }
+        } catch (error) {
+          console.error('[BreezService] Error handling SDK event:', error);
+        }
+      }
+    );
+
+    console.log('[BreezService] Event listeners set up');
   }
 
   /**
@@ -172,6 +235,12 @@ class BreezServiceImpl {
   async shutdown(): Promise<void> {
     if (!this.isInitialized) return;
 
+    // Clean up event listeners
+    if (this.eventSubscription) {
+      DeviceEventEmitter.removeAllListeners('breezSdkEvent');
+      this.eventSubscription = null;
+    }
+
     if (this.mockMode) {
       this.isInitialized = false;
       this.emit('connection', false);
@@ -179,6 +248,12 @@ class BreezServiceImpl {
     }
 
     try {
+      // Remove event subscription
+      if (this.eventSubscription) {
+        this.eventSubscription.remove();
+        this.eventSubscription = null;
+      }
+      
       await disconnect();
       this.isInitialized = false;
       this.emit('connection', false);
