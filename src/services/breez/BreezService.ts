@@ -7,25 +7,35 @@
  * Requires a valid API key in .env file.
  */
 
-import {
+// Check if Breez SDK native module is available
+let BreezSDK: any = null;
+let isNativeModuleAvailable = false;
+
+try {
+  BreezSDK = require('@breeztech/react-native-breez-sdk');
+  isNativeModuleAvailable = true;
+} catch (error) {
+  console.warn('[BreezService] Native module not available - using mock mode');
+  console.warn('[BreezService] Rebuild with: eas build --profile development --platform ios');
+}
+
+// Destructure SDK functions (will be undefined if not available)
+const {
   connect,
   disconnect,
   nodeInfo,
-  parseInvoice as sdkParseInvoice,
+  parseInvoice: sdkParseInvoice,
   receivePayment,
   sendPayment,
   listPayments,
   lspInfo,
   sync,
-  BreezEvent,
   EnvironmentType,
-  NodeConfig,
   NodeConfigVariant,
   PaymentTypeFilter,
-  GreenlightNodeConfig,
   defaultConfig,
   mnemonicToSeed,
-} from '@breeztech/react-native-breez-sdk';
+} = BreezSDK || {};
 
 import type {
   Balance,
@@ -51,8 +61,18 @@ export interface BreezServiceConfig {
   network: 'bitcoin' | 'testnet';
 }
 
+// Mock data for when native module isn't available
+const MOCK_BALANCE: Balance = {
+  lightning: 0,
+  onchain: 0,
+  pendingIncoming: 0,
+  pendingOutgoing: 0,
+  lastUpdated: new Date(),
+};
+
 class BreezServiceImpl {
   private isInitialized = false;
+  private mockMode = !isNativeModuleAvailable;
   private eventListeners: Map<string, Set<(...args: any[]) => void>> = new Map();
   private eventSubscription: any = null;
 
@@ -61,6 +81,13 @@ class BreezServiceImpl {
    */
   isConfigured(): boolean {
     return isBreezConfigured();
+  }
+
+  /**
+   * Check if running in mock mode (native module not available)
+   */
+  isMockMode(): boolean {
+    return this.mockMode;
   }
 
   /**
@@ -75,6 +102,15 @@ class BreezServiceImpl {
       return;
     }
 
+    // If native module not available, use mock mode
+    if (!isNativeModuleAvailable) {
+      console.warn('[BreezService] Running in MOCK mode - rebuild app for real Lightning');
+      this.mockMode = true;
+      this.isInitialized = true;
+      this.emit('connection', true);
+      return;
+    }
+
     if (!isBreezConfigured()) {
       throw new Error('Breez SDK not configured. Add EXPO_PUBLIC_BREEZ_API_KEY to .env file');
     }
@@ -86,12 +122,12 @@ class BreezServiceImpl {
       const seed = await mnemonicToSeed(mnemonic);
 
       // Get default config and customize
-      const nodeConfig: NodeConfig = {
+      const nodeConfig = {
         type: NodeConfigVariant.GREENLIGHT,
         config: {
           partnerCredentials: null,
           inviteCode: null,
-        } as GreenlightNodeConfig,
+        },
       };
 
       const sdkConfig = await defaultConfig(
@@ -112,6 +148,7 @@ class BreezServiceImpl {
       this.subscribeToEvents();
 
       this.isInitialized = true;
+      this.mockMode = false;
       this.emit('connection', true);
       console.log('[BreezService] Initialized successfully');
 
@@ -135,6 +172,12 @@ class BreezServiceImpl {
   async shutdown(): Promise<void> {
     if (!this.isInitialized) return;
 
+    if (this.mockMode) {
+      this.isInitialized = false;
+      this.emit('connection', false);
+      return;
+    }
+
     try {
       await disconnect();
       this.isInitialized = false;
@@ -154,6 +197,11 @@ class BreezServiceImpl {
       throw new Error('Breez SDK not initialized');
     }
 
+    if (this.mockMode) {
+      this.emit('sync');
+      return;
+    }
+
     try {
       await sync();
       this.emit('sync');
@@ -170,6 +218,10 @@ class BreezServiceImpl {
   async getBalance(): Promise<Balance> {
     if (!this.isInitialized) {
       throw new Error('Breez SDK not initialized');
+    }
+
+    if (this.mockMode) {
+      return { ...MOCK_BALANCE, lastUpdated: new Date() };
     }
 
     try {
@@ -194,6 +246,16 @@ class BreezServiceImpl {
   async getNodeInfo(): Promise<NodeInfo> {
     if (!this.isInitialized) {
       throw new Error('Breez SDK not initialized');
+    }
+
+    if (this.mockMode) {
+      return {
+        id: 'mock-node-id',
+        pubkey: '02mock...',
+        network: 'bitcoin',
+        blockHeight: 820000,
+        channelsCount: 0,
+      };
     }
 
     try {
@@ -222,6 +284,18 @@ class BreezServiceImpl {
   ): Promise<Invoice> {
     if (!this.isInitialized) {
       throw new Error('Breez SDK not initialized');
+    }
+
+    if (this.mockMode) {
+      const mockBolt11 = `lnbc${amountSats}n1pjmock${Date.now()}`;
+      return {
+        bolt11: mockBolt11,
+        paymentHash: `mock_hash_${Date.now()}`,
+        amountSats,
+        description: description || 'Starr Wallet Payment',
+        expiresAt: new Date(Date.now() + expireSeconds * 1000),
+        createdAt: new Date(),
+      };
     }
 
     try {
@@ -254,6 +328,10 @@ class BreezServiceImpl {
       throw new Error('Breez SDK not initialized');
     }
 
+    if (this.mockMode) {
+      throw new Error('Cannot send payments in mock mode. Rebuild app with: eas build --profile development');
+    }
+
     try {
       const response = await sendPayment({
         bolt11,
@@ -283,6 +361,17 @@ class BreezServiceImpl {
    * Parse a Lightning invoice without paying
    */
   async parseInvoice(bolt11: string) {
+    if (this.mockMode) {
+      return {
+        bolt11,
+        paymentHash: 'mock_hash',
+        amountMsat: 100000,
+        description: 'Mock invoice',
+        payee: '02mock...',
+        expiry: 3600,
+      };
+    }
+
     try {
       const parsed = await sdkParseInvoice(bolt11);
       
@@ -312,8 +401,12 @@ class BreezServiceImpl {
       throw new Error('Breez SDK not initialized');
     }
 
+    if (this.mockMode) {
+      return []; // No payments in mock mode
+    }
+
     try {
-      let typeFilter: PaymentTypeFilter | undefined;
+      let typeFilter: typeof PaymentTypeFilter.SENT | typeof PaymentTypeFilter.RECEIVED | undefined;
       if (filter === 'sent') {
         typeFilter = PaymentTypeFilter.SENT;
       } else if (filter === 'received') {
@@ -328,7 +421,7 @@ class BreezServiceImpl {
         limit: limit,
       });
 
-      return sdkPayments.map((p): LightningPayment => ({
+      return sdkPayments.map((p: any): LightningPayment => ({
         id: p.id,
         type: p.paymentType === 'sent' ? 'send' : 'receive',
         status: this.mapPaymentStatus(p.status),
@@ -363,6 +456,21 @@ class BreezServiceImpl {
   async getCurrentLSP(): Promise<LSPInfo | null> {
     if (!this.isInitialized) {
       throw new Error('Breez SDK not initialized');
+    }
+
+    if (this.mockMode) {
+      return {
+        id: 'mock-lsp',
+        name: 'Mock LSP (Rebuild for real)',
+        host: 'mock.lsp.local',
+        pubkey: '02mock...',
+        baseFeeSats: 1000,
+        feeRate: 0.001,
+        minChannelSize: 10000,
+        maxChannelSize: 10000000,
+        isActive: true,
+        isDefault: true,
+      };
     }
 
     try {
