@@ -208,6 +208,35 @@ class BreezServiceImpl {
         throw helpfulError;
       }
       
+      // Handle network connectivity errors
+      const errorMessage = error?.message || '';
+      const errorString = JSON.stringify(error);
+      
+      if (
+        errorMessage.includes('Operation timed out') ||
+        errorMessage.includes('tcp connect error') ||
+        errorMessage.includes('Connection timed out') ||
+        errorString.includes('TimedOut') ||
+        errorString.includes('Unavailable')
+      ) {
+        const networkError = new Error(
+          'Network connection timeout. Unable to connect to Breez servers.\n\n' +
+          'Possible causes:\n' +
+          '• No internet connection\n' +
+          '• Firewall or VPN blocking the connection\n' +
+          '• iOS Simulator network restrictions\n' +
+          '• Breez servers temporarily unavailable\n\n' +
+          'Troubleshooting:\n' +
+          '1. Check your internet connection\n' +
+          '2. Try disabling VPN or firewall\n' +
+          '3. If using iOS Simulator, try a physical device\n' +
+          '4. Wait a few minutes and try again\n' +
+          '5. Check Breez status: https://status.breez.technology'
+        );
+        networkError.cause = error;
+        throw networkError;
+      }
+      
       throw error;
     }
   }
