@@ -22,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
+import { TorService } from '@/services/tor';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme } from '@/contexts';
 import { colors, spacing, layout } from '@/theme';
@@ -66,10 +67,24 @@ export default function SettingsScreen() {
   const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [torStatus, setTorStatus] = useState({ isRunning: false, isAvailable: false });
+  const [isTorStarting, setIsTorStarting] = useState(false);
 
   useEffect(() => {
     checkBiometric();
+    checkTorStatus();
+    
+    // Update Tor status periodically
+    const interval = setInterval(checkTorStatus, 2000);
+    return () => clearInterval(interval);
   }, []);
+
+  const checkTorStatus = () => {
+    setTorStatus({
+      isRunning: TorService.isTorRunning(),
+      isAvailable: TorService.isAvailable(),
+    });
+  };
 
   const checkBiometric = async () => {
     const { available, type } = await KeychainService.isBiometricAvailable();
@@ -164,6 +179,85 @@ export default function SettingsScreen() {
         { text: 'Visit Support Page', onPress: () => openExternalLink(EXTERNAL_LINKS.SUPPORT) },
         { text: 'Email Support', onPress: () => Linking.openURL('mailto:support@starr.app') },
         { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleTorToggle = async () => {
+    if (settings.torEnabled) {
+      updateSettings({ torEnabled: false });
+      try {
+        await TorService.stopTor();
+      } catch (error) {
+        console.error('Failed to stop Tor:', error);
+      }
+    } else {
+      updateSettings({ torEnabled: true });
+      try {
+        await TorService.initialize();
+      } catch (error) {
+        Alert.alert('Tor Error', 'Failed to initialize Tor. Make sure you have a development build.');
+        updateSettings({ torEnabled: false });
+      }
+    }
+    checkTorStatus();
+  };
+
+  const handleTorAutoStartToggle = (value: boolean) => {
+    updateSettings({ torAutoStart: value });
+  };
+
+  const handleStartTor = async () => {
+    if (!settings.torEnabled) {
+      Alert.alert('Tor Disabled', 'Please enable Tor first.');
+      return;
+    }
+
+    if (torStatus.isRunning) {
+      Alert.alert('Tor Running', 'Tor is already running.');
+      return;
+    }
+
+    setIsTorStarting(true);
+    try {
+      await TorService.startTor();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Tor Started', 'Tor daemon is now running and ready for .onion connections.');
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Tor Start Failed',
+        error instanceof Error ? error.message : 'Failed to start Tor. Please check your network connection.'
+      );
+    } finally {
+      setIsTorStarting(false);
+      checkTorStatus();
+    }
+  };
+
+  const handleStopTor = async () => {
+    if (!torStatus.isRunning) {
+      return;
+    }
+
+    Alert.alert(
+      'Stop Tor',
+      'Are you sure you want to stop Tor? This will disconnect any active .onion connections.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Stop',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await TorService.stopTor();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              checkTorStatus();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to stop Tor.');
+            }
+          },
+        },
       ]
     );
   };
@@ -268,6 +362,115 @@ export default function SettingsScreen() {
               onPress={() => setShowThemeModal(true)}
             />
           </View>
+
+          {/* Tor Section */}
+          {torStatus.isAvailable && (
+            <View style={styles.section}>
+              <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+                TOR PRIVACY
+              </Text>
+
+              <SettingsItem
+                icon="shield"
+                title="Enable Tor"
+                subtitle="Use Tor for .onion address connections"
+                trailing={
+                  <Switch
+                    value={settings.torEnabled}
+                    onValueChange={handleTorToggle}
+                    trackColor={{ false: colors.background.tertiary, true: colors.accent.cyan + '80' }}
+                    thumbColor={settings.torEnabled ? colors.accent.cyan : colors.text.muted}
+                  />
+                }
+              />
+
+              {settings.torEnabled && (
+                <>
+                  <SettingsItem
+                    icon="flash"
+                    title="Auto-Start Tor"
+                    subtitle="Automatically start Tor when needed"
+                    trailing={
+                      <Switch
+                        value={settings.torAutoStart}
+                        onValueChange={handleTorAutoStartToggle}
+                        trackColor={{ false: colors.background.tertiary, true: colors.accent.cyan + '80' }}
+                        thumbColor={settings.torAutoStart ? colors.accent.cyan : colors.text.muted}
+                      />
+                    }
+                  />
+
+                  <SettingsItem
+                    icon={torStatus.isRunning ? 'checkmark-circle' : 'close-circle'}
+                    title="Tor Status"
+                    subtitle={
+                      torStatus.isRunning
+                        ? `Running on port ${TorService.getSocksPort()}`
+                        : 'Not running'
+                    }
+                    trailing={
+                      <View style={styles.torStatusContainer}>
+                        <View
+                          style={[
+                            styles.torStatusDot,
+                            torStatus.isRunning ? styles.torStatusDotActive : styles.torStatusDotInactive,
+                          ]}
+                        />
+                        <Text
+                          variant="labelSmall"
+                          color={torStatus.isRunning ? colors.status.success : colors.text.muted}
+                        >
+                          {torStatus.isRunning ? 'Active' : 'Inactive'}
+                        </Text>
+                      </View>
+                    }
+                  />
+
+                  {!torStatus.isRunning && (
+                    <TouchableOpacity
+                      style={styles.torActionButton}
+                      onPress={handleStartTor}
+                      disabled={isTorStarting}
+                    >
+                      <Ionicons
+                        name="play"
+                        size={20}
+                        color={isTorStarting ? colors.text.muted : colors.accent.cyan}
+                      />
+                      <Text
+                        variant="titleSmall"
+                        color={isTorStarting ? colors.text.muted : colors.accent.cyan}
+                      >
+                        {isTorStarting ? 'Starting...' : 'Start Tor'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {torStatus.isRunning && (
+                    <TouchableOpacity
+                      style={[styles.torActionButton, styles.torActionButtonStop]}
+                      onPress={handleStopTor}
+                    >
+                      <Ionicons name="stop" size={20} color={colors.status.error} />
+                      <Text variant="titleSmall" color={colors.status.error}>
+                        Stop Tor
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <Card variant="outlined" style={styles.torInfoCard}>
+                    <View style={styles.torInfoContent}>
+                      <Ionicons name="information-circle" size={20} color={colors.accent.cyan} />
+                      <Text variant="bodySmall" color={colors.text.secondary} style={styles.torInfoText}>
+                        Tor enables secure connections to .onion addresses. Starting Tor may take 10-30 seconds.
+                        Tor uses additional battery when running.
+                      </Text>
+                    </View>
+                  </Card>
+                </>
+              )}
+            </View>
+          )}
 
           {/* Developer Section */}
           <View style={styles.section}>
@@ -675,5 +878,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
+  },
+  torStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  torStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  torStatusDotActive: {
+    backgroundColor: colors.status.success,
+  },
+  torStatusDotInactive: {
+    backgroundColor: colors.text.muted,
+  },
+  torActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.accent.cyan + '15',
+    borderRadius: layout.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.accent.cyan + '30',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  torActionButtonStop: {
+    backgroundColor: colors.status.error + '15',
+    borderColor: colors.status.error + '30',
+  },
+  torInfoCard: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+  },
+  torInfoContent: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  torInfoText: {
+    flex: 1,
   },
 });

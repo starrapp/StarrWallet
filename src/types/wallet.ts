@@ -126,6 +126,10 @@ export interface WalletSettings {
   // Network
   preferredLSP?: string;
   
+  // Tor
+  torEnabled: boolean;
+  torAutoStart: boolean;
+  
   // Backup
   autoBackupEnabled: boolean;
   backupProvider?: 'icloud' | 'google' | 'local';

@@ -8,11 +8,13 @@
 import { create } from 'zustand';
 import { BreezService } from '@/services/breez';
 import { LNDService } from '@/services/lnd';
+import { TorService } from '@/services/tor';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { LSPManager } from '@/services/lsp';
 import { BREEZ_CONFIG } from '@/config';
 import { isLNDConfigured } from '@/config/lnd';
+import { isOnionAddress } from '@/utils/tor';
 import type {
   Balance,
   LightningPayment,
@@ -81,6 +83,8 @@ const defaultSettings: WalletSettings = {
   biometricEnabled: false,
   pinEnabled: false,
   autoLockMinutes: 5,
+  torEnabled: true,
+  torAutoStart: true,
   autoBackupEnabled: true,
 };
 
@@ -130,6 +134,32 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
       } else {
         throw new Error('No wallet found. Please create or import a wallet.');
+      }
+
+      // Initialize Tor service if enabled
+      const settings = get().settings;
+      if (settings.torEnabled) {
+        try {
+          await TorService.initialize();
+          console.log('[WalletStore] Tor service initialized');
+          
+          // Auto-start Tor if enabled and LND uses .onion address
+          if (settings.torAutoStart && isLNDConfigured()) {
+            const lndRestUrl = process.env.EXPO_PUBLIC_LND_REST_URL || '';
+            if (isOnionAddress(lndRestUrl)) {
+              try {
+                await TorService.startTor();
+                console.log('[WalletStore] Tor auto-started for .onion LND connection');
+              } catch (error) {
+                console.warn('[WalletStore] Tor auto-start failed:', error);
+                // Continue without Tor - user can start manually
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[WalletStore] Tor initialization failed:', error);
+          // Continue without Tor
+        }
       }
 
       // Initialize LND service if configured (takes priority over Breez)

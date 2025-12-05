@@ -15,6 +15,8 @@ import { Buffer } from 'buffer';
 import { LND_CONFIG, isLNDConfigured } from '@/config/lnd';
 import { parseLndConnectUrl } from '@/utils/lndConnect';
 import { isOnionAddress, prepareTorRequest } from '@/utils/tor';
+import { TorService } from '@/services/tor';
+import { TOR_CONFIG } from '@/config/tor';
 import type { Balance, Invoice, LightningPayment, LSPInfo, NodeInfo } from '@/types/wallet';
 
 interface LNDConfig {
@@ -170,13 +172,36 @@ class LNDServiceImpl {
 
     const url = `${this.config.restUrl}${endpoint}`;
     
-    // Check if this is a .onion address
+    // Check if this is a .onion address and handle Tor routing
     const torInfo = prepareTorRequest(url);
-    if (torInfo.requiresTor && !torInfo.proxy) {
-      console.warn(
-        '[LNDService] .onion address detected but Tor proxy not configured. ' +
-        'Connection may fail. Configure Tor proxy or use VPN with Tor routing.'
-      );
+    
+    if (torInfo.requiresTor) {
+      // Ensure Tor is available and running
+      if (!torInfo.torAvailable) {
+        throw new Error(
+          'Tor module not available. Rebuild app with development build to enable Tor support.'
+        );
+      }
+
+      // Auto-start Tor if enabled and not running
+      if (!TorService.isTorRunning()) {
+        if (TOR_CONFIG.autoStart || TOR_CONFIG.enabled) {
+          try {
+            console.log('[LNDService] Auto-starting Tor for .onion connection...');
+            await TorService.startTor();
+          } catch (error) {
+            throw new Error(
+              `Failed to start Tor for .onion connection: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+              'Please start Tor manually from settings or check your network connection.'
+            );
+          }
+        } else {
+          throw new Error(
+            'Tor is required for .onion addresses but is not running. ' +
+            'Please enable Tor in settings or start it manually.'
+          );
+        }
+      }
     }
 
     // Decode macaroon (can be base64 or hex)
@@ -207,7 +232,16 @@ class LNDServiceImpl {
     // In production, use proper certificates
 
     try {
-      const response = await fetch(url, fetchOptions);
+      let response: Response;
+
+      // Use Tor service for .onion addresses
+      if (torInfo.requiresTor && TorService.isTorRunning()) {
+        console.log('[LNDService] Making request through Tor:', url);
+        response = await TorService.makeRequest(url, fetchOptions);
+      } else {
+        // Regular fetch for non-onion addresses
+        response = await fetch(url, fetchOptions);
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -221,8 +255,8 @@ class LNDServiceImpl {
         if (isOnionAddress(url)) {
           throw new Error(
             'Failed to connect to .onion address. ' +
-            'Tor proxy may not be configured. ' +
-            'For .onion addresses, you need Tor routing (VPN or system Tor).'
+            'Tor may not be running or connection failed. ' +
+            'Please check Tor status in settings.'
           );
         }
         throw new Error(
