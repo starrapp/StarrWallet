@@ -15,6 +15,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BreezService } from '../breez';
+import { LNDService } from '../lnd';
+import { isLNDConfigured } from '@/config/lnd';
 import type { LSPInfo } from '@/types/wallet';
 
 const LSP_KEYS = {
@@ -70,12 +72,37 @@ class LSPManagerImpl {
    * Get all available LSPs with health info
    */
   async getAvailableLSPs(): Promise<(LSPInfo & { health?: LSPHealth })[]> {
-    const lsps = await BreezService.getAvailableLSPs();
+    const lsps: (LSPInfo & { health?: LSPHealth })[] = [];
     
-    return lsps.map((lsp) => ({
-      ...lsp,
-      health: this.lspHealth.get(lsp.id),
-    }));
+    // Add custom LND node if configured
+    if (isLNDConfigured() && LNDService.isInitialized()) {
+      try {
+        const lndLSP = await LNDService.getCurrentLSP();
+        lsps.push({
+          ...lndLSP,
+          health: this.lspHealth.get(lndLSP.id),
+        });
+      } catch (error) {
+        console.error('[LSPManager] Failed to get LND LSP info:', error);
+        // Continue without LND LSP if it fails
+      }
+    }
+    
+    // Add Breez LSPs
+    try {
+      const breezLSPs = await BreezService.getAvailableLSPs();
+      breezLSPs.forEach((lsp) => {
+        lsps.push({
+          ...lsp,
+          health: this.lspHealth.get(lsp.id),
+        });
+      });
+    } catch (error) {
+      console.error('[LSPManager] Failed to get Breez LSPs:', error);
+      // Continue without Breez LSPs if they fail
+    }
+    
+    return lsps;
   }
 
   /**
@@ -86,8 +113,25 @@ class LSPManagerImpl {
       return this.currentLSP;
     }
     
-    this.currentLSP = await BreezService.getCurrentLSP();
-    return this.currentLSP;
+    // Check if LND is configured and initialized (takes priority)
+    if (isLNDConfigured() && LNDService.isInitialized()) {
+      try {
+        this.currentLSP = await LNDService.getCurrentLSP();
+        return this.currentLSP;
+      } catch (error) {
+        console.error('[LSPManager] Failed to get LND LSP:', error);
+        // Fall through to Breez
+      }
+    }
+    
+    // Fall back to Breez LSP
+    try {
+      this.currentLSP = await BreezService.getCurrentLSP();
+      return this.currentLSP;
+    } catch (error) {
+      console.error('[LSPManager] Failed to get Breez LSP:', error);
+      return null;
+    }
   }
 
   /**
@@ -188,7 +232,7 @@ class LSPManagerImpl {
    * Check health of all LSPs
    */
   async checkAllHealth(): Promise<void> {
-    const lsps = await BreezService.getAvailableLSPs();
+    const lsps = await this.getAvailableLSPs();
 
     for (const lsp of lsps) {
       await this.checkLSPHealth(lsp);

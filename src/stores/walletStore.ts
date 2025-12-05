@@ -7,10 +7,12 @@
 
 import { create } from 'zustand';
 import { BreezService } from '@/services/breez';
+import { LNDService } from '@/services/lnd';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { LSPManager } from '@/services/lsp';
 import { BREEZ_CONFIG } from '@/config';
+import { isLNDConfigured } from '@/config/lnd';
 import type {
   Balance,
   LightningPayment,
@@ -130,11 +132,24 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         throw new Error('No wallet found. Please create or import a wallet.');
       }
 
-      // Initialize Breez SDK with mnemonic
-      await BreezService.initialize(mnemonicPhrase, {
-        workingDir: BREEZ_CONFIG.WORKING_DIR,
-        network: BREEZ_CONFIG.NETWORK,
-      });
+      // Initialize LND service if configured (takes priority over Breez)
+      if (isLNDConfigured()) {
+        try {
+          await LNDService.initialize();
+          console.log('[WalletStore] LND service initialized');
+        } catch (error) {
+          console.error('[WalletStore] LND initialization failed:', error);
+          // Continue with Breez if LND fails
+        }
+      }
+
+      // Initialize Breez SDK with mnemonic (if LND not configured or failed)
+      if (!isLNDConfigured() || !LNDService.isInitialized()) {
+        await BreezService.initialize(mnemonicPhrase, {
+          workingDir: BREEZ_CONFIG.WORKING_DIR,
+          network: BREEZ_CONFIG.NETWORK,
+        });
+      }
 
       // Initialize backup service
       await BackupService.initialize();
@@ -142,10 +157,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       // Initialize LSP manager
       await LSPManager.initialize();
 
-      // Get initial data
+      // Get initial data (use LND if available, otherwise Breez)
       const [balance, nodeInfo, currentLSP, backupState] = await Promise.all([
-        BreezService.getBalance(),
-        BreezService.getNodeInfo(),
+        LNDService.isInitialized()
+          ? LNDService.getBalance()
+          : BreezService.getBalance(),
+        LNDService.isInitialized()
+          ? LNDService.getInfo()
+          : BreezService.getNodeInfo(),
         LSPManager.getCurrentLSP(),
         BackupService.getBackupState(),
       ]);
@@ -205,7 +224,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshBalance: async () => {
     set({ isLoadingBalance: true });
     try {
-      const balance = await BreezService.getBalance();
+      const balance = LNDService.isInitialized()
+        ? await LNDService.getBalance()
+        : await BreezService.getBalance();
       set({ balance, isLoadingBalance: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh balance:', error);
@@ -217,7 +238,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshPayments: async () => {
     set({ isLoadingPayments: true });
     try {
-      const payments = await BreezService.getPayments('all', 50);
+      const payments = LNDService.isInitialized()
+        ? await LNDService.listPayments()
+        : await BreezService.getPayments('all', 50);
       set({ payments, isLoadingPayments: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh payments:', error);
@@ -229,7 +252,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   createInvoice: async (amountSats: number, description?: string) => {
     set({ isCreatingInvoice: true });
     try {
-      const invoice = await BreezService.createInvoice(amountSats, description);
+      const invoice = LNDService.isInitialized()
+        ? await LNDService.createInvoice(amountSats, description)
+        : await BreezService.createInvoice(amountSats, description);
       set({ currentInvoice: invoice, isCreatingInvoice: false });
       return invoice;
     } catch (error) {
@@ -241,7 +266,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Pay invoice
   payInvoice: async (bolt11: string, amountSats?: number) => {
     try {
-      // Parse invoice first for validation and display
+      // Parse invoice first for validation and display (use Breez for parsing even with LND)
       const parsed = await BreezService.parseInvoice(bolt11);
       
       set({
@@ -256,7 +281,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         },
       });
 
-      const payment = await BreezService.payInvoice(bolt11, amountSats);
+      const payment = LNDService.isInitialized()
+        ? await LNDService.payInvoice(bolt11, amountSats)
+        : await BreezService.payInvoice(bolt11, amountSats);
       
       set((state) => ({
         payments: [payment, ...state.payments],
@@ -283,9 +310,15 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Sync node with network
   syncNode: async () => {
     try {
-      await BreezService.syncNode();
-      const balance = await BreezService.getBalance();
-      set({ balance });
+      if (LNDService.isInitialized()) {
+        // LND doesn't have explicit sync, just refresh balance
+        const balance = await LNDService.getBalance();
+        set({ balance });
+      } else {
+        await BreezService.syncNode();
+        const balance = await BreezService.getBalance();
+        set({ balance });
+      }
     } catch (error) {
       console.error('[WalletStore] Sync failed:', error);
     }
