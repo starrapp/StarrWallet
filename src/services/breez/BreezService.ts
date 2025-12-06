@@ -204,7 +204,10 @@ class BreezServiceImpl {
           'EXPO_PUBLIC_BREEZ_INVITE_CODE=your_invite_code_here\n\n' +
           'Or use staging environment (already configured) which may not require an invite code.'
         );
-        helpfulError.cause = error;
+        // Store original error for debugging (cause property may not be supported in all environments)
+        if (error && typeof (helpfulError as any).cause !== 'undefined') {
+          (helpfulError as any).cause = error;
+        }
         throw helpfulError;
       }
       
@@ -233,7 +236,10 @@ class BreezServiceImpl {
           '4. Wait a few minutes and try again\n' +
           '5. Check Breez status: https://status.breez.technology'
         );
-        networkError.cause = error;
+        // Store original error for debugging (cause property may not be supported in all environments)
+        if (error && typeof (networkError as any).cause !== 'undefined') {
+          (networkError as any).cause = error;
+        }
         throw networkError;
       }
       
