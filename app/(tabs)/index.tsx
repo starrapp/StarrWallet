@@ -85,6 +85,10 @@ export default function HomeScreen() {
               onPress={() => {
                 initializeWallet().catch((error) => {
                   console.error('[HomeScreen] Wallet retry failed:', error);
+                  // If wallet data is corrupted, redirect to onboarding
+                  if (error instanceof Error && error.message.includes('corrupted')) {
+                    router.replace('/onboarding');
+                  }
                 });
               }}
             >
@@ -92,6 +96,16 @@ export default function HomeScreen() {
                 Retry
               </Text>
             </TouchableOpacity>
+            {initError?.includes('corrupted') && (
+              <TouchableOpacity
+                style={[styles.retryButton, { marginTop: spacing.sm }]}
+                onPress={() => router.replace('/onboarding')}
+              >
+                <Text variant="titleSmall" color={colors.text.secondary}>
+                  Create New Wallet
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </SafeAreaView>
       </View>

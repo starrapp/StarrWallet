@@ -131,7 +131,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Existing wallet - get mnemonic from keychain
         // Skip auth on auto-init - device unlock provides security
         // Sensitive operations (backup view, large sends) require separate auth
-        mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
+        try {
+          mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
+        } catch (error) {
+          // If mnemonic is missing but flag is set, clear the flag and redirect to onboarding
+          if (error instanceof Error && error.message === 'No mnemonic found') {
+            console.warn('[WalletStore] Wallet flag set but mnemonic missing, clearing state');
+            await KeychainService.clearAllData();
+            throw new Error('Wallet data corrupted. Please create a new wallet.');
+          }
+          throw error;
+        }
       } else {
         throw new Error('No wallet found. Please create or import a wallet.');
       }

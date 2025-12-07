@@ -45,7 +45,23 @@ class KeychainServiceImpl {
    */
   async isWalletInitialized(): Promise<boolean> {
     const value = await SecureStore.getItemAsync(KEYS.WALLET_INITIALIZED, SECURE_OPTIONS);
-    return value === 'true';
+    if (value !== 'true') {
+      return false;
+    }
+    
+    // Verify that mnemonic actually exists (data consistency check)
+    try {
+      const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC_ENCRYPTED, SECURE_OPTIONS);
+      if (!mnemonic) {
+        // Flag is set but mnemonic is missing - clear the flag
+        console.warn('[KeychainService] Wallet flag set but mnemonic missing, clearing inconsistent state');
+        await SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED, SECURE_OPTIONS);
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
