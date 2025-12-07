@@ -259,11 +259,12 @@ import type { ColorTheme } from '@/theme/colors';
 
 const TransactionItem: React.FC<{ transaction: LightningPayment; colors: ColorTheme }> = ({ transaction, colors }) => {
   const isReceive = transaction.type === 'receive';
+  const styles = getStyles(colors);
 
   return (
-    <View style={[getStyles(colors).txItem]}>
+    <View style={styles.txItem}>
       <View style={[
-        getStyles(colors).txIcon,
+        styles.txIcon,
         { backgroundColor: isReceive ? colors.status.success + '20' : colors.accent.cyan + '20' },
       ]}>
         <Ionicons
@@ -272,7 +273,7 @@ const TransactionItem: React.FC<{ transaction: LightningPayment; colors: ColorTh
           color={isReceive ? colors.status.success : colors.accent.cyan}
         />
       </View>
-      <View style={getStyles(colors).txDetails}>
+      <View style={styles.txDetails}>
         <Text variant="titleSmall" numberOfLines={1}>
           {transaction.description || (isReceive ? 'Received' : 'Sent')}
         </Text>
