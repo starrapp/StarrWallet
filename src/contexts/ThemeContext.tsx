@@ -98,8 +98,17 @@ export function useTheme(): ThemeContextType {
 
 // Hook for components that just need colors (with fallback for non-context usage)
 export function useColors(): ColorTheme {
-  const context = useContext(ThemeContext);
-  // Return dark colors as default if not in a ThemeProvider
-  return context?.colors ?? darkColors;
+  try {
+    const context = useContext(ThemeContext);
+    // Return colors from context if available, otherwise fallback to darkColors
+    if (context && context.colors) {
+      return context.colors;
+    }
+    return darkColors;
+  } catch (error) {
+    // If context is not available (e.g., outside ThemeProvider), return darkColors
+    console.warn('[useColors] ThemeContext not available, using darkColors fallback');
+    return darkColors;
+  }
 }
 
