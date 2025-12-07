@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
-import { BreezService } from '@/services/breez';
+import { LNDService } from '@/services/lnd';
 import { colors, spacing, layout } from '@/theme';
 
 const CONFIRMATION_TEXT = 'DELETE';
@@ -57,11 +57,14 @@ export default function DeleteWalletScreen() {
       setIsDeleting(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
-      // Shutdown Breez SDK first
+      // Shutdown Lightning service if initialized
       try {
-        await BreezService.shutdown();
+        if (LNDService.isInitialized()) {
+          // TODO: Add shutdown method to LNDService or new Lightning service
+          console.log('[DeleteWallet] Lightning service shutdown');
+        }
       } catch (err) {
-        console.log('[DeleteWallet] Breez shutdown (may already be stopped):', err);
+        console.log('[DeleteWallet] Lightning service shutdown (may already be stopped):', err);
       }
 
       // Clear all keychain data

@@ -163,7 +163,7 @@ export default function SettingsScreen() {
   const handleAbout = () => {
     Alert.alert(
       'About Starr',
-      `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.\n\nPowered by Breez SDK.`,
+      `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.`,
       [
         { text: 'View on GitHub', onPress: () => openExternalLink(EXTERNAL_LINKS.GITHUB) },
         { text: 'OK' },
@@ -478,12 +478,6 @@ export default function SettingsScreen() {
               DEVELOPER
             </Text>
 
-            <SettingsItem
-              icon="flask"
-              title="Test Breez SDK"
-              subtitle="Test all SDK functions and API key"
-              onPress={() => router.push('/test-breez')}
-            />
           </View>
 
           {/* About Section */}

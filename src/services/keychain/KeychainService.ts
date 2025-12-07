@@ -107,7 +107,7 @@ class KeychainServiceImpl {
     );
 
     // Store encrypted seed, mnemonic, and hash
-    // Note: Mnemonic is stored separately for Breez SDK which requires it
+    // Note: Mnemonic is stored separately for Lightning Network initialization
     await SecureStore.setItemAsync(KEYS.SEED_ENCRYPTED, seedHex, SECURE_OPTIONS);
     await SecureStore.setItemAsync(KEYS.MNEMONIC_ENCRYPTED, mnemonic, SECURE_OPTIONS);
     await SecureStore.setItemAsync(KEYS.SEED_HASH, hash, SECURE_OPTIONS);
@@ -117,7 +117,7 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Retrieve seed bytes for Breez SDK initialization
+   * Retrieve seed bytes for Lightning Network initialization
    * Requires authentication
    */
   async getSeedBytes(requireAuth: boolean = true): Promise<Uint8Array> {
@@ -143,7 +143,7 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Retrieve the mnemonic for Breez SDK initialization
+   * Retrieve the mnemonic for Lightning Network initialization
    * Requires authentication
    */
   async getMnemonicForBackup(requireAuth: boolean = true): Promise<string> {

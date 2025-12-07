@@ -88,13 +88,6 @@ function RootLayoutInner() {
             presentation: 'modal',
           }} 
         />
-        <Stack.Screen 
-          name="test-breez" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
       </Stack>
     </View>
   );

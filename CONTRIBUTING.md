@@ -93,9 +93,10 @@ We welcome feature suggestions! Please open an issue with:
 
 3. **Set up environment variables**
    - Create a `.env` file in the root directory
-   - Add your Breez SDK API key:
+   - Add your Lightning Network configuration:
      ```
-     EXPO_PUBLIC_BREEZ_API_KEY=your_api_key_here
+     EXPO_PUBLIC_LND_REST_URL=https://your-lnd-node:8080
+     EXPO_PUBLIC_LND_MACAROON=your_macaroon_hex
      EXPO_PUBLIC_NETWORK=testnet  # Use testnet for development
      ```
 
@@ -188,7 +189,7 @@ starr/
 │   │   ├── ui/           # Base UI components
 │   │   └── wallet/       # Wallet-specific components
 │   ├── services/          # Core services
-│   │   ├── breez/        # Breez SDK integration
+│   │   ├── lnd/          # LND integration
 │   │   ├── keychain/     # Secure key storage
 │   │   ├── backup/       # Backup management
 │   │   └── lsp/          # LSP management

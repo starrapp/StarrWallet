@@ -14,7 +14,6 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BreezService } from '../breez';
 import { LNDService } from '../lnd';
 import { isLNDConfigured } from '@/config/lnd';
 import type { LSPInfo } from '@/types/wallet';
@@ -88,19 +87,7 @@ class LSPManagerImpl {
       }
     }
     
-    // Add Breez LSPs
-    try {
-      const breezLSPs = await BreezService.getAvailableLSPs();
-      breezLSPs.forEach((lsp) => {
-        lsps.push({
-          ...lsp,
-          health: this.lspHealth.get(lsp.id),
-        });
-      });
-    } catch (error) {
-      console.error('[LSPManager] Failed to get Breez LSPs:', error);
-      // Continue without Breez LSPs if they fail
-    }
+    // TODO: Add other LSP providers when new Lightning implementation is ready
     
     return lsps;
   }
@@ -124,14 +111,8 @@ class LSPManagerImpl {
       }
     }
     
-    // Fall back to Breez LSP
-    try {
-      this.currentLSP = await BreezService.getCurrentLSP();
-      return this.currentLSP;
-    } catch (error) {
-      console.error('[LSPManager] Failed to get Breez LSP:', error);
-      return null;
-    }
+    // TODO: Get LSP from new Lightning implementation when ready
+    return null;
   }
 
   /**
@@ -179,14 +160,21 @@ class LSPManagerImpl {
    */
   async connectToLSP(lspId: string): Promise<boolean> {
     try {
-      await BreezService.selectLSP(lspId);
-      this.currentLSP = await BreezService.getCurrentLSP();
+      // TODO: Implement LSP connection with new Lightning implementation
+      // For now, if it's an LND node, verify it's configured
+      if (isLNDConfigured() && LNDService.isInitialized()) {
+        const lndLSP = await LNDService.getCurrentLSP();
+        if (lndLSP.id === lspId) {
+          this.currentLSP = lndLSP;
+          await AsyncStorage.setItem(LSP_KEYS.PREFERRED, lspId);
+          console.log('[LSPManager] Connected to LND LSP:', lspId);
+          return true;
+        }
+      }
       
-      // Save as preferred
-      await AsyncStorage.setItem(LSP_KEYS.PREFERRED, lspId);
-      
-      console.log('[LSPManager] Connected to LSP:', lspId);
-      return true;
+      // TODO: Add other LSP connection logic when new implementation is ready
+      console.warn('[LSPManager] LSP connection not yet implemented for:', lspId);
+      return false;
     } catch (error) {
       console.error('[LSPManager] Failed to connect to LSP:', error);
       

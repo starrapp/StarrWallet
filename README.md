@@ -18,9 +18,9 @@ A beautiful, non-custodial Bitcoin Lightning wallet for iOS and Android.
 Starr is built with a phased approach to Lightning integration:
 
 ### Phase 1: MVP (Current)
-- **Breez SDK** for rapid Lightning development
-- Automatic channel management via LSP
-- Built-in on-chain/Lightning swaps
+- **LND** for Lightning Network connectivity
+- Remote node support
+- Channel management via LSP
 
 ### Phase 2: Power Users (Planned)
 - Remote node support (LND/CLN)
@@ -35,7 +35,7 @@ Starr is built with a phased approach to Lightning integration:
 ## Tech Stack
 
 - **React Native** with Expo
-- **Breez SDK** for Lightning
+- **LND** for Lightning Network (or new implementation)
 - **Zustand** for state management
 - **Expo Router** for navigation
 - **TypeScript** for type safety
@@ -102,7 +102,7 @@ starr/
 │   │   ├── ui/           # Base UI components
 │   │   └── wallet/       # Wallet-specific components
 │   ├── services/          # Core services
-│   │   ├── breez/        # Breez SDK integration
+│   │   ├── lnd/          # LND integration
 │   │   ├── keychain/     # Secure key storage
 │   │   ├── backup/       # Backup management
 │   │   └── lsp/          # LSP management
@@ -115,33 +115,24 @@ starr/
 
 ## Configuration
 
-### Breez SDK API Key
+### Lightning Network Setup
 
-To use Starr, you'll need a Breez SDK API key:
+Starr currently supports connecting to an LND node. Configure your LND connection:
 
-1. Register at [https://breez.technology/sdk/](https://breez.technology/sdk/)
-2. Create a `.env` file in the root directory:
+1. Create a `.env` file in the root directory:
 
 ```bash
 # .env file
-EXPO_PUBLIC_BREEZ_API_KEY=your_api_key_here
+EXPO_PUBLIC_LND_REST_URL=https://your-lnd-node:8080
+EXPO_PUBLIC_LND_MACAROON=your_macaroon_hex
 EXPO_PUBLIC_NETWORK=bitcoin  # or 'testnet' for testing
 ```
 
-3. Restart your development server after adding the API key
+2. Restart your development server after adding the configuration
 
-### Testing Breez SDK
+### New Lightning Implementation
 
-Starr includes a comprehensive test screen to verify all Breez SDK functions:
-
-1. **Access the Test Screen**: 
-   - Open the app and navigate to **Settings**
-   - Scroll to the **Developer** section
-   - Tap **"Test Breez SDK"**
-
-2. **What Gets Tested**:
-   - ✅ API key configuration validation
-   - ✅ Native module availability (mock mode detection)
+We're working on implementing a new Lightning Network connection method. The Breez SDK has been removed and archived in the `archive/breez-sdk-implementation` branch.
    - ✅ SDK initialization
    - ✅ Balance retrieval
    - ✅ Node information
