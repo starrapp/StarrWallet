@@ -148,7 +148,7 @@ class LDKServiceImpl {
       throw new Error(
         'Native LDK mode not yet implemented. ' +
         'This requires creating native modules for iOS and Android. ' +
-        'For now, please use REST API mode by setting EXPO_PUBLIC_LDK_REST_URL.'
+        'For now, please use REST API mode by configuring LDK Node in the Channels tab.'
       );
     } else {
       throw new Error('LDK configuration incomplete');

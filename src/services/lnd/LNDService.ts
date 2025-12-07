@@ -126,23 +126,24 @@ class LNDServiceImpl {
       };
     } else {
       await this.loadConfig();
-      
-      if (!this.config) {
-        const configured = await isLNDConfigured();
-        if (!configured) {
-          throw new Error(
-            'LND not configured. Please configure LND Node in the Channels tab.'
-          );
-        }
-      }
-    }
-
-    // Ensure config is loaded
-    if (!this.config) {
-      await this.loadConfig();
     }
     
-    if (!this.config || !this.config.restUrl || !this.config.macaroon) {
+    // Validate config
+    if (!this.config) {
+      const configured = await isLNDConfigured();
+      if (!configured) {
+        throw new Error(
+          'LND not configured. Please configure LND Node in the Channels tab.'
+        );
+      }
+      // Config should exist if isLNDConfigured returned true, but try loading again
+      await this.loadConfig();
+      if (!this.config) {
+        throw new Error('LND configuration incomplete: failed to load configuration');
+      }
+    }
+    
+    if (!this.config.restUrl || !this.config.macaroon) {
       throw new Error('LND configuration incomplete: missing restUrl or macaroon');
     }
 
