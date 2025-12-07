@@ -172,26 +172,34 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         }
       }
 
-      // Initialize LDK service if configured (takes priority)
+      // Initialize Lightning service if configured (optional for testing)
+      let lightningInitialized = false;
+      
       if (isLDKConfigured()) {
         try {
           await LDKService.initialize(mnemonicPhrase);
           console.log('[WalletStore] LDK service initialized');
+          lightningInitialized = true;
         } catch (error) {
           console.error('[WalletStore] LDK initialization failed:', error);
-          throw new Error('Failed to initialize LDK service. Please check your configuration.');
+          // Don't throw - allow wallet to exist without Lightning for testing
+          console.warn('[WalletStore] Continuing without LDK - configure EXPO_PUBLIC_LDK_REST_URL to enable Lightning');
         }
       } else if (isLNDConfigured()) {
         // Fall back to LND if LDK not configured
         try {
           await LNDService.initialize();
           console.log('[WalletStore] LND service initialized');
+          lightningInitialized = true;
         } catch (error) {
           console.error('[WalletStore] LND initialization failed:', error);
-          throw new Error('Failed to initialize LND service. Please check your configuration.');
+          // Don't throw - allow wallet to exist without Lightning for testing
+          console.warn('[WalletStore] Continuing without LND - configure EXPO_PUBLIC_LND_ENABLED to enable Lightning');
         }
       } else {
-        throw new Error('No Lightning Network service configured. Please configure LDK or LND.');
+        // No Lightning configured - this is OK for testing
+        console.warn('[WalletStore] No Lightning Network service configured. Wallet created but Lightning features disabled.');
+        console.warn('[WalletStore] Configure LDK (EXPO_PUBLIC_LDK_REST_URL) or LND (EXPO_PUBLIC_LND_ENABLED) to enable Lightning.');
       }
 
       // Initialize backup service
@@ -200,20 +208,35 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       // Initialize LSP manager
       await LSPManager.initialize();
 
-      // Get initial data (use LDK if available, otherwise LND)
+      // Get initial data (use LDK if available, otherwise LND, or use defaults)
       const isLDK = LDKService.isInitialized();
       const isLND = LNDService.isInitialized();
       
-      if (!isLDK && !isLND) {
-        throw new Error('No Lightning service initialized');
+      let balance: Balance;
+      let nodeInfo: NodeInfo | null = null;
+      let currentLSP: LSPInfo | null = null;
+      
+      if (isLDK || isLND) {
+        const [balanceData, nodeInfoData, currentLSPData] = await Promise.all([
+          isLDK ? LDKService.getBalance() : LNDService.getBalance(),
+          isLDK ? LDKService.getInfo() : LNDService.getInfo(),
+          LSPManager.getCurrentLSP(),
+        ]);
+        balance = balanceData;
+        nodeInfo = nodeInfoData;
+        currentLSP = currentLSPData;
+      } else {
+        // No Lightning configured - use default/empty values
+        balance = {
+          lightning: 0,
+          onchain: 0,
+          pendingIncoming: 0,
+          pendingOutgoing: 0,
+          lastUpdated: new Date(),
+        };
       }
-
-      const [balance, nodeInfo, currentLSP, backupState] = await Promise.all([
-        isLDK ? LDKService.getBalance() : LNDService.getBalance(),
-        isLDK ? LDKService.getInfo() : LNDService.getInfo(),
-        LSPManager.getCurrentLSP(),
-        BackupService.getBackupState(),
-      ]);
+      
+      const backupState = await BackupService.getBackupState();
 
       // TODO: Subscribe to payment events from new Lightning implementation
       // Payment events will be handled by the Lightning service
@@ -267,7 +290,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       const isLND = LNDService.isInitialized();
       
       if (!isLDK && !isLND) {
-        throw new Error('No Lightning service initialized');
+        // No Lightning configured - keep current balance (likely zeros)
+        console.warn('[WalletStore] Cannot refresh balance - Lightning not configured');
+        set({ isLoadingBalance: false });
+        return;
       }
       
       const balance = isLDK ? await LDKService.getBalance() : await LNDService.getBalance();
@@ -286,7 +312,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       const isLND = LNDService.isInitialized();
       
       if (!isLDK && !isLND) {
-        throw new Error('No Lightning service initialized');
+        // No Lightning configured - set empty payments list
+        console.warn('[WalletStore] Cannot refresh payments - Lightning not configured');
+        set({ payments: [], isLoadingPayments: false });
+        return;
       }
       
       const payments = isLDK ? await LDKService.listPayments() : await LNDService.listPayments();
@@ -305,7 +334,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       const isLND = LNDService.isInitialized();
       
       if (!isLDK && !isLND) {
-        throw new Error('No Lightning service initialized');
+        set({ isCreatingInvoice: false });
+        throw new Error('Lightning Network not configured. Please configure LDK or LND to create invoices.');
       }
       
       const invoice = isLDK 
@@ -326,7 +356,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       const isLND = LNDService.isInitialized();
       
       if (!isLDK && !isLND) {
-        throw new Error('No Lightning service initialized');
+        throw new Error('Lightning Network not configured. Please configure LDK or LND to send payments.');
       }
 
       // Parse invoice for validation
@@ -385,7 +415,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       const isLND = LNDService.isInitialized();
       
       if (!isLDK && !isLND) {
-        throw new Error('No Lightning service initialized');
+        console.warn('[WalletStore] Cannot sync - Lightning not configured');
+        return;
       }
       
       if (isLDK) {
