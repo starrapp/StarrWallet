@@ -133,17 +133,32 @@ EXPO_PUBLIC_LDK_NETWORK=testnet  # bitcoin, testnet, signet, or regtest
 
 3. Restart your development server after adding the configuration
 
-#### Option 2: LND Node (Fallback)
+#### Option 2: LND Node (Recommended for Start9, Umbrel, etc.)
 
-If you prefer to use LND instead:
+For Start9, Umbrel, or other LND nodes, use the LND Connect URL:
 
 ```bash
-# .env file - LND mode
+# .env file - LND mode with LND Connect URL (Start9/Umbrel)
+EXPO_PUBLIC_LND_ENABLED=true
+EXPO_PUBLIC_LND_CONNECT_URL=lndconnect://your-host:port?macaroon=...&cert=...
+```
+
+Or use manual REST API configuration:
+
+```bash
+# .env file - LND mode with manual config
 EXPO_PUBLIC_LND_ENABLED=true
 EXPO_PUBLIC_LND_REST_URL=https://your-lnd-node:8080
 EXPO_PUBLIC_LND_MACAROON=your_macaroon_hex
+EXPO_PUBLIC_LND_CERT=your_cert_base64  # Optional for self-signed certs
 EXPO_PUBLIC_NETWORK=bitcoin  # or 'testnet' for testing
 ```
+
+**For Start9 specifically:**
+1. Open your Start9 Embassy dashboard
+2. Navigate to your LND service
+3. Copy the LND Connect URL from the "Connect" section
+4. Paste it as `EXPO_PUBLIC_LND_CONNECT_URL` in your `.env` file
 
 #### Option 3: Native LDK (Future)
 
