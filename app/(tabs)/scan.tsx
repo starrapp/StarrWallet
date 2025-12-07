@@ -6,8 +6,9 @@
  */
 
 import { View } from 'react-native';
-import { colors } from '@/theme';
+import { useColors } from '@/contexts';
 
 export default function ScanTabPlaceholder() {
+  const colors = useColors();
   return <View style={{ flex: 1, backgroundColor: colors.background.primary }} />;
 }

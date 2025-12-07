@@ -24,8 +24,8 @@ import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { TorService } from '@/services/tor';
 import { useWalletStore } from '@/stores/walletStore';
-import { useTheme } from '@/contexts';
-import { colors, spacing, layout } from '@/theme';
+import { useTheme, useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 // Currency options
 const BITCOIN_UNITS = [
@@ -63,6 +63,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings, performBackup, backupState } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
+  const colors = useColors();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);

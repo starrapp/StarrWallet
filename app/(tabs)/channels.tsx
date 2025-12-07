@@ -26,12 +26,14 @@ import { ConfigService, type PreferredService } from '@/services/config';
 import { LDKService } from '@/services/ldk';
 import { LNDService } from '@/services/lnd';
 import { useWalletStore } from '@/stores/walletStore';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 import { isLDKConfigured } from '@/config/ldk';
 import { isLNDConfigured } from '@/config/lnd';
 import type { LSPInfo } from '@/types/wallet';
 
 export default function ChannelsScreen() {
+  const colors = useColors();
   const { isInitialized, isInitializing } = useWalletStore();
   const [currentLSP, setCurrentLSP] = useState<LSPInfo | null>(null);
   const [availableLSPs, setAvailableLSPs] = useState<LSPInfo[]>([]);

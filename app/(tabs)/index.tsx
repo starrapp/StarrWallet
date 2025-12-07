@@ -20,10 +20,12 @@ import * as Haptics from 'expo-haptics';
 import { Text } from '@/components/ui';
 import { BalanceCard, TransactionList } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const colors = useColors();
   const {
     balance,
     payments,
