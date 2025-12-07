@@ -220,11 +220,17 @@ export default function SettingsScreen() {
 
     setIsTorStarting(true);
     try {
-      await TorService.startTor();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Tor Started', 'Tor daemon is now running and ready for .onion connections.');
+      const success = await TorService.startTor();
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Tor Started', 'Tor daemon is now running and ready for .onion connections.');
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Tor Start Failed', 'Tor failed to start. Check console logs for details.');
+      }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.error('[Settings] Tor start error:', error);
       Alert.alert(
         'Tor Start Failed',
         error instanceof Error ? error.message : 'Failed to start Tor. Please check your network connection.'
@@ -232,6 +238,35 @@ export default function SettingsScreen() {
     } finally {
       setIsTorStarting(false);
       checkTorStatus();
+    }
+  };
+
+  const handleTestTor = async () => {
+    if (!torStatus.isRunning) {
+      Alert.alert('Tor Not Running', 'Please start Tor first to test the connection.');
+      return;
+    }
+
+    try {
+      // Test Tor by making a request through Tor
+      // Using check.torproject.org API to verify Tor is working
+      const testUrl = 'https://check.torproject.org/api/ip';
+      
+      Alert.alert('Testing Tor', 'Making a test request through Tor...');
+      
+      const response = await TorService.makeRequest(testUrl);
+      const data = await response.json();
+      
+      Alert.alert(
+        'Tor Test Successful',
+        `Tor is working! Your IP through Tor: ${data.IP || 'Unknown'}\n\nThis confirms your requests are being routed through Tor.`
+      );
+    } catch (error) {
+      console.error('[Settings] Tor test error:', error);
+      Alert.alert(
+        'Tor Test Failed',
+        error instanceof Error ? error.message : 'Failed to make request through Tor. Check console for details.'
+      );
     }
   };
 
@@ -447,15 +482,26 @@ export default function SettingsScreen() {
                   )}
 
                   {torStatus.isRunning && (
-                    <TouchableOpacity
-                      style={[styles.torActionButton, styles.torActionButtonStop]}
-                      onPress={handleStopTor}
-                    >
-                      <Ionicons name="stop" size={20} color={colors.status.error} />
-                      <Text variant="titleSmall" color={colors.status.error}>
-                        Stop Tor
-                      </Text>
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        style={styles.torActionButton}
+                        onPress={handleTestTor}
+                      >
+                        <Ionicons name="checkmark-circle" size={20} color={colors.status.success} />
+                        <Text variant="titleSmall" color={colors.status.success}>
+                          Test Tor Connection
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.torActionButton, styles.torActionButtonStop]}
+                        onPress={handleStopTor}
+                      >
+                        <Ionicons name="stop" size={20} color={colors.status.error} />
+                        <Text variant="titleSmall" color={colors.status.error}>
+                          Stop Tor
+                        </Text>
+                      </TouchableOpacity>
+                    </>
                   )}
 
                   <Card variant="outlined" style={styles.torInfoCard}>
