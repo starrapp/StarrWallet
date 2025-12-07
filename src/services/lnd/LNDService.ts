@@ -125,21 +125,15 @@ class LNDServiceImpl {
         cert: config.cert,
       };
     } else {
-      // Try to load from LND Connect URL first
-      const lndConnectUrl = process.env.EXPO_PUBLIC_LND_CONNECT_URL;
-      if (lndConnectUrl) {
-        const parsed = parseLndConnectUrl(lndConnectUrl);
-        this.config = parsed;
-      } else if (isLNDConfigured()) {
-        this.config = {
-          restUrl: LND_CONFIG.restUrl,
-          macaroon: LND_CONFIG.macaroon,
-          cert: LND_CONFIG.cert,
-        };
-      } else {
-        throw new Error(
-          'LND not configured. Set EXPO_PUBLIC_LND_ENABLED=true and provide connection details.'
-        );
+      await this.loadConfig();
+      
+      if (!this.config) {
+        const configured = await isLNDConfigured();
+        if (!configured) {
+          throw new Error(
+            'LND not configured. Please configure LND Node in the Channels tab.'
+          );
+        }
       }
     }
 
