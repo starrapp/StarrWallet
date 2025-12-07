@@ -13,14 +13,22 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Text, Card } from '@/components/ui';
+import { Text, Card, Input, Button } from '@/components/ui';
 import { LSPManager } from '@/services/lsp';
+import { ConfigService, type PreferredService } from '@/services/config';
+import { LDKService } from '@/services/ldk';
+import { LNDService } from '@/services/lnd';
 import { useWalletStore } from '@/stores/walletStore';
 import { colors, spacing, layout } from '@/theme';
+import { isLDKConfigured } from '@/config/ldk';
+import { isLNDConfigured } from '@/config/lnd';
 import type { LSPInfo } from '@/types/wallet';
 
 export default function ChannelsScreen() {
@@ -31,17 +39,88 @@ export default function ChannelsScreen() {
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // Lightning service configuration state
+  const [ldkConfigured, setLdkConfigured] = useState(false);
+  const [lndConfigured, setLndConfigured] = useState(false);
+  const [preferredService, setPreferredService] = useState<PreferredService>('auto');
+  const [activeService, setActiveService] = useState<'ldk' | 'lnd' | 'none'>('none');
+  const [showLDKModal, setShowLDKModal] = useState(false);
+  const [showLNDModal, setShowLNDModal] = useState(false);
+  
+  // LDK form state
+  const [ldkRestUrl, setLdkRestUrl] = useState('');
+  const [ldkApiKey, setLdkApiKey] = useState('');
+  
+  // LND form state
+  const [lndEnabled, setLndEnabled] = useState(false);
+  const [lndRestUrl, setLndRestUrl] = useState('');
+  const [lndMacaroon, setLndMacaroon] = useState('');
+  const [lndCert, setLndCert] = useState('');
+  const [lndConnectUrl, setLndConnectUrl] = useState('');
+  const [lndConfigMode, setLndConfigMode] = useState<'connect' | 'manual'>('connect');
 
   useEffect(() => {
     // Only load data if wallet is initialized
     if (isInitialized && !isInitializing) {
       loadData();
+      loadServiceConfig();
     } else if (!isInitializing && !isInitialized) {
       // Wallet not initialized yet
       setIsLoading(false);
       setLoadError('Wallet not initialized');
     }
   }, [isInitialized, isInitializing]);
+  
+  const loadServiceConfig = async () => {
+    try {
+      const [ldkConfig, lndConfig, preferred] = await Promise.all([
+        isLDKConfigured(),
+        isLNDConfigured(),
+        ConfigService.getPreferredService(),
+      ]);
+      
+      setLdkConfigured(ldkConfig);
+      setLndConfigured(lndConfig);
+      setPreferredService(preferred);
+      
+      // Determine active service
+      if (preferred === 'ldk' && ldkConfig) {
+        setActiveService('ldk');
+      } else if (preferred === 'lnd' && lndConfig) {
+        setActiveService('lnd');
+      } else if (ldkConfig) {
+        setActiveService('ldk');
+      } else if (lndConfig) {
+        setActiveService('lnd');
+      } else {
+        setActiveService('none');
+      }
+      
+      // Load form values
+      const savedLDK = await ConfigService.getLDKConfig();
+      if (savedLDK) {
+        setLdkRestUrl(savedLDK.restUrl);
+        setLdkApiKey(savedLDK.apiKey || '');
+      }
+      
+      const savedLND = await ConfigService.getLNDConfig();
+      if (savedLND) {
+        setLndEnabled(savedLND.enabled);
+        if (savedLND.connectUrl) {
+          setLndConfigMode('connect');
+          setLndConnectUrl(savedLND.connectUrl);
+        } else {
+          setLndConfigMode('manual');
+          setLndRestUrl(savedLND.restUrl);
+          setLndMacaroon(savedLND.macaroon);
+          setLndCert(savedLND.cert || '');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load service config:', error);
+    }
+  };
 
   const loadData = async () => {
     if (!isInitialized) {
@@ -74,6 +153,147 @@ export default function ChannelsScreen() {
     setIsRefreshing(false);
   };
 
+  const handleSaveLDK = async () => {
+    if (!ldkRestUrl.trim()) {
+      Alert.alert('Invalid Configuration', 'Please enter a REST API URL.');
+      return;
+    }
+    
+    try {
+      await ConfigService.setLDKConfig({
+        restUrl: ldkRestUrl.trim(),
+        apiKey: ldkApiKey.trim() || undefined,
+      });
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Configuration Saved', 'LDK configuration has been saved. Please restart the app for changes to take effect.');
+      setShowLDKModal(false);
+      await loadServiceConfig();
+    } catch (error) {
+      console.error('Failed to save LDK config:', error);
+      Alert.alert('Error', 'Failed to save configuration. Please try again.');
+    }
+  };
+  
+  const handleClearLDK = async () => {
+    Alert.alert(
+      'Clear LDK Configuration',
+      'Are you sure you want to clear the LDK configuration?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ConfigService.setLDKConfig({ restUrl: '', apiKey: '' });
+              setLdkRestUrl('');
+              setLdkApiKey('');
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Configuration Cleared', 'LDK configuration has been cleared.');
+              setShowLDKModal(false);
+              await loadServiceConfig();
+            } catch (error) {
+              console.error('Failed to clear LDK config:', error);
+              Alert.alert('Error', 'Failed to clear configuration.');
+            }
+          },
+        },
+      ]
+    );
+  };
+  
+  const handleSaveLND = async () => {
+    if (!lndEnabled) {
+      try {
+        await ConfigService.setLNDConfig({ enabled: false });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Configuration Saved', 'LND has been disabled.');
+        setShowLNDModal(false);
+        await loadServiceConfig();
+      } catch (error) {
+        console.error('Failed to save LND config:', error);
+        Alert.alert('Error', 'Failed to save configuration.');
+      }
+      return;
+    }
+    
+    if (lndConfigMode === 'connect') {
+      if (!lndConnectUrl.trim()) {
+        Alert.alert('Invalid Configuration', 'Please enter an LND Connect URL.');
+        return;
+      }
+      
+      try {
+        await ConfigService.setLNDConfig({
+          enabled: true,
+          connectUrl: lndConnectUrl.trim(),
+        });
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Configuration Saved', 'LND configuration has been saved. Please restart the app for changes to take effect.');
+        setShowLNDModal(false);
+        await loadServiceConfig();
+      } catch (error) {
+        console.error('Failed to save LND config:', error);
+        Alert.alert('Error', 'Failed to save configuration. Please try again.');
+      }
+    } else {
+      if (!lndRestUrl.trim() || !lndMacaroon.trim()) {
+        Alert.alert('Invalid Configuration', 'Please enter both REST API URL and Macaroon.');
+        return;
+      }
+      
+      try {
+        await ConfigService.setLNDConfig({
+          enabled: true,
+          restUrl: lndRestUrl.trim(),
+          macaroon: lndMacaroon.trim(),
+          cert: lndCert.trim() || undefined,
+        });
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Configuration Saved', 'LND configuration has been saved. Please restart the app for changes to take effect.');
+        setShowLNDModal(false);
+        await loadServiceConfig();
+      } catch (error) {
+        console.error('Failed to save LND config:', error);
+        Alert.alert('Error', 'Failed to save configuration. Please try again.');
+      }
+    }
+  };
+  
+  const handleClearLND = async () => {
+    Alert.alert(
+      'Clear LND Configuration',
+      'Are you sure you want to clear the LND configuration?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ConfigService.setLNDConfig({ enabled: false });
+              setLndEnabled(false);
+              setLndRestUrl('');
+              setLndMacaroon('');
+              setLndCert('');
+              setLndConnectUrl('');
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Configuration Cleared', 'LND configuration has been cleared.');
+              setShowLNDModal(false);
+              await loadServiceConfig();
+            } catch (error) {
+              console.error('Failed to clear LND config:', error);
+              Alert.alert('Error', 'Failed to clear configuration.');
+            }
+          },
+        },
+      ]
+    );
+  };
+  
   const handleSelectLSP = async (lsp: LSPInfo) => {
     // If already the current LSP, do nothing
     if (currentLSP?.id === lsp.id) {
@@ -194,6 +414,72 @@ export default function ChannelsScreen() {
             />
           }
         >
+          {/* Lightning Service Configuration */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text variant="titleMedium" color={colors.text.primary}>
+                Lightning Service
+              </Text>
+              <View style={styles.serviceStatus}>
+                <View style={[
+                  styles.serviceStatusDot,
+                  activeService !== 'none' ? styles.serviceStatusDotActive : styles.serviceStatusDotInactive
+                ]} />
+                <Text variant="labelSmall" color={colors.text.muted}>
+                  {activeService === 'ldk' ? 'LDK Active' : activeService === 'lnd' ? 'LND Active' : 'Not Configured'}
+                </Text>
+              </View>
+            </View>
+            
+            <Card variant="default" style={styles.configCard}>
+              <TouchableOpacity
+                style={styles.configItem}
+                onPress={() => setShowLDKModal(true)}
+              >
+                <View style={styles.configItemLeft}>
+                  <Ionicons 
+                    name={ldkConfigured ? 'checkmark-circle' : 'ellipse-outline'} 
+                    size={24} 
+                    color={ldkConfigured ? colors.status.success : colors.text.muted} 
+                  />
+                  <View style={styles.configItemInfo}>
+                    <Text variant="titleSmall" color={colors.text.primary}>
+                      LDK Node
+                    </Text>
+                    <Text variant="bodySmall" color={colors.text.secondary}>
+                      {ldkConfigured ? 'Configured' : 'Not configured'}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+              
+              <View style={styles.configDivider} />
+              
+              <TouchableOpacity
+                style={styles.configItem}
+                onPress={() => setShowLNDModal(true)}
+              >
+                <View style={styles.configItemLeft}>
+                  <Ionicons 
+                    name={lndConfigured ? 'checkmark-circle' : 'ellipse-outline'} 
+                    size={24} 
+                    color={lndConfigured ? colors.status.success : colors.text.muted} 
+                  />
+                  <View style={styles.configItemInfo}>
+                    <Text variant="titleSmall" color={colors.text.primary}>
+                      LND Node
+                    </Text>
+                    <Text variant="bodySmall" color={colors.text.secondary}>
+                      {lndConfigured ? 'Configured' : 'Not configured'}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            </Card>
+          </View>
+
           {/* Current LSP */}
           <View style={styles.section}>
             <Text variant="titleMedium" color={colors.text.primary} style={styles.sectionTitle}>
@@ -347,6 +633,227 @@ export default function ChannelsScreen() {
           </Card>
         </ScrollView>
       </SafeAreaView>
+      
+      {/* LDK Configuration Modal */}
+      <Modal
+        visible={showLDKModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowLDKModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text variant="headlineSmall" color={colors.text.primary}>
+              Configure LDK Node
+            </Text>
+            <TouchableOpacity onPress={() => setShowLDKModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <Card variant="outlined" style={styles.modalCard}>
+              <Text variant="bodySmall" color={colors.text.secondary} style={styles.modalDescription}>
+                Connect to an LDK Node running as a REST API service. Enter the base URL of your LDK Node instance.
+              </Text>
+            </Card>
+            
+            <View style={styles.formGroup}>
+              <Text variant="labelMedium" color={colors.text.primary} style={styles.label}>
+                REST API URL *
+              </Text>
+              <Input
+                placeholder="http://localhost:3000"
+                value={ldkRestUrl}
+                onChangeText={setLdkRestUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text variant="labelMedium" color={colors.text.primary} style={styles.label}>
+                API Key (Optional)
+              </Text>
+              <Input
+                placeholder="Leave empty if no authentication required"
+                value={ldkApiKey}
+                onChangeText={setLdkApiKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+            </View>
+            
+            <Button
+              title="Save Configuration"
+              onPress={handleSaveLDK}
+              style={styles.saveButton}
+            />
+            
+            {ldkConfigured && (
+              <Button
+                title="Clear Configuration"
+                variant="outlined"
+                onPress={handleClearLDK}
+                style={styles.clearButton}
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+      
+      {/* LND Configuration Modal */}
+      <Modal
+        visible={showLNDModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowLNDModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text variant="headlineSmall" color={colors.text.primary}>
+              Configure LND Node
+            </Text>
+            <TouchableOpacity onPress={() => setShowLNDModal(false)}>
+              <Ionicons name="close" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <Card variant="outlined" style={styles.modalCard}>
+              <Text variant="bodySmall" color={colors.text.secondary} style={styles.modalDescription}>
+                Connect to your LND node. You can use an LND Connect URL (from Start9/Umbrel) or enter credentials manually.
+              </Text>
+            </Card>
+            
+            <View style={styles.formGroup}>
+              <View style={styles.switchRow}>
+                <Text variant="labelMedium" color={colors.text.primary}>
+                  Enable LND
+                </Text>
+                <Switch
+                  value={lndEnabled}
+                  onValueChange={setLndEnabled}
+                  trackColor={{ false: colors.border.subtle, true: colors.accent.cyan }}
+                  thumbColor={lndEnabled ? colors.accent.cyan : colors.text.muted}
+                />
+              </View>
+            </View>
+            
+            {lndEnabled && (
+              <>
+                <View style={styles.formGroup}>
+                  <View style={styles.configModeSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.configModeButton,
+                        lndConfigMode === 'connect' && styles.configModeButtonActive
+                      ]}
+                      onPress={() => setLndConfigMode('connect')}
+                    >
+                      <Text variant="labelMedium" color={lndConfigMode === 'connect' ? colors.text.primary : colors.text.secondary}>
+                        LND Connect URL
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.configModeButton,
+                        lndConfigMode === 'manual' && styles.configModeButtonActive
+                      ]}
+                      onPress={() => setLndConfigMode('manual')}
+                    >
+                      <Text variant="labelMedium" color={lndConfigMode === 'manual' ? colors.text.primary : colors.text.secondary}>
+                        Manual
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {lndConfigMode === 'connect' ? (
+                  <View style={styles.formGroup}>
+                    <Text variant="labelMedium" color={colors.text.primary} style={styles.label}>
+                      LND Connect URL *
+                    </Text>
+                    <Input
+                      placeholder="lndconnect://host:port?macaroon=...&cert=..."
+                      value={lndConnectUrl}
+                      onChangeText={setLndConnectUrl}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      multiline
+                      style={styles.textArea}
+                    />
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.formGroup}>
+                      <Text variant="labelMedium" color={colors.text.primary} style={styles.label}>
+                        REST API URL *
+                      </Text>
+                      <Input
+                        placeholder="https://your-lnd-node:8080"
+                        value={lndRestUrl}
+                        onChangeText={setLndRestUrl}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="url"
+                      />
+                    </View>
+                    
+                    <View style={styles.formGroup}>
+                      <Text variant="labelMedium" color={colors.text.primary} style={styles.label}>
+                        Macaroon (Hex) *
+                      </Text>
+                      <Input
+                        placeholder="Hex-encoded macaroon"
+                        value={lndMacaroon}
+                        onChangeText={setLndMacaroon}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        secureTextEntry
+                        multiline
+                        style={styles.textArea}
+                      />
+                    </View>
+                    
+                    <View style={styles.formGroup}>
+                      <Text variant="labelMedium" color={colors.text.primary} style={styles.label}>
+                        Certificate (Base64, Optional)
+                      </Text>
+                      <Input
+                        placeholder="Base64-encoded certificate for self-signed certs"
+                        value={lndCert}
+                        onChangeText={setLndCert}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        multiline
+                        style={styles.textArea}
+                      />
+                    </View>
+                  </>
+                )}
+                
+                <Button
+                  title="Save Configuration"
+                  onPress={handleSaveLND}
+                  style={styles.saveButton}
+                />
+              </>
+            )}
+            
+            {lndConfigured && (
+              <Button
+                title="Clear Configuration"
+                variant="outlined"
+                onPress={handleClearLND}
+                style={styles.clearButton}
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }
@@ -514,6 +1021,108 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: spacing.xs,
     maxWidth: 300,
+  },
+  configCard: {
+    padding: spacing.md,
+  },
+  configItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  configItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  configItemInfo: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  configDivider: {
+    height: 1,
+    backgroundColor: colors.border.subtle,
+    marginVertical: spacing.sm,
+  },
+  serviceStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  serviceStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  serviceStatusDotActive: {
+    backgroundColor: colors.status.success,
+  },
+  serviceStatusDotInactive: {
+    backgroundColor: colors.text.muted,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  modalContent: {
+    flex: 1,
+    padding: spacing.lg,
+  },
+  modalCard: {
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  modalDescription: {
+    marginTop: spacing.xs,
+  },
+  formGroup: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    marginBottom: spacing.xs,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    marginTop: spacing.md,
+  },
+  clearButton: {
+    marginTop: spacing.sm,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  configModeSelector: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.secondary,
+    borderRadius: layout.radius.md,
+    padding: spacing.xxs,
+    gap: spacing.xxs,
+  },
+  configModeButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: layout.radius.sm,
+    alignItems: 'center',
+  },
+  configModeButtonActive: {
+    backgroundColor: colors.background.primary,
   },
 });
 

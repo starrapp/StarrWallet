@@ -12,7 +12,8 @@
  */
 
 import { Buffer } from 'buffer';
-import { LND_CONFIG, isLNDConfigured } from '@/config/lnd';
+import { getLNDConfig, getLNDConnectURL, isLNDConfigured } from '@/config/lnd';
+import { ConfigService } from '@/services/config';
 import { parseLndConnectUrl } from '@/utils/lndConnect';
 import { isOnionAddress, prepareTorRequest } from '@/utils/tor';
 import { TorService } from '@/services/tor';
@@ -142,7 +143,12 @@ class LNDServiceImpl {
       }
     }
 
-    if (!this.config.restUrl || !this.config.macaroon) {
+    // Ensure config is loaded
+    if (!this.config) {
+      await this.loadConfig();
+    }
+    
+    if (!this.config || !this.config.restUrl || !this.config.macaroon) {
       throw new Error('LND configuration incomplete: missing restUrl or macaroon');
     }
 
@@ -170,6 +176,15 @@ class LNDServiceImpl {
       throw new Error('LND service not initialized');
     }
 
+    // Ensure config is loaded
+    if (!this.config) {
+      await this.loadConfig();
+    }
+    
+    if (!this.config) {
+      throw new Error('LND not configured');
+    }
+    
     const url = `${this.config.restUrl}${endpoint}`;
     
     // Check if this is a .onion address and handle Tor routing

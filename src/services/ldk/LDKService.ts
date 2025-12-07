@@ -17,7 +17,8 @@
  */
 
 import { Buffer } from 'buffer';
-import { LDK_CONFIG, isLDKConfigured, isLDKRestMode, isLDKNativeMode } from '@/config/ldk';
+import { getLDKConfig, isLDKConfigured, isLDKRestMode } from '@/config/ldk';
+import { ConfigService } from '@/services/config';
 import type { Balance, Invoice, LightningPayment, LSPInfo, NodeInfo } from '@/types/wallet';
 
 // LDK Node REST API response types
@@ -84,9 +85,28 @@ interface LDKChannelResponse {
 }
 
 class LDKServiceImpl {
-  private config = LDK_CONFIG;
+  private config: { restUrl?: string; apiKey?: string } | null = null;
   private _isInitialized = false;
   private nodeId: string | null = null;
+
+  /**
+   * Load configuration from ConfigService (runtime) or env vars (fallback)
+   */
+  private async loadConfig(): Promise<void> {
+    // Try runtime config first (user-configured in app)
+    const runtimeConfig = await ConfigService.getLDKConfig();
+    if (runtimeConfig) {
+      this.config = runtimeConfig;
+      return;
+    }
+    
+    // Fall back to env vars
+    const envConfig = await getLDKConfig();
+    this.config = {
+      restUrl: envConfig.restUrl,
+      apiKey: envConfig.apiKey,
+    };
+  }
 
   /**
    * Initialize LDK service
@@ -98,13 +118,18 @@ class LDKServiceImpl {
       return;
     }
 
-    if (!isLDKConfigured()) {
+    // Load config from runtime storage or env
+    await this.loadConfig();
+
+    const configured = await isLDKConfigured();
+    if (!configured) {
       throw new Error(
-        'LDK not configured. Set EXPO_PUBLIC_LDK_REST_URL or EXPO_PUBLIC_LDK_DATA_DIR in .env file.'
+        'LDK not configured. Please configure LDK Node in the Channels tab.'
       );
     }
 
-    if (isLDKRestMode()) {
+    const restMode = await isLDKRestMode();
+    if (restMode) {
       // REST API mode - verify connection
       try {
         const info = await this.getInfo();
@@ -137,7 +162,12 @@ class LDKServiceImpl {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    if (!isLDKRestMode() || !this.config.restUrl) {
+    // Ensure config is loaded
+    if (!this.config) {
+      await this.loadConfig();
+    }
+    
+    if (!this.config || !this.config.restUrl) {
       throw new Error('LDK REST API not configured');
     }
 

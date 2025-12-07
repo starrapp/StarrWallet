@@ -154,15 +154,20 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           console.log('[WalletStore] Tor service initialized');
           
           // Auto-start Tor if enabled and LND uses .onion address
-          if (settings.torAutoStart && isLNDConfigured()) {
-            const lndRestUrl = process.env.EXPO_PUBLIC_LND_REST_URL || '';
-            if (isOnionAddress(lndRestUrl)) {
-              try {
-                await TorService.startTor();
-                console.log('[WalletStore] Tor auto-started for .onion LND connection');
-              } catch (error) {
-                console.warn('[WalletStore] Tor auto-start failed:', error);
-                // Continue without Tor - user can start manually
+          if (settings.torAutoStart) {
+            const lndConfigured = await isLNDConfigured();
+            if (lndConfigured) {
+              const { getLNDConfig } = await import('@/config/lnd');
+              const lndConfig = await getLNDConfig();
+              const lndRestUrl = lndConfig?.restUrl || '';
+              if (lndRestUrl && isOnionAddress(lndRestUrl)) {
+                try {
+                  await TorService.startTor();
+                  console.log('[WalletStore] Tor auto-started for .onion LND connection');
+                } catch (error) {
+                  console.warn('[WalletStore] Tor auto-start failed:', error);
+                  // Continue without Tor - user can start manually
+                }
               }
             }
           }
@@ -175,7 +180,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       // Initialize Lightning service if configured (optional for testing)
       let lightningInitialized = false;
       
-      if (isLDKConfigured()) {
+      const ldkConfigured = await isLDKConfigured();
+      const lndConfigured = await isLNDConfigured();
+      
+      if (ldkConfigured) {
         try {
           await LDKService.initialize(mnemonicPhrase);
           console.log('[WalletStore] LDK service initialized');
@@ -183,9 +191,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         } catch (error) {
           console.error('[WalletStore] LDK initialization failed:', error);
           // Don't throw - allow wallet to exist without Lightning for testing
-          console.warn('[WalletStore] Continuing without LDK - configure EXPO_PUBLIC_LDK_REST_URL to enable Lightning');
+          console.warn('[WalletStore] Continuing without LDK - configure LDK Node in Channels tab to enable Lightning');
         }
-      } else if (isLNDConfigured()) {
+      } else if (lndConfigured) {
         // Fall back to LND if LDK not configured
         try {
           await LNDService.initialize();
@@ -194,12 +202,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         } catch (error) {
           console.error('[WalletStore] LND initialization failed:', error);
           // Don't throw - allow wallet to exist without Lightning for testing
-          console.warn('[WalletStore] Continuing without LND - configure EXPO_PUBLIC_LND_ENABLED to enable Lightning');
+          console.warn('[WalletStore] Continuing without LND - configure LND Node in Channels tab to enable Lightning');
         }
       } else {
         // No Lightning configured - this is OK for testing
         console.warn('[WalletStore] No Lightning Network service configured. Wallet created but Lightning features disabled.');
-        console.warn('[WalletStore] Configure LDK (EXPO_PUBLIC_LDK_REST_URL) or LND (EXPO_PUBLIC_LND_ENABLED) to enable Lightning.');
+        console.warn('[WalletStore] Configure LDK or LND in the Channels tab to enable Lightning.');
       }
 
       // Initialize backup service
