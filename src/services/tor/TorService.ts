@@ -10,10 +10,20 @@ let RnTor: any = null;
 let isTorModuleAvailable = false;
 
 try {
-  RnTor = require('react-native-nitro-tor');
-  isTorModuleAvailable = true;
+  const torModule = require('react-native-nitro-tor');
+  // The module might export differently - try common patterns
+  RnTor = torModule.default || torModule.RnTor || torModule;
+  
+  // Verify the module has the expected methods
+  if (RnTor && typeof RnTor.startTorIfNotRunning === 'function') {
+    isTorModuleAvailable = true;
+  } else {
+    console.warn('[TorService] Tor module loaded but startTorIfNotRunning method not found');
+    console.warn('[TorService] Available methods:', Object.keys(RnTor || {}));
+    isTorModuleAvailable = false;
+  }
 } catch (error) {
-  console.warn('[TorService] Native Tor module not available');
+  console.warn('[TorService] Native Tor module not available:', error);
   console.warn('[TorService] Tor support requires a development build');
 }
 
@@ -93,6 +103,16 @@ class TorServiceImpl {
     try {
       console.log('[TorService] Starting Tor daemon...');
       
+      if (!isTorModuleAvailable || !RnTor) {
+        throw new Error('Tor module not available. Rebuild app with development build.');
+      }
+
+      if (typeof RnTor.startTorIfNotRunning !== 'function') {
+        console.error('[TorService] startTorIfNotRunning method not available');
+        console.error('[TorService] Available methods:', Object.keys(RnTor));
+        throw new Error('Tor module methods not available. The native module may not be properly linked.');
+      }
+      
       if (!this.dataDir) {
         await this.initialize();
       }
@@ -116,7 +136,9 @@ class TorServiceImpl {
     } catch (error) {
       console.error('[TorService] Tor startup error:', error);
       this.isRunning = false;
-      throw error;
+      // Don't throw - allow app to continue without Tor
+      console.warn('[TorService] Continuing without Tor - features requiring Tor will be unavailable');
+      return false;
     }
   }
 
