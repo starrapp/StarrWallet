@@ -105,13 +105,13 @@ interface LNDSendPaymentResponse {
 
 class LNDServiceImpl {
   private config: LNDConfig | null = null;
-  private isInitialized = false;
+  private _isInitialized = false;
 
   /**
    * Initialize LND service with configuration
    */
   async initialize(config?: Partial<LNDConfig>): Promise<void> {
-    if (this.isInitialized) {
+    if (this._isInitialized) {
       console.log('[LNDService] Already initialized');
       return;
     }
@@ -149,7 +149,7 @@ class LNDServiceImpl {
     // Test connection
     try {
       await this.getInfo();
-      this.isInitialized = true;
+      this._isInitialized = true;
       console.log('[LNDService] Initialized successfully');
     } catch (error) {
       console.error('[LNDService] Initialization failed:', error);
@@ -427,14 +427,14 @@ class LNDServiceImpl {
    * Check if service is initialized
    */
   isInitialized(): boolean {
-    return this.isInitialized;
+    return this._isInitialized;
   }
 
   /**
    * Shutdown the service
    */
   async shutdown(): Promise<void> {
-    this.isInitialized = false;
+    this._isInitialized = false;
     this.config = null;
     console.log('[LNDService] Shutdown complete');
   }
