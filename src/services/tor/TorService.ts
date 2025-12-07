@@ -59,7 +59,12 @@ class TorServiceImpl {
 
     // Set up Tor data directory
     if (!this.dataDir) {
-      const torDataDir = `${FileSystem.documentDirectory}tor/`;
+      const baseDir = FileSystem.documentDirectory;
+      if (!baseDir) {
+        throw new Error('FileSystem.documentDirectory is not available');
+      }
+      
+      const torDataDir = `${baseDir}tor/`;
       
       // Ensure directory exists
       const dirInfo = await FileSystem.getInfoAsync(torDataDir);
@@ -67,7 +72,8 @@ class TorServiceImpl {
         await FileSystem.makeDirectoryAsync(torDataDir, { intermediates: true });
       }
       
-      this.dataDir = torDataDir;
+      // Ensure path is properly formatted (remove file:// protocol if present)
+      this.dataDir = torDataDir.replace(/^file:\/\//, '');
     }
 
     this.socksPort = TOR_CONFIG.socksPort;
@@ -117,8 +123,14 @@ class TorServiceImpl {
         await this.initialize();
       }
 
+      // Validate dataDir is set and is a string
+      if (!this.dataDir || typeof this.dataDir !== 'string') {
+        throw new Error(`Invalid Tor data directory: ${this.dataDir}. Expected a string path.`);
+      }
+
+      console.log('[TorService] Starting Tor with data_dir:', this.dataDir);
       const result = await RnTor.startTorIfNotRunning({
-        data_dir: this.dataDir!,
+        data_dir: this.dataDir,
         socks_port: this.socksPort,
         timeout_ms: 60000, // 60 second timeout
       });
