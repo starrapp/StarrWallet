@@ -85,7 +85,7 @@ interface LDKChannelResponse {
 
 class LDKServiceImpl {
   private config = LDK_CONFIG;
-  private isInitialized = false;
+  private _isInitialized = false;
   private nodeId: string | null = null;
 
   /**
@@ -93,7 +93,7 @@ class LDKServiceImpl {
    * For now, only REST API mode is supported
    */
   async initialize(mnemonic?: string): Promise<void> {
-    if (this.isInitialized) {
+    if (this._isInitialized) {
       console.log('[LDKService] Already initialized');
       return;
     }
@@ -109,7 +109,7 @@ class LDKServiceImpl {
       try {
         const info = await this.getInfo();
         this.nodeId = info.pubkey;
-        this.isInitialized = true;
+        this._isInitialized = true;
         console.log('[LDKService] Initialized successfully (REST API mode)');
       } catch (error) {
         console.error('[LDKService] Initialization failed:', error);
@@ -371,14 +371,14 @@ class LDKServiceImpl {
    * Check if service is initialized
    */
   isInitialized(): boolean {
-    return this.isInitialized;
+    return this._isInitialized;
   }
 
   /**
    * Shutdown the service
    */
   async shutdown(): Promise<void> {
-    this.isInitialized = false;
+    this._isInitialized = false;
     this.nodeId = null;
     console.log('[LDKService] Shutdown complete');
   }
