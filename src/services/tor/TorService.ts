@@ -64,7 +64,13 @@ class TorServiceImpl {
         throw new Error('FileSystem.documentDirectory is not available');
       }
       
-      const torDataDir = `${baseDir}tor/`;
+      // Remove file:// protocol if present
+      let cleanBaseDir = baseDir.replace(/^file:\/\//, '');
+      
+      // Ensure base directory doesn't end with slash (we'll add it)
+      cleanBaseDir = cleanBaseDir.replace(/\/$/, '');
+      
+      const torDataDir = `${cleanBaseDir}/tor`;
       
       // Ensure directory exists
       const dirInfo = await FileSystem.getInfoAsync(torDataDir);
@@ -72,8 +78,11 @@ class TorServiceImpl {
         await FileSystem.makeDirectoryAsync(torDataDir, { intermediates: true });
       }
       
-      // Ensure path is properly formatted (remove file:// protocol if present)
-      this.dataDir = torDataDir.replace(/^file:\/\//, '');
+      // The native module expects a plain filesystem path (no file:// protocol)
+      this.dataDir = torDataDir;
+      
+      console.log('[TorService] Tor data directory initialized:', this.dataDir);
+      console.log('[TorService] Base directory was:', baseDir);
     }
 
     this.socksPort = TOR_CONFIG.socksPort;
@@ -124,16 +133,21 @@ class TorServiceImpl {
       }
 
       // Validate dataDir is set and is a string
-      if (!this.dataDir || typeof this.dataDir !== 'string') {
-        throw new Error(`Invalid Tor data directory: ${this.dataDir}. Expected a string path.`);
+      if (!this.dataDir || typeof this.dataDir !== 'string' || this.dataDir.length === 0) {
+        const errorMsg = `Invalid Tor data directory: ${this.dataDir}. Expected a non-empty string path.`;
+        console.error('[TorService]', errorMsg);
+        throw new Error(errorMsg);
       }
 
-      console.log('[TorService] Starting Tor with data_dir:', this.dataDir);
-      const result = await RnTor.startTorIfNotRunning({
+      // Log the exact parameters being sent
+      const torParams = {
         data_dir: this.dataDir,
         socks_port: this.socksPort,
-        timeout_ms: 60000, // 60 second timeout
-      });
+        timeout_ms: 60000,
+      };
+      console.log('[TorService] Starting Tor with parameters:', JSON.stringify(torParams, null, 2));
+      
+      const result = await RnTor.startTorIfNotRunning(torParams);
 
       if (result.is_success) {
         this.isRunning = true;
