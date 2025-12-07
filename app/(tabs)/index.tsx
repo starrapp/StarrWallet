@@ -142,6 +142,12 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
 export default function HomeScreen() {
   const router = useRouter();
   const colors = useColors();
+  
+  // Guard: Ensure colors is available before rendering
+  if (!colors || !colors.background || !colors.text) {
+    return null; // Wait for theme to load
+  }
+  
   const {
     balance,
     payments,
@@ -374,6 +380,11 @@ import type { LightningPayment } from '@/types/wallet';
 import type { ColorTheme } from '@/theme/colors';
 
 const TransactionItem: React.FC<{ transaction: LightningPayment; colors: ColorTheme }> = ({ transaction, colors }) => {
+  // Guard: Ensure colors is valid
+  if (!colors || !colors.background || !colors.text) {
+    return null;
+  }
+  
   const isReceive = transaction.type === 'receive';
   const styles = getStyles(colors);
 
