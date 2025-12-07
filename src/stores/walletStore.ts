@@ -83,8 +83,8 @@ const defaultSettings: WalletSettings = {
   biometricEnabled: false,
   pinEnabled: false,
   autoLockMinutes: 5,
-  torEnabled: true,
-  torAutoStart: true,
+  torEnabled: false,
+  torAutoStart: false,
   autoBackupEnabled: true,
 };
 
