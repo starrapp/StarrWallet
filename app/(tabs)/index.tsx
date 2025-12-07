@@ -64,6 +64,8 @@ export default function HomeScreen() {
 
   const recentTransactions = payments.slice(0, 5);
 
+  const styles = getStyles(colors);
+  
   // Show error state if initialization failed
   if (initError) {
     return (
@@ -135,6 +137,8 @@ export default function HomeScreen() {
     );
   }
 
+  const styles = getStyles(colors);
+  
   return (
     <View style={styles.container}>
       {/* Background gradient */}
@@ -229,7 +233,7 @@ export default function HomeScreen() {
             {recentTransactions.length > 0 ? (
               <View style={styles.transactionsList}>
                 {recentTransactions.map((tx) => (
-                  <TransactionItem key={tx.id} transaction={tx} />
+                  <TransactionItem key={tx.id} transaction={tx} colors={colors} />
                 ))}
               </View>
             ) : (
@@ -253,14 +257,15 @@ export default function HomeScreen() {
 // Compact transaction item for home screen
 import { formatDistanceToNow } from 'date-fns';
 import type { LightningPayment } from '@/types/wallet';
+import type { ColorTheme } from '@/theme/colors';
 
-const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transaction }) => {
+const TransactionItem: React.FC<{ transaction: LightningPayment; colors: ColorTheme }> = ({ transaction, colors }) => {
   const isReceive = transaction.type === 'receive';
 
   return (
-    <View style={styles.txItem}>
+    <View style={[getStyles(colors).txItem]}>
       <View style={[
-        styles.txIcon,
+        getStyles(colors).txIcon,
         { backgroundColor: isReceive ? colors.status.success + '20' : colors.accent.cyan + '20' },
       ]}>
         <Ionicons
@@ -269,7 +274,7 @@ const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transact
           color={isReceive ? colors.status.success : colors.accent.cyan}
         />
       </View>
-      <View style={styles.txDetails}>
+      <View style={getStyles(colors).txDetails}>
         <Text variant="titleSmall" numberOfLines={1}>
           {transaction.description || (isReceive ? 'Received' : 'Sent')}
         </Text>
@@ -287,7 +292,7 @@ const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transact
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ColorTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -341,7 +346,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.accent.cyan + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -391,10 +395,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.gold.glow,
     borderRadius: layout.radius.md,
     borderWidth: 1,
-    borderColor: colors.gold.pure,
   },
   loadingContainer: {
     flex: 1,
