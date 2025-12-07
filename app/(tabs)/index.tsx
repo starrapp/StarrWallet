@@ -137,8 +137,6 @@ export default function HomeScreen() {
     );
   }
 
-  const styles = getStyles(colors);
-  
   return (
     <View style={styles.container}>
       {/* Background gradient */}
