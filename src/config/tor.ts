@@ -19,7 +19,7 @@ export interface TorConfig {
 
 export const TOR_CONFIG: TorConfig = {
   enabled: process.env.EXPO_PUBLIC_TOR_ENABLED === 'true',
-  autoStart: process.env.EXPO_PUBLIC_TOR_AUTO_START !== 'false', // Default to true
+  autoStart: process.env.EXPO_PUBLIC_TOR_AUTO_START === 'true', // Default to false
   socksPort: parseInt(process.env.EXPO_PUBLIC_TOR_SOCKS_PORT || '9050', 10),
   dataDir: process.env.EXPO_PUBLIC_TOR_DATA_DIR,
 };

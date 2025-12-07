@@ -10,10 +10,20 @@ let RnTor: any = null;
 let isTorModuleAvailable = false;
 
 try {
-  RnTor = require('react-native-nitro-tor');
-  isTorModuleAvailable = true;
+  const torModule = require('react-native-nitro-tor');
+  // The module might export differently - try common patterns
+  RnTor = torModule.default || torModule.RnTor || torModule;
+  
+  // Verify the module has the expected methods
+  if (RnTor && typeof RnTor.startTorIfNotRunning === 'function') {
+    isTorModuleAvailable = true;
+  } else {
+    console.warn('[TorService] Tor module loaded but startTorIfNotRunning method not found');
+    console.warn('[TorService] Available methods:', Object.keys(RnTor || {}));
+    isTorModuleAvailable = false;
+  }
 } catch (error) {
-  console.warn('[TorService] Native Tor module not available');
+  console.warn('[TorService] Native Tor module not available:', error);
   console.warn('[TorService] Tor support requires a development build');
 }
 
@@ -49,7 +59,18 @@ class TorServiceImpl {
 
     // Set up Tor data directory
     if (!this.dataDir) {
-      const torDataDir = `${FileSystem.documentDirectory}tor/`;
+      const baseDir = FileSystem.documentDirectory;
+      if (!baseDir) {
+        throw new Error('FileSystem.documentDirectory is not available');
+      }
+      
+      // Remove file:// protocol if present
+      let cleanBaseDir = baseDir.replace(/^file:\/\//, '');
+      
+      // Ensure base directory doesn't end with slash (we'll add it)
+      cleanBaseDir = cleanBaseDir.replace(/\/$/, '');
+      
+      const torDataDir = `${cleanBaseDir}/tor`;
       
       // Ensure directory exists
       const dirInfo = await FileSystem.getInfoAsync(torDataDir);
@@ -57,7 +78,11 @@ class TorServiceImpl {
         await FileSystem.makeDirectoryAsync(torDataDir, { intermediates: true });
       }
       
+      // The native module expects a plain filesystem path (no file:// protocol)
       this.dataDir = torDataDir;
+      
+      console.log('[TorService] Tor data directory initialized:', this.dataDir);
+      console.log('[TorService] Base directory was:', baseDir);
     }
 
     this.socksPort = TOR_CONFIG.socksPort;
@@ -93,15 +118,36 @@ class TorServiceImpl {
     try {
       console.log('[TorService] Starting Tor daemon...');
       
+      if (!isTorModuleAvailable || !RnTor) {
+        throw new Error('Tor module not available. Rebuild app with development build.');
+      }
+
+      if (typeof RnTor.startTorIfNotRunning !== 'function') {
+        console.error('[TorService] startTorIfNotRunning method not available');
+        console.error('[TorService] Available methods:', Object.keys(RnTor));
+        throw new Error('Tor module methods not available. The native module may not be properly linked.');
+      }
+      
       if (!this.dataDir) {
         await this.initialize();
       }
 
-      const result = await RnTor.startTorIfNotRunning({
-        data_dir: this.dataDir!,
+      // Validate dataDir is set and is a string
+      if (!this.dataDir || typeof this.dataDir !== 'string' || this.dataDir.length === 0) {
+        const errorMsg = `Invalid Tor data directory: ${this.dataDir}. Expected a non-empty string path.`;
+        console.error('[TorService]', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // Log the exact parameters being sent
+      const torParams = {
+        data_dir: this.dataDir,
         socks_port: this.socksPort,
-        timeout_ms: 60000, // 60 second timeout
-      });
+        timeout_ms: 60000,
+      };
+      console.log('[TorService] Starting Tor with parameters:', JSON.stringify(torParams, null, 2));
+      
+      const result = await RnTor.startTorIfNotRunning(torParams);
 
       if (result.is_success) {
         this.isRunning = true;
@@ -116,7 +162,9 @@ class TorServiceImpl {
     } catch (error) {
       console.error('[TorService] Tor startup error:', error);
       this.isRunning = false;
-      throw error;
+      // Don't throw - allow app to continue without Tor
+      console.warn('[TorService] Continuing without Tor - features requiring Tor will be unavailable');
+      return false;
     }
   }
 

@@ -15,6 +15,7 @@ interface ThemeContextType {
   mode: ThemeMode;
   isDark: boolean;
   colors: ColorTheme;
+  isLoaded: boolean;
   setMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
 }
@@ -72,6 +73,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     mode,
     isDark,
     colors,
+    isLoaded,
     setMode,
     toggleTheme,
   };
@@ -98,8 +100,18 @@ export function useTheme(): ThemeContextType {
 
 // Hook for components that just need colors (with fallback for non-context usage)
 export function useColors(): ColorTheme {
-  const context = useContext(ThemeContext);
-  // Return dark colors as default if not in a ThemeProvider
-  return context?.colors ?? darkColors;
+  try {
+    const context = useContext(ThemeContext);
+    // Return colors from context if available and loaded, otherwise fallback to darkColors
+    if (context && context.isLoaded && context.colors) {
+      return context.colors;
+    }
+    // Always return darkColors as fallback - it's a safe default
+    return darkColors;
+  } catch (error) {
+    // If context is not available (e.g., outside ThemeProvider), return darkColors
+    console.warn('[useColors] ThemeContext not available, using darkColors fallback:', error);
+    return darkColors;
+  }
 }
 

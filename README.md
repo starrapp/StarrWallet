@@ -15,27 +15,26 @@ A beautiful, non-custodial Bitcoin Lightning wallet for iOS and Android.
 
 ## Architecture
 
-Starr is built with a phased approach to Lightning integration:
+Starr is built with Lightning Network integration using:
 
-### Phase 1: MVP (Current)
-- **Breez SDK** for rapid Lightning development
-- Automatic channel management via LSP
-- Built-in on-chain/Lightning swaps
+### Current Implementation
+- **LDK (Lightning Development Kit)** via LDK Node - Primary implementation
+- **LND (Lightning Network Daemon)** - Fallback option for remote nodes
+- REST API mode: Connect to LDK Node running as a service
+- Native mode: Embedded LDK Node (planned, requires native modules)
 
-### Phase 2: Power Users (Planned)
-- Remote node support (LND/CLN)
-- Advanced channel management
-- Custom LSP configuration
-
-### Phase 3: Full Control (Future)
-- Raw LDK integration option
-- Complete node control
-- Advanced routing
+### Features
+- Non-custodial Lightning wallet
+- Channel management via LSP
+- Invoice creation and payment
+- Payment history tracking
+- Secure key management
 
 ## Tech Stack
 
 - **React Native** with Expo
-- **Breez SDK** for Lightning
+- **LDK (Lightning Development Kit)** via LDK Node for Lightning Network
+- **LND** as fallback option
 - **Zustand** for state management
 - **Expo Router** for navigation
 - **TypeScript** for type safety
@@ -102,7 +101,7 @@ starr/
 │   │   ├── ui/           # Base UI components
 │   │   └── wallet/       # Wallet-specific components
 │   ├── services/          # Core services
-│   │   ├── breez/        # Breez SDK integration
+│   │   ├── lnd/          # LND integration
 │   │   ├── keychain/     # Secure key storage
 │   │   ├── backup/       # Backup management
 │   │   └── lsp/          # LSP management
@@ -115,33 +114,59 @@ starr/
 
 ## Configuration
 
-### Breez SDK API Key
+### Lightning Network Setup
 
-To use Starr, you'll need a Breez SDK API key:
+Starr uses **LDK (Lightning Development Kit)** via LDK Node as the primary Lightning implementation.
 
-1. Register at [https://breez.technology/sdk/](https://breez.technology/sdk/)
+#### Option 1: LDK Node REST API (Recommended for Development)
+
+1. Set up and run LDK Node as a separate service (see [LDK Node documentation](https://github.com/lightningdevkit/ldk-node))
+
 2. Create a `.env` file in the root directory:
 
 ```bash
-# .env file
-EXPO_PUBLIC_BREEZ_API_KEY=your_api_key_here
+# .env file - LDK Node REST API mode
+EXPO_PUBLIC_LDK_REST_URL=http://localhost:3000  # Your LDK Node REST API URL
+EXPO_PUBLIC_LDK_API_KEY=your_api_key_here  # Optional, if LDK Node requires auth
+EXPO_PUBLIC_LDK_NETWORK=testnet  # bitcoin, testnet, signet, or regtest
+```
+
+3. Restart your development server after adding the configuration
+
+#### Option 2: LND Node (Recommended for Start9, Umbrel, etc.)
+
+For Start9, Umbrel, or other LND nodes, use the LND Connect URL:
+
+```bash
+# .env file - LND mode with LND Connect URL (Start9/Umbrel)
+EXPO_PUBLIC_LND_ENABLED=true
+EXPO_PUBLIC_LND_CONNECT_URL=lndconnect://your-host:port?macaroon=...&cert=...
+```
+
+Or use manual REST API configuration:
+
+```bash
+# .env file - LND mode with manual config
+EXPO_PUBLIC_LND_ENABLED=true
+EXPO_PUBLIC_LND_REST_URL=https://your-lnd-node:8080
+EXPO_PUBLIC_LND_MACAROON=your_macaroon_hex
+EXPO_PUBLIC_LND_CERT=your_cert_base64  # Optional for self-signed certs
 EXPO_PUBLIC_NETWORK=bitcoin  # or 'testnet' for testing
 ```
 
-3. Restart your development server after adding the API key
+**For Start9 specifically:**
+1. Open your Start9 Embassy dashboard
+2. Navigate to your LND service
+3. Copy the LND Connect URL from the "Connect" section
+4. Paste it as `EXPO_PUBLIC_LND_CONNECT_URL` in your `.env` file
 
-### Testing Breez SDK
+#### Option 3: Native LDK (Future)
 
-Starr includes a comprehensive test screen to verify all Breez SDK functions:
+Native LDK integration (embedded in the app) is planned but requires native module development for iOS and Android. This will provide better performance and offline capabilities.
 
-1. **Access the Test Screen**: 
-   - Open the app and navigate to **Settings**
-   - Scroll to the **Developer** section
-   - Tap **"Test Breez SDK"**
+### Previous Implementation
 
-2. **What Gets Tested**:
-   - ✅ API key configuration validation
-   - ✅ Native module availability (mock mode detection)
+The Breez SDK implementation has been archived in the `archive/breez-sdk-implementation` branch.
    - ✅ SDK initialization
    - ✅ Balance retrieval
    - ✅ Node information

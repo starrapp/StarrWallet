@@ -9,10 +9,12 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { colors, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { layout } from '@/theme';
 
 export default function TabLayout() {
   const router = useRouter();
+  const colors = useColors();
 
   return (
     <Tabs

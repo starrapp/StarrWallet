@@ -12,7 +12,8 @@
  */
 
 import { Buffer } from 'buffer';
-import { LND_CONFIG, isLNDConfigured } from '@/config/lnd';
+import { getLNDConfig, getLNDConnectURL, isLNDConfigured } from '@/config/lnd';
+import { ConfigService } from '@/services/config';
 import { parseLndConnectUrl } from '@/utils/lndConnect';
 import { isOnionAddress, prepareTorRequest } from '@/utils/tor';
 import { TorService } from '@/services/tor';
@@ -105,13 +106,13 @@ interface LNDSendPaymentResponse {
 
 class LNDServiceImpl {
   private config: LNDConfig | null = null;
-  private isInitialized = false;
+  private _isInitialized = false;
 
   /**
    * Initialize LND service with configuration
    */
   async initialize(config?: Partial<LNDConfig>): Promise<void> {
-    if (this.isInitialized) {
+    if (this._isInitialized) {
       console.log('[LNDService] Already initialized');
       return;
     }
@@ -124,24 +125,24 @@ class LNDServiceImpl {
         cert: config.cert,
       };
     } else {
-      // Try to load from LND Connect URL first
-      const lndConnectUrl = process.env.EXPO_PUBLIC_LND_CONNECT_URL;
-      if (lndConnectUrl) {
-        const parsed = parseLndConnectUrl(lndConnectUrl);
-        this.config = parsed;
-      } else if (isLNDConfigured()) {
-        this.config = {
-          restUrl: LND_CONFIG.restUrl,
-          macaroon: LND_CONFIG.macaroon,
-          cert: LND_CONFIG.cert,
-        };
-      } else {
+      await this.loadConfig();
+    }
+    
+    // Validate config
+    if (!this.config) {
+      const configured = await isLNDConfigured();
+      if (!configured) {
         throw new Error(
-          'LND not configured. Set EXPO_PUBLIC_LND_ENABLED=true and provide connection details.'
+          'LND not configured. Please configure LND Node in the Channels tab.'
         );
       }
+      // Config should exist if isLNDConfigured returned true, but try loading again
+      await this.loadConfig();
+      if (!this.config) {
+        throw new Error('LND configuration incomplete: failed to load configuration');
+      }
     }
-
+    
     if (!this.config.restUrl || !this.config.macaroon) {
       throw new Error('LND configuration incomplete: missing restUrl or macaroon');
     }
@@ -149,7 +150,7 @@ class LNDServiceImpl {
     // Test connection
     try {
       await this.getInfo();
-      this.isInitialized = true;
+      this._isInitialized = true;
       console.log('[LNDService] Initialized successfully');
     } catch (error) {
       console.error('[LNDService] Initialization failed:', error);
@@ -170,6 +171,15 @@ class LNDServiceImpl {
       throw new Error('LND service not initialized');
     }
 
+    // Ensure config is loaded
+    if (!this.config) {
+      await this.loadConfig();
+    }
+    
+    if (!this.config) {
+      throw new Error('LND not configured');
+    }
+    
     const url = `${this.config.restUrl}${endpoint}`;
     
     // Check if this is a .onion address and handle Tor routing
@@ -427,14 +437,14 @@ class LNDServiceImpl {
    * Check if service is initialized
    */
   isInitialized(): boolean {
-    return this.isInitialized;
+    return this._isInitialized;
   }
 
   /**
    * Shutdown the service
    */
   async shutdown(): Promise<void> {
-    this.isInitialized = false;
+    this._isInitialized = false;
     this.config = null;
     console.log('[LNDService] Shutdown complete');
   }

@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { Text as RNText, TextStyle, StyleSheet } from 'react-native';
-import { colors, typography } from '@/theme';
+import { typography } from '@/theme';
+import { useColors } from '@/contexts';
 
 type TextVariant = keyof typeof typography;
 
@@ -27,6 +28,7 @@ export const Text: React.FC<TextProps> = ({
   style,
   numberOfLines,
 }) => {
+  const colors = useColors();
   const textColor = color || colors.text.primary;
   const variantStyle = typography[variant];
 
@@ -57,9 +59,11 @@ export const Amount: React.FC<AmountProps> = ({
   sats,
   size = 'md',
   showUnit = true,
-  color = colors.text.primary,
+  color,
   style,
 }) => {
+  const colors = useColors();
+  const amountColor = color || colors.text.primary;
   const formatAmount = (amount: number): string => {
     return amount.toLocaleString('en-US');
   };
@@ -73,7 +77,7 @@ export const Amount: React.FC<AmountProps> = ({
   };
 
   return (
-    <RNText style={[typography[getVariant()], { color }, style]}>
+    <RNText style={[typography[getVariant()], { color: amountColor }, style]}>
       {formatAmount(sats)}
       {showUnit && (
         <RNText style={[styles.unit, { color: colors.text.secondary }]}>

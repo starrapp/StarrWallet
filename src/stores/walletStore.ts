@@ -6,14 +6,14 @@
  */
 
 import { create } from 'zustand';
-import { BreezService } from '@/services/breez';
 import { LNDService } from '@/services/lnd';
+import { LDKService } from '@/services/ldk';
 import { TorService } from '@/services/tor';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { LSPManager } from '@/services/lsp';
-import { BREEZ_CONFIG } from '@/config';
 import { isLNDConfigured } from '@/config/lnd';
+import { isLDKConfigured } from '@/config/ldk';
 import { isOnionAddress } from '@/utils/tor';
 import type {
   Balance,
@@ -83,8 +83,8 @@ const defaultSettings: WalletSettings = {
   biometricEnabled: false,
   pinEnabled: false,
   autoLockMinutes: 5,
-  torEnabled: true,
-  torAutoStart: true,
+  torEnabled: false,
+  torAutoStart: false,
   autoBackupEnabled: true,
 };
 
@@ -114,7 +114,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   settings: defaultSettings,
 
-  // Initialize wallet with Breez SDK
+  // Initialize wallet - requires LND or new Lightning implementation
   initializeWallet: async (mnemonic?: string) => {
     set({ isInitializing: true, initError: null });
 
@@ -131,7 +131,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Existing wallet - get mnemonic from keychain
         // Skip auth on auto-init - device unlock provides security
         // Sensitive operations (backup view, large sends) require separate auth
-        mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
+        try {
+          mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
+        } catch (error) {
+          // If mnemonic is missing but flag is set, clear the flag and redirect to onboarding
+          if (error instanceof Error && error.message === 'No mnemonic found') {
+            console.warn('[WalletStore] Wallet flag set but mnemonic missing, clearing state');
+            await KeychainService.clearAllData();
+            throw new Error('Wallet data corrupted. Please create a new wallet.');
+          }
+          throw error;
+        }
       } else {
         throw new Error('No wallet found. Please create or import a wallet.');
       }
@@ -144,15 +154,20 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           console.log('[WalletStore] Tor service initialized');
           
           // Auto-start Tor if enabled and LND uses .onion address
-          if (settings.torAutoStart && isLNDConfigured()) {
-            const lndRestUrl = process.env.EXPO_PUBLIC_LND_REST_URL || '';
-            if (isOnionAddress(lndRestUrl)) {
-              try {
-                await TorService.startTor();
-                console.log('[WalletStore] Tor auto-started for .onion LND connection');
-              } catch (error) {
-                console.warn('[WalletStore] Tor auto-start failed:', error);
-                // Continue without Tor - user can start manually
+          if (settings.torAutoStart) {
+            const lndConfigured = await isLNDConfigured();
+            if (lndConfigured) {
+              const { getLNDConfig } = await import('@/config/lnd');
+              const lndConfig = await getLNDConfig();
+              const lndRestUrl = lndConfig?.restUrl || '';
+              if (lndRestUrl && isOnionAddress(lndRestUrl)) {
+                try {
+                  await TorService.startTor();
+                  console.log('[WalletStore] Tor auto-started for .onion LND connection');
+                } catch (error) {
+                  console.warn('[WalletStore] Tor auto-start failed:', error);
+                  // Continue without Tor - user can start manually
+                }
               }
             }
           }
@@ -162,23 +177,37 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         }
       }
 
-      // Initialize LND service if configured (takes priority over Breez)
-      if (isLNDConfigured()) {
+      // Initialize Lightning service if configured (optional for testing)
+      let lightningInitialized = false;
+      
+      const ldkConfigured = await isLDKConfigured();
+      const lndConfigured = await isLNDConfigured();
+      
+      if (ldkConfigured) {
+        try {
+          await LDKService.initialize(mnemonicPhrase);
+          console.log('[WalletStore] LDK service initialized');
+          lightningInitialized = true;
+        } catch (error) {
+          console.error('[WalletStore] LDK initialization failed:', error);
+          // Don't throw - allow wallet to exist without Lightning for testing
+          console.warn('[WalletStore] Continuing without LDK - configure LDK Node in Channels tab to enable Lightning');
+        }
+      } else if (lndConfigured) {
+        // Fall back to LND if LDK not configured
         try {
           await LNDService.initialize();
           console.log('[WalletStore] LND service initialized');
+          lightningInitialized = true;
         } catch (error) {
           console.error('[WalletStore] LND initialization failed:', error);
-          // Continue with Breez if LND fails
+          // Don't throw - allow wallet to exist without Lightning for testing
+          console.warn('[WalletStore] Continuing without LND - configure LND Node in Channels tab to enable Lightning');
         }
-      }
-
-      // Initialize Breez SDK with mnemonic (if LND not configured or failed)
-      if (!isLNDConfigured() || !LNDService.isInitialized()) {
-        await BreezService.initialize(mnemonicPhrase, {
-          workingDir: BREEZ_CONFIG.WORKING_DIR,
-          network: BREEZ_CONFIG.NETWORK,
-        });
+      } else {
+        // No Lightning configured - this is OK for testing
+        console.warn('[WalletStore] No Lightning Network service configured. Wallet created but Lightning features disabled.');
+        console.warn('[WalletStore] Configure LDK or LND in the Channels tab to enable Lightning.');
       }
 
       // Initialize backup service
@@ -187,27 +216,38 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       // Initialize LSP manager
       await LSPManager.initialize();
 
-      // Get initial data (use LND if available, otherwise Breez)
-      const [balance, nodeInfo, currentLSP, backupState] = await Promise.all([
-        LNDService.isInitialized()
-          ? LNDService.getBalance()
-          : BreezService.getBalance(),
-        LNDService.isInitialized()
-          ? LNDService.getInfo()
-          : BreezService.getNodeInfo(),
-        LSPManager.getCurrentLSP(),
-        BackupService.getBackupState(),
-      ]);
+      // Get initial data (use LDK if available, otherwise LND, or use defaults)
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      let balance: Balance;
+      let nodeInfo: NodeInfo | null = null;
+      let currentLSP: LSPInfo | null = null;
+      
+      if (isLDK || isLND) {
+        const [balanceData, nodeInfoData, currentLSPData] = await Promise.all([
+          isLDK ? LDKService.getBalance() : LNDService.getBalance(),
+          isLDK ? LDKService.getInfo() : LNDService.getInfo(),
+          LSPManager.getCurrentLSP(),
+        ]);
+        balance = balanceData;
+        nodeInfo = nodeInfoData;
+        currentLSP = currentLSPData;
+      } else {
+        // No Lightning configured - use default/empty values
+        balance = {
+          lightning: 0,
+          onchain: 0,
+          pendingIncoming: 0,
+          pendingOutgoing: 0,
+          lastUpdated: new Date(),
+        };
+      }
+      
+      const backupState = await BackupService.getBackupState();
 
-      // Subscribe to payment events
-      BreezService.on('payment', (payment) => {
-        set((state) => ({
-          payments: [payment, ...state.payments],
-          pendingPayment: null,
-        }));
-        // Refresh balance after payment
-        get().refreshBalance();
-      });
+      // TODO: Subscribe to payment events from new Lightning implementation
+      // Payment events will be handled by the Lightning service
 
       set({
         isInitializing: false,
@@ -254,9 +294,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshBalance: async () => {
     set({ isLoadingBalance: true });
     try {
-      const balance = LNDService.isInitialized()
-        ? await LNDService.getBalance()
-        : await BreezService.getBalance();
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        // No Lightning configured - keep current balance (likely zeros)
+        console.warn('[WalletStore] Cannot refresh balance - Lightning not configured');
+        set({ isLoadingBalance: false });
+        return;
+      }
+      
+      const balance = isLDK ? await LDKService.getBalance() : await LNDService.getBalance();
       set({ balance, isLoadingBalance: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh balance:', error);
@@ -268,9 +316,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshPayments: async () => {
     set({ isLoadingPayments: true });
     try {
-      const payments = LNDService.isInitialized()
-        ? await LNDService.listPayments()
-        : await BreezService.getPayments('all', 50);
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        // No Lightning configured - set empty payments list
+        console.warn('[WalletStore] Cannot refresh payments - Lightning not configured');
+        set({ payments: [], isLoadingPayments: false });
+        return;
+      }
+      
+      const payments = isLDK ? await LDKService.listPayments() : await LNDService.listPayments();
       set({ payments, isLoadingPayments: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh payments:', error);
@@ -282,9 +338,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   createInvoice: async (amountSats: number, description?: string) => {
     set({ isCreatingInvoice: true });
     try {
-      const invoice = LNDService.isInitialized()
-        ? await LNDService.createInvoice(amountSats, description)
-        : await BreezService.createInvoice(amountSats, description);
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        set({ isCreatingInvoice: false });
+        throw new Error('Lightning Network not configured. Please configure LDK or LND to create invoices.');
+      }
+      
+      const invoice = isLDK 
+        ? await LDKService.createInvoice(amountSats, description)
+        : await LNDService.createInvoice(amountSats, description);
       set({ currentInvoice: invoice, isCreatingInvoice: false });
       return invoice;
     } catch (error) {
@@ -296,24 +360,39 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Pay invoice
   payInvoice: async (bolt11: string, amountSats?: number) => {
     try {
-      // Parse invoice first for validation and display (use Breez for parsing even with LND)
-      const parsed = await BreezService.parseInvoice(bolt11);
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
       
+      if (!isLDK && !isLND) {
+        throw new Error('Lightning Network not configured. Please configure LDK or LND to send payments.');
+      }
+
+      // Parse invoice for validation
+      let parsed;
+      try {
+        parsed = isLDK 
+          ? await LDKService.parseInvoice(bolt11)
+          : { paymentHash: '', amountMsat: undefined, description: undefined };
+      } catch (error) {
+        console.warn('[WalletStore] Invoice parsing failed, continuing anyway:', error);
+        parsed = { paymentHash: '', amountMsat: undefined, description: undefined };
+      }
+
       set({
         pendingPayment: {
           id: 'pending',
           type: 'send',
           status: 'pending',
-          amountSats: amountSats || (parsed.amountMsat ? parsed.amountMsat / 1000 : 0),
-          paymentHash: parsed.paymentHash,
-          description: parsed.description,
+          amountSats: amountSats || (parsed.amountMsat ? Math.floor(parsed.amountMsat / 1000) : 0),
+          paymentHash: parsed.paymentHash || '',
+          description: parsed.description || '',
           timestamp: new Date(),
         },
       });
 
-      const payment = LNDService.isInitialized()
-        ? await LNDService.payInvoice(bolt11, amountSats)
-        : await BreezService.payInvoice(bolt11, amountSats);
+      const payment = isLDK
+        ? await LDKService.payInvoice(bolt11, amountSats)
+        : await LNDService.payInvoice(bolt11, amountSats);
       
       set((state) => ({
         payments: [payment, ...state.payments],
@@ -340,13 +419,21 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Sync node with network
   syncNode: async () => {
     try {
-      if (LNDService.isInitialized()) {
-        // LND doesn't have explicit sync, just refresh balance
-        const balance = await LNDService.getBalance();
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        console.warn('[WalletStore] Cannot sync - Lightning not configured');
+        return;
+      }
+      
+      if (isLDK) {
+        await LDKService.syncNode();
+        const balance = await LDKService.getBalance();
         set({ balance });
       } else {
-        await BreezService.syncNode();
-        const balance = await BreezService.getBalance();
+        // LND doesn't have explicit sync, just refresh balance
+        const balance = await LNDService.getBalance();
         set({ balance });
       }
     } catch (error) {

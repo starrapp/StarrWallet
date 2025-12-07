@@ -10,14 +10,13 @@
  * 3. Manual export option
  * 4. Redundant backup to multiple providers
  * 
- * The Breez SDK handles most channel state internally, but we add
- * additional layers of backup for maximum safety.
+ * Channel state backup for Lightning Network wallet.
+ * Backup implementation will be provided by the new Lightning service.
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BreezService } from '../breez';
 import { KeychainService } from '../keychain';
 import type { BackupState, BackupType } from '@/types/wallet';
 
@@ -70,11 +69,9 @@ class BackupServiceImpl {
     const stateJson = await AsyncStorage.getItem(BACKUP_KEYS.STATE);
     const state: Partial<BackupState> = stateJson ? JSON.parse(stateJson) : {};
 
-    // Get Breez SDK backup status
-    const breezStatus = await BreezService.getBackupStatus();
-
+    // TODO: Get backup status from new Lightning implementation
     return {
-      lastBackup: state.lastBackup ? new Date(state.lastBackup) : breezStatus.lastBackup,
+      lastBackup: state.lastBackup ? new Date(state.lastBackup) : undefined,
       backupType: state.backupType as BackupType | undefined,
       channelStateHash: state.channelStateHash,
       isAutoBackupEnabled: this.autoBackupEnabled,
@@ -109,8 +106,8 @@ class BackupServiceImpl {
     try {
       console.log('[BackupService] Starting backup, type:', type);
 
-      // Trigger Breez SDK backup
-      await BreezService.triggerBackup();
+      // TODO: Trigger backup in new Lightning implementation
+      console.log('[BackupService] Backup trigger - to be implemented with new Lightning service');
 
       // Get current timestamp
       const timestamp = new Date();
@@ -119,7 +116,7 @@ class BackupServiceImpl {
       const backupData: BackupData = {
         version: 1,
         timestamp: timestamp.toISOString(),
-        channelState: '', // Breez handles this internally
+        channelState: '', // TODO: Get from new Lightning implementation
         checksum: '',
       };
 

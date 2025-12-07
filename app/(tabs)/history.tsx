@@ -8,9 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
 import { TransactionList } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 export default function HistoryScreen() {
+  const colors = useColors();
   const { payments, isLoadingPayments, refreshPayments } = useWalletStore();
 
   return (

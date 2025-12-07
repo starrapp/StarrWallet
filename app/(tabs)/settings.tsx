@@ -24,8 +24,8 @@ import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { TorService } from '@/services/tor';
 import { useWalletStore } from '@/stores/walletStore';
-import { useTheme } from '@/contexts';
-import { colors, spacing, layout } from '@/theme';
+import { useTheme, useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 // Currency options
 const BITCOIN_UNITS = [
@@ -63,6 +63,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings, performBackup, backupState } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
+  const colors = useColors();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
@@ -163,7 +164,7 @@ export default function SettingsScreen() {
   const handleAbout = () => {
     Alert.alert(
       'About Starr',
-      `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.\n\nPowered by Breez SDK.`,
+      `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.`,
       [
         { text: 'View on GitHub', onPress: () => openExternalLink(EXTERNAL_LINKS.GITHUB) },
         { text: 'OK' },
@@ -220,11 +221,17 @@ export default function SettingsScreen() {
 
     setIsTorStarting(true);
     try {
-      await TorService.startTor();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Tor Started', 'Tor daemon is now running and ready for .onion connections.');
+      const success = await TorService.startTor();
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Tor Started', 'Tor daemon is now running and ready for .onion connections.');
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Tor Start Failed', 'Tor failed to start. Check console logs for details.');
+      }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.error('[Settings] Tor start error:', error);
       Alert.alert(
         'Tor Start Failed',
         error instanceof Error ? error.message : 'Failed to start Tor. Please check your network connection.'
@@ -232,6 +239,35 @@ export default function SettingsScreen() {
     } finally {
       setIsTorStarting(false);
       checkTorStatus();
+    }
+  };
+
+  const handleTestTor = async () => {
+    if (!torStatus.isRunning) {
+      Alert.alert('Tor Not Running', 'Please start Tor first to test the connection.');
+      return;
+    }
+
+    try {
+      // Test Tor by making a request through Tor
+      // Using check.torproject.org API to verify Tor is working
+      const testUrl = 'https://check.torproject.org/api/ip';
+      
+      Alert.alert('Testing Tor', 'Making a test request through Tor...');
+      
+      const response = await TorService.makeRequest(testUrl);
+      const data = await response.json();
+      
+      Alert.alert(
+        'Tor Test Successful',
+        `Tor is working! Your IP through Tor: ${data.IP || 'Unknown'}\n\nThis confirms your requests are being routed through Tor.`
+      );
+    } catch (error) {
+      console.error('[Settings] Tor test error:', error);
+      Alert.alert(
+        'Tor Test Failed',
+        error instanceof Error ? error.message : 'Failed to make request through Tor. Check console for details.'
+      );
     }
   };
 
@@ -447,15 +483,26 @@ export default function SettingsScreen() {
                   )}
 
                   {torStatus.isRunning && (
-                    <TouchableOpacity
-                      style={[styles.torActionButton, styles.torActionButtonStop]}
-                      onPress={handleStopTor}
-                    >
-                      <Ionicons name="stop" size={20} color={colors.status.error} />
-                      <Text variant="titleSmall" color={colors.status.error}>
-                        Stop Tor
-                      </Text>
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        style={styles.torActionButton}
+                        onPress={handleTestTor}
+                      >
+                        <Ionicons name="checkmark-circle" size={20} color={colors.status.success} />
+                        <Text variant="titleSmall" color={colors.status.success}>
+                          Test Tor Connection
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.torActionButton, styles.torActionButtonStop]}
+                        onPress={handleStopTor}
+                      >
+                        <Ionicons name="stop" size={20} color={colors.status.error} />
+                        <Text variant="titleSmall" color={colors.status.error}>
+                          Stop Tor
+                        </Text>
+                      </TouchableOpacity>
+                    </>
                   )}
 
                   <Card variant="outlined" style={styles.torInfoCard}>
@@ -478,12 +525,6 @@ export default function SettingsScreen() {
               DEVELOPER
             </Text>
 
-            <SettingsItem
-              icon="flask"
-              title="Test Breez SDK"
-              subtitle="Test all SDK functions and API key"
-              onPress={() => router.push('/test-breez')}
-            />
           </View>
 
           {/* About Section */}

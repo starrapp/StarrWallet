@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
-import { BreezService } from '@/services/breez';
 import { useWalletStore } from '@/stores/walletStore';
 import { colors, spacing, layout } from '@/theme';
 
@@ -34,16 +33,10 @@ export default function SendScreen() {
     setError(null);
     setParsedInvoice(null);
 
-    if (text.length > 10) {
-      try {
-        const parsed = await BreezService.parseInvoice(text);
-        setParsedInvoice(parsed);
-        if (parsed.amountMsat) {
-          setAmount(String(parsed.amountMsat / 1000));
-        }
-      } catch {
-        // Not a valid invoice yet
-      }
+    // Parse invoice if it looks valid
+    // Actual parsing happens in payInvoice, this is just for UI feedback
+    if (text.length > 10 && text.startsWith('lnbc')) {
+      setParsedInvoice({ isValid: true });
     }
   };
 
@@ -55,12 +48,12 @@ export default function SendScreen() {
 
     const amountSats = parseInt(amount) || undefined;
     
-    if (!parsedInvoice?.amountMsat && !amountSats) {
+    if (!amountSats) {
       setError('Please enter an amount');
       return;
     }
 
-    const finalAmount = amountSats || (parsedInvoice?.amountMsat / 1000);
+    const finalAmount = amountSats;
     
     if (balance && finalAmount > balance.lightning) {
       setError('Insufficient balance');
@@ -155,8 +148,8 @@ export default function SendScreen() {
               </Card>
             )}
 
-            {/* Amount input (for zero-amount invoices) */}
-            {parsedInvoice && !parsedInvoice.amountMsat && (
+            {/* Amount input */}
+            {parsedInvoice && (
               <AmountInput
                 value={amount}
                 onChangeValue={setAmount}
@@ -165,22 +158,6 @@ export default function SendScreen() {
               />
             )}
 
-            {/* Amount display (for fixed-amount invoices) */}
-            {parsedInvoice?.amountMsat && (
-              <View style={styles.amountDisplay}>
-                <Text variant="labelMedium" color={colors.text.muted}>
-                  Amount
-                </Text>
-                <View style={styles.amountRow}>
-                  <Text variant="amountMedium" color={colors.text.primary}>
-                    {(parsedInvoice.amountMsat / 1000).toLocaleString()}
-                  </Text>
-                  <Text variant="titleMedium" color={colors.text.secondary}>
-                    sats
-                  </Text>
-                </View>
-              </View>
-            )}
 
             {/* Balance info */}
             <View style={styles.balanceInfo}>
