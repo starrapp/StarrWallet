@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { Text as RNText, TextStyle, StyleSheet } from 'react-native';
-import { colors, typography } from '@/theme';
+import { typography } from '@/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
 type TextVariant = keyof typeof typography;
 
@@ -27,7 +28,8 @@ export const Text: React.FC<TextProps> = ({
   style,
   numberOfLines,
 }) => {
-  const textColor = color || colors.text.primary;
+  const themeColors = useColors();
+  const textColor = color || themeColors.text.primary;
   const variantStyle = typography[variant];
 
   return (
@@ -57,9 +59,12 @@ export const Amount: React.FC<AmountProps> = ({
   sats,
   size = 'md',
   showUnit = true,
-  color = colors.text.primary,
+  color,
   style,
 }) => {
+  const themeColors = useColors();
+  const textColor = color || themeColors.text.primary;
+
   const formatAmount = (amount: number): string => {
     return amount.toLocaleString('en-US');
   };
@@ -73,10 +78,10 @@ export const Amount: React.FC<AmountProps> = ({
   };
 
   return (
-    <RNText style={[typography[getVariant()], { color }, style]}>
+    <RNText style={[typography[getVariant()], { color: textColor }, style]}>
       {formatAmount(sats)}
       {showUnit && (
-        <RNText style={[styles.unit, { color: colors.text.secondary }]}>
+        <RNText style={[styles.unit, { color: themeColors.text.secondary }]}>
           {' '}sats
         </RNText>
       )}
@@ -90,4 +95,3 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 });
-

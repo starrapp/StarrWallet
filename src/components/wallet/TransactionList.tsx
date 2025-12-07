@@ -1,7 +1,7 @@
 /**
  * Transaction List Component
  * 
- * Displays payment history with beautiful styling.
+ * Displays payment history with clean, modern styling.
  */
 
 import React from 'react';
@@ -15,7 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { Text } from '@/components/ui';
-import { colors, spacing, layout } from '@/theme';
+import { layout, spacing } from '@/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import type { LightningPayment } from '@/types/wallet';
 
 interface TransactionListProps {
@@ -31,6 +32,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   onRefresh,
   isLoading = false,
 }) => {
+  const colors = useColors();
+
   const renderTransaction = ({ item }: { item: LightningPayment }) => (
     <TransactionItem
       transaction={item}
@@ -40,7 +43,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.background.secondary }]}>
         <Ionicons name="flash-outline" size={48} color={colors.text.muted} />
       </View>
       <Text variant="titleMedium" color={colors.text.secondary} align="center">
@@ -86,6 +89,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   onPress,
 }) => {
+  const colors = useColors();
   const isReceive = transaction.type === 'receive';
   const isPending = transaction.status === 'pending';
   const isFailed = transaction.status === 'failed';
@@ -93,7 +97,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   const getStatusColor = (): string => {
     if (isFailed) return colors.status.error;
     if (isPending) return colors.status.warning;
-    return isReceive ? colors.status.success : colors.accent.cyan;
+    return isReceive ? colors.status.success : colors.text.primary;
   };
 
   const getIcon = (): keyof typeof Ionicons.glyphMap => {
@@ -111,20 +115,28 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
     return formatDistanceToNow(date, { addSuffix: true });
   };
 
+  // Helper for opacity since colors are hex
+  const withOpacity = (color: string, opacity: string) => {
+    return `${color}${opacity}`; // hex + hex alpha
+  };
+
   return (
     <TouchableOpacity
-      style={styles.transactionItem}
+      style={[styles.transactionItem, { backgroundColor: colors.background.secondary }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
       {/* Icon */}
-      <View style={[styles.iconContainer, { backgroundColor: `${getStatusColor()}15` }]}>
+      <View style={[
+        styles.iconContainer, 
+        { backgroundColor: withOpacity(getStatusColor(), '15') }
+      ]}>
         <Ionicons name={getIcon()} size={20} color={getStatusColor()} />
       </View>
 
       {/* Details */}
       <View style={styles.transactionDetails}>
-        <Text variant="titleSmall" numberOfLines={1}>
+        <Text variant="titleSmall" numberOfLines={1} color={colors.text.primary}>
           {transaction.description || (isReceive ? 'Received' : 'Sent')}
         </Text>
         <View style={styles.transactionMeta}>
@@ -132,14 +144,14 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
             {formatTime(transaction.timestamp)}
           </Text>
           {isPending && (
-            <View style={styles.statusBadge}>
+            <View style={[styles.statusBadge, { backgroundColor: withOpacity(colors.status.warning, '20') }]}>
               <Text variant="labelSmall" color={colors.status.warning}>
                 Pending
               </Text>
             </View>
           )}
           {isFailed && (
-            <View style={[styles.statusBadge, styles.errorBadge]}>
+            <View style={[styles.statusBadge, { backgroundColor: withOpacity(colors.status.error, '20') }]}>
               <Text variant="labelSmall" color={colors.status.error}>
                 Failed
               </Text>
@@ -181,7 +193,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
@@ -190,7 +201,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    backgroundColor: colors.background.secondary,
     borderRadius: layout.radius.lg,
     marginBottom: spacing.sm,
     gap: spacing.md,
@@ -214,14 +224,9 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
-    backgroundColor: `${colors.status.warning}20`,
     borderRadius: layout.radius.xs,
-  },
-  errorBadge: {
-    backgroundColor: `${colors.status.error}20`,
   },
   amountContainer: {
     alignItems: 'flex-end',
   },
 });
-

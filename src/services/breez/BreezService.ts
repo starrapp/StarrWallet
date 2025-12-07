@@ -170,19 +170,28 @@ class BreezServiceImpl {
       // Connect to the SDK with event listener
       // The connect function requires an EventListener callback as the second parameter
       // It returns an EmitterSubscription that we store for cleanup
+      // Wrap event handler in try-catch to prevent native exceptions from crashing the app
       this.eventSubscription = await connect(
         {
           config: sdkConfig,
           seed: seed,
         },
         (breezEvent: any) => {
-          // Handle Breez SDK events
-          // Event types: 'invoicePaid', 'paymentSucceed', 'synced', etc.
-          if (breezEvent.type === 'invoicePaid' || breezEvent.type === 'paymentSucceed') {
-            // Map to our payment event
-            this.emit('payment', breezEvent.details);
-          } else if (breezEvent.type === 'synced') {
-            this.emit('sync');
+          try {
+            // Handle Breez SDK events
+            // Event types: 'invoicePaid', 'paymentSucceed', 'synced', etc.
+            if (breezEvent?.type === 'invoicePaid' || breezEvent?.type === 'paymentSucceed') {
+              // Map to our payment event
+              this.emit('payment', breezEvent.details);
+            } else if (breezEvent?.type === 'synced') {
+              this.emit('sync');
+            }
+          } catch (eventError) {
+            // Defensively catch any errors in event handler to prevent crashes
+            // This prevents NSException from reaching React Native's error conversion
+            // which can cause memory corruption under React 19.1.2 + Hermes
+            console.error('[BreezService] Error in event handler:', eventError);
+            // Don't re-throw - silently log to prevent crash chain
           }
         }
       );
@@ -304,37 +313,61 @@ class BreezServiceImpl {
 
   /**
    * Disconnect from Breez SDK
+   * Non-blocking cleanup to prevent TurboModule invalidation timeout
    */
   async shutdown(): Promise<void> {
     if (!this.isInitialized) return;
 
-    // Clean up event listeners
-    if (this.eventSubscription) {
-      DeviceEventEmitter.removeAllListeners('breezSdkEvent');
-      this.eventSubscription = null;
-    }
+    // Mark as not initialized immediately to prevent new operations
+    this.isInitialized = false;
 
     if (this.mockMode) {
-      this.isInitialized = false;
       this.emit('connection', false);
       return;
     }
 
-    try {
-      // Remove event subscription
-      if (this.eventSubscription) {
-        this.eventSubscription.remove();
-        this.eventSubscription = null;
+    // Perform cleanup asynchronously without blocking
+    // This prevents TurboModule invalidation timeout
+    setImmediate(async () => {
+      try {
+        // Remove event subscription with very short timeout
+        if (this.eventSubscription) {
+          try {
+            await Promise.race([
+              Promise.resolve(this.eventSubscription.remove?.()),
+              new Promise((resolve) => setTimeout(resolve, 1000)), // 1 second timeout
+            ]);
+          } catch (err) {
+            // Ignore errors
+          }
+          this.eventSubscription = null;
+        }
+
+        // Clean up event listeners
+        DeviceEventEmitter.removeAllListeners('breezSdkEvent');
+
+        // Disconnect with short timeout to prevent blocking
+        try {
+          await Promise.race([
+            disconnect(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Disconnect timeout')), 2000) // 2 second timeout
+            ),
+          ]);
+        } catch (err) {
+          // Ignore disconnect errors - we're shutting down anyway
+        }
+        
+        this.emit('connection', false);
+        console.log('[BreezService] Shutdown complete');
+      } catch (error) {
+        // Silently ignore all errors during shutdown
+        this.emit('connection', false);
       }
-      
-      await disconnect();
-      this.isInitialized = false;
-      this.emit('connection', false);
-      console.log('[BreezService] Shutdown complete');
-    } catch (error) {
-      console.error('[BreezService] Shutdown failed:', error);
-      throw error;
-    }
+    });
+
+    // Return immediately without waiting for cleanup
+    this.emit('connection', false);
   }
 
   /**

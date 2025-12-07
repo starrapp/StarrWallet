@@ -13,7 +13,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Text } from './Text';
-import { colors, layout, spacing, typography } from '@/theme';
+import { layout, spacing, typography } from '@/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -34,12 +35,17 @@ export const Input: React.FC<InputProps> = ({
   style,
   ...props
 }) => {
+  const colors = useColors();
   const [isFocused, setIsFocused] = useState(false);
 
   const getBorderColor = (): string => {
     if (error) return colors.status.error;
     if (isFocused) return colors.gold.pure;
     return colors.border.subtle;
+  };
+
+  const getBackgroundColor = (): string => {
+     return colors.background.secondary;
   };
 
   return (
@@ -53,8 +59,11 @@ export const Input: React.FC<InputProps> = ({
       <View
         style={[
           styles.inputContainer,
-          { borderColor: getBorderColor() },
-          isFocused && styles.focused,
+          { 
+            borderColor: getBorderColor(),
+            backgroundColor: getBackgroundColor(),
+          },
+          isFocused && { backgroundColor: colors.background.tertiary },
         ]}
       >
         {leftIcon && <View style={styles.icon}>{leftIcon}</View>}
@@ -107,6 +116,8 @@ export const AmountInput: React.FC<AmountInputProps> = ({
   error,
   maxAmount,
 }) => {
+  const colors = useColors();
+
   const handleChange = (text: string) => {
     // Only allow numbers
     const numericValue = text.replace(/[^0-9]/g, '');
@@ -123,7 +134,11 @@ export const AmountInput: React.FC<AmountInputProps> = ({
       
       <View style={styles.amountContainer}>
         <TextInput
-          style={[styles.amountInput, typography.amountMedium]}
+          style={[
+            styles.amountInput, 
+            typography.amountMedium, 
+            { color: colors.text.primary }
+          ]}
           value={value}
           onChangeText={handleChange}
           keyboardType="numeric"
@@ -162,13 +177,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: layout.inputHeight,
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.md,
+    borderRadius: layout.radius.lg, // More rounded
     borderWidth: 1,
     paddingHorizontal: spacing.md,
-  },
-  focused: {
-    backgroundColor: colors.background.tertiary,
   },
   input: {
     flex: 1,
@@ -187,10 +198,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   amountInput: {
-    color: colors.text.primary,
     textAlign: 'right',
     minWidth: 80,
     marginRight: spacing.sm,
   },
 });
-

@@ -83,8 +83,8 @@ const defaultSettings: WalletSettings = {
   biometricEnabled: false,
   pinEnabled: false,
   autoLockMinutes: 5,
-  torEnabled: true,
-  torAutoStart: true,
+  torEnabled: false,
+  torAutoStart: false,
   autoBackupEnabled: true,
 };
 
@@ -136,14 +136,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         throw new Error('No wallet found. Please create or import a wallet.');
       }
 
-      // Initialize Tor service if enabled
+      // Initialize Tor service only if enabled in settings
       const settings = get().settings;
       if (settings.torEnabled) {
         try {
           await TorService.initialize();
-          console.log('[WalletStore] Tor service initialized');
+          console.log('[WalletStore] Tor service initialized (not started yet)');
           
-          // Auto-start Tor if enabled and LND uses .onion address
+          // Auto-start Tor only if both enabled and auto-start is enabled
           if (settings.torAutoStart && isLNDConfigured()) {
             const lndRestUrl = process.env.EXPO_PUBLIC_LND_REST_URL || '';
             if (isOnionAddress(lndRestUrl)) {
@@ -159,6 +159,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         } catch (error) {
           console.error('[WalletStore] Tor initialization failed:', error);
           // Continue without Tor
+        }
+      } else {
+        // Ensure Tor is stopped if disabled
+        try {
+          if (TorService.isTorRunning()) {
+            await TorService.stopTor();
+            console.log('[WalletStore] Tor stopped (disabled in settings)');
+          }
+        } catch (error) {
+          // Ignore errors when stopping Tor
+          console.warn('[WalletStore] Error stopping Tor:', error);
         }
       }
 

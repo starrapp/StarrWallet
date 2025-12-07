@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors, layout, spacing } from '@/theme';
+import { layout, spacing } from '@/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
 interface CardProps {
   children: React.ReactNode;
@@ -21,6 +22,8 @@ export const Card: React.FC<CardProps> = ({
   padding = 'md',
   style,
 }) => {
+  const colors = useColors();
+
   const getPadding = (): number => {
     switch (padding) {
       case 'none': return 0;
@@ -36,10 +39,10 @@ export const Card: React.FC<CardProps> = ({
         return {
           backgroundColor: colors.background.secondary,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
           shadowRadius: 8,
-          elevation: 4,
+          elevation: 2,
         };
       case 'outlined':
         return {
@@ -70,8 +73,7 @@ export const Card: React.FC<CardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: layout.radius.lg,
+    borderRadius: layout.radius.xl, // More rounded corners for modern look
     overflow: 'hidden',
   },
 });
-
