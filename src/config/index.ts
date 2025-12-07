@@ -1,2 +1,4 @@
-// Config exports - Breez SDK removed, using LND or new Lightning implementation
+// Config exports
 export { isLNDConfigured } from './lnd';
+export { LDK_CONFIG, isLDKConfigured, isLDKRestMode, isLDKNativeMode } from './ldk';
+export type { LDKConfig } from './ldk';

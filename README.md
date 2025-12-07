@@ -15,27 +15,26 @@ A beautiful, non-custodial Bitcoin Lightning wallet for iOS and Android.
 
 ## Architecture
 
-Starr is built with a phased approach to Lightning integration:
+Starr is built with Lightning Network integration using:
 
-### Phase 1: MVP (Current)
-- **LND** for Lightning Network connectivity
-- Remote node support
+### Current Implementation
+- **LDK (Lightning Development Kit)** via LDK Node - Primary implementation
+- **LND (Lightning Network Daemon)** - Fallback option for remote nodes
+- REST API mode: Connect to LDK Node running as a service
+- Native mode: Embedded LDK Node (planned, requires native modules)
+
+### Features
+- Non-custodial Lightning wallet
 - Channel management via LSP
-
-### Phase 2: Power Users (Planned)
-- Remote node support (LND/CLN)
-- Advanced channel management
-- Custom LSP configuration
-
-### Phase 3: Full Control (Future)
-- Raw LDK integration option
-- Complete node control
-- Advanced routing
+- Invoice creation and payment
+- Payment history tracking
+- Secure key management
 
 ## Tech Stack
 
 - **React Native** with Expo
-- **LND** for Lightning Network (or new implementation)
+- **LDK (Lightning Development Kit)** via LDK Node for Lightning Network
+- **LND** as fallback option
 - **Zustand** for state management
 - **Expo Router** for navigation
 - **TypeScript** for type safety
@@ -117,22 +116,42 @@ starr/
 
 ### Lightning Network Setup
 
-Starr currently supports connecting to an LND node. Configure your LND connection:
+Starr uses **LDK (Lightning Development Kit)** via LDK Node as the primary Lightning implementation.
 
-1. Create a `.env` file in the root directory:
+#### Option 1: LDK Node REST API (Recommended for Development)
+
+1. Set up and run LDK Node as a separate service (see [LDK Node documentation](https://github.com/lightningdevkit/ldk-node))
+
+2. Create a `.env` file in the root directory:
 
 ```bash
-# .env file
+# .env file - LDK Node REST API mode
+EXPO_PUBLIC_LDK_REST_URL=http://localhost:3000  # Your LDK Node REST API URL
+EXPO_PUBLIC_LDK_API_KEY=your_api_key_here  # Optional, if LDK Node requires auth
+EXPO_PUBLIC_LDK_NETWORK=testnet  # bitcoin, testnet, signet, or regtest
+```
+
+3. Restart your development server after adding the configuration
+
+#### Option 2: LND Node (Fallback)
+
+If you prefer to use LND instead:
+
+```bash
+# .env file - LND mode
+EXPO_PUBLIC_LND_ENABLED=true
 EXPO_PUBLIC_LND_REST_URL=https://your-lnd-node:8080
 EXPO_PUBLIC_LND_MACAROON=your_macaroon_hex
 EXPO_PUBLIC_NETWORK=bitcoin  # or 'testnet' for testing
 ```
 
-2. Restart your development server after adding the configuration
+#### Option 3: Native LDK (Future)
 
-### New Lightning Implementation
+Native LDK integration (embedded in the app) is planned but requires native module development for iOS and Android. This will provide better performance and offline capabilities.
 
-We're working on implementing a new Lightning Network connection method. The Breez SDK has been removed and archived in the `archive/breez-sdk-implementation` branch.
+### Previous Implementation
+
+The Breez SDK implementation has been archived in the `archive/breez-sdk-implementation` branch.
    - ✅ SDK initialization
    - ✅ Balance retrieval
    - ✅ Node information

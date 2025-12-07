@@ -33,10 +33,9 @@ export default function SendScreen() {
     setError(null);
     setParsedInvoice(null);
 
-    // TODO: Parse invoice with new Lightning implementation or LND
-    // For now, basic validation - invoice should start with "lnbc"
+    // Parse invoice if it looks valid
+    // Actual parsing happens in payInvoice, this is just for UI feedback
     if (text.length > 10 && text.startsWith('lnbc')) {
-      // Basic invoice detected - detailed parsing will be implemented with new Lightning service
       setParsedInvoice({ isValid: true });
     }
   };

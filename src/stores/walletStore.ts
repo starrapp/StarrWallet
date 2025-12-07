@@ -7,11 +7,13 @@
 
 import { create } from 'zustand';
 import { LNDService } from '@/services/lnd';
+import { LDKService } from '@/services/ldk';
 import { TorService } from '@/services/tor';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { LSPManager } from '@/services/lsp';
 import { isLNDConfigured } from '@/config/lnd';
+import { isLDKConfigured } from '@/config/ldk';
 import { isOnionAddress } from '@/utils/tor';
 import type {
   Balance,
@@ -160,8 +162,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         }
       }
 
-      // Initialize LND service if configured
-      if (isLNDConfigured()) {
+      // Initialize LDK service if configured (takes priority)
+      if (isLDKConfigured()) {
+        try {
+          await LDKService.initialize(mnemonicPhrase);
+          console.log('[WalletStore] LDK service initialized');
+        } catch (error) {
+          console.error('[WalletStore] LDK initialization failed:', error);
+          throw new Error('Failed to initialize LDK service. Please check your configuration.');
+        }
+      } else if (isLNDConfigured()) {
+        // Fall back to LND if LDK not configured
         try {
           await LNDService.initialize();
           console.log('[WalletStore] LND service initialized');
@@ -170,8 +181,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           throw new Error('Failed to initialize LND service. Please check your configuration.');
         }
       } else {
-        // TODO: Initialize new Lightning implementation when ready
-        throw new Error('No Lightning Network service configured. Please configure LND or wait for new implementation.');
+        throw new Error('No Lightning Network service configured. Please configure LDK or LND.');
       }
 
       // Initialize backup service
@@ -180,14 +190,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       // Initialize LSP manager
       await LSPManager.initialize();
 
-      // Get initial data from LND
-      if (!LNDService.isInitialized()) {
-        throw new Error('LND service not initialized');
+      // Get initial data (use LDK if available, otherwise LND)
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        throw new Error('No Lightning service initialized');
       }
 
       const [balance, nodeInfo, currentLSP, backupState] = await Promise.all([
-        LNDService.getBalance(),
-        LNDService.getInfo(),
+        isLDK ? LDKService.getBalance() : LNDService.getBalance(),
+        isLDK ? LDKService.getInfo() : LNDService.getInfo(),
         LSPManager.getCurrentLSP(),
         BackupService.getBackupState(),
       ]);
@@ -240,10 +253,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshBalance: async () => {
     set({ isLoadingBalance: true });
     try {
-      if (!LNDService.isInitialized()) {
-        throw new Error('LND service not initialized');
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        throw new Error('No Lightning service initialized');
       }
-      const balance = await LNDService.getBalance();
+      
+      const balance = isLDK ? await LDKService.getBalance() : await LNDService.getBalance();
       set({ balance, isLoadingBalance: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh balance:', error);
@@ -255,10 +272,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshPayments: async () => {
     set({ isLoadingPayments: true });
     try {
-      if (!LNDService.isInitialized()) {
-        throw new Error('LND service not initialized');
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        throw new Error('No Lightning service initialized');
       }
-      const payments = await LNDService.listPayments();
+      
+      const payments = isLDK ? await LDKService.listPayments() : await LNDService.listPayments();
       set({ payments, isLoadingPayments: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh payments:', error);
@@ -270,10 +291,16 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   createInvoice: async (amountSats: number, description?: string) => {
     set({ isCreatingInvoice: true });
     try {
-      if (!LNDService.isInitialized()) {
-        throw new Error('LND service not initialized');
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        throw new Error('No Lightning service initialized');
       }
-      const invoice = await LNDService.createInvoice(amountSats, description);
+      
+      const invoice = isLDK 
+        ? await LDKService.createInvoice(amountSats, description)
+        : await LNDService.createInvoice(amountSats, description);
       set({ currentInvoice: invoice, isCreatingInvoice: false });
       return invoice;
     } catch (error) {
@@ -285,25 +312,39 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Pay invoice
   payInvoice: async (bolt11: string, amountSats?: number) => {
     try {
-      if (!LNDService.isInitialized()) {
-        throw new Error('LND service not initialized');
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        throw new Error('No Lightning service initialized');
       }
 
-      // TODO: Parse invoice for validation - implement with new Lightning service or use LND's decode
-      // For now, set pending payment with basic info
+      // Parse invoice for validation
+      let parsed;
+      try {
+        parsed = isLDK 
+          ? await LDKService.parseInvoice(bolt11)
+          : { paymentHash: '', amountMsat: undefined, description: undefined };
+      } catch (error) {
+        console.warn('[WalletStore] Invoice parsing failed, continuing anyway:', error);
+        parsed = { paymentHash: '', amountMsat: undefined, description: undefined };
+      }
+
       set({
         pendingPayment: {
           id: 'pending',
           type: 'send',
           status: 'pending',
-          amountSats: amountSats || 0,
-          paymentHash: '',
-          description: '',
+          amountSats: amountSats || (parsed.amountMsat ? Math.floor(parsed.amountMsat / 1000) : 0),
+          paymentHash: parsed.paymentHash || '',
+          description: parsed.description || '',
           timestamp: new Date(),
         },
       });
 
-      const payment = await LNDService.payInvoice(bolt11, amountSats);
+      const payment = isLDK
+        ? await LDKService.payInvoice(bolt11, amountSats)
+        : await LNDService.payInvoice(bolt11, amountSats);
       
       set((state) => ({
         payments: [payment, ...state.payments],
@@ -330,12 +371,22 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Sync node with network
   syncNode: async () => {
     try {
-      if (!LNDService.isInitialized()) {
-        throw new Error('LND service not initialized');
+      const isLDK = LDKService.isInitialized();
+      const isLND = LNDService.isInitialized();
+      
+      if (!isLDK && !isLND) {
+        throw new Error('No Lightning service initialized');
       }
-      // LND doesn't have explicit sync, just refresh balance
-      const balance = await LNDService.getBalance();
-      set({ balance });
+      
+      if (isLDK) {
+        await LDKService.syncNode();
+        const balance = await LDKService.getBalance();
+        set({ balance });
+      } else {
+        // LND doesn't have explicit sync, just refresh balance
+        const balance = await LNDService.getBalance();
+        set({ balance });
+      }
     } catch (error) {
       console.error('[WalletStore] Sync failed:', error);
     }
