@@ -1,143 +1,143 @@
 /**
  * Starr Wallet Color System
  * 
- * A cosmic, premium aesthetic inspired by starlight and deep space.
- * Supports both dark and light themes.
+ * A clean, modern aesthetic focusing on simplicity and readability.
+ * Primary color is Bitcoin Orange (#F7931A).
  */
 
-// Dark theme - Deep space foundation (default)
+// Dark theme - Modern Clean Dark
 export const darkColors = {
-  // Core palette - Deep space foundation
+  // Core palette
   background: {
-    primary: '#0A0A0F',      // Near black with subtle blue
-    secondary: '#12121A',    // Elevated surfaces
-    tertiary: '#1A1A24',     // Cards and modals
-    elevated: '#22222E',     // Hover states
+    primary: '#000000',      // Pure black for OLED
+    secondary: '#1C1C1E',    // Elevated surfaces (System Gray 6 Dark)
+    tertiary: '#2C2C2E',     // Cards and modals (System Gray 5 Dark)
+    elevated: '#3A3A3C',     // Hover states
   },
 
-  // Starlight gold - Primary accent
+  // Primary Brand Color (Bitcoin Orange) - Mapping 'gold' to this for compatibility
   gold: {
-    pure: '#F7C948',         // Pure starlight
-    bright: '#FFD93D',       // Bright star
-    muted: '#C9A227',        // Dimmed gold
-    glow: 'rgba(247, 201, 72, 0.15)', // Glow effect
+    pure: '#F7931A',         // Bitcoin Orange
+    bright: '#FFA040',       // Lighter Orange
+    muted: '#B36200',        // Darker Orange
+    glow: 'rgba(247, 147, 26, 0.2)', // Orange Glow
   },
 
-  // Electric accents
+  // Accents
   accent: {
-    cyan: '#00D4FF',         // Lightning bolt
-    purple: '#9D4EDD',       // Cosmic purple
-    pink: '#FF6B9D',         // Error/danger accent
-    green: '#00F5A0',        // Success states
+    cyan: '#0A84FF',         // System Blue
+    purple: '#BF5AF2',       // System Purple
+    pink: '#FF375F',         // System Pink
+    green: '#30D158',        // System Green
   },
 
   // Text hierarchy
   text: {
-    primary: '#FFFFFF',      // Headlines
-    secondary: '#A0A0B0',    // Body text
-    muted: '#606070',        // Captions
-    inverse: '#0A0A0F',      // On light backgrounds
+    primary: '#FFFFFF',      // White
+    secondary: '#EBEBF5',    // Light Gray (60%)
+    muted: '#8E8E93',        // Gray
+    inverse: '#000000',      // On light backgrounds
   },
 
   // Status colors
   status: {
-    success: '#00F5A0',
-    warning: '#FFB800',
-    error: '#FF4757',
-    info: '#00D4FF',
+    success: '#30D158',
+    warning: '#FFD60A',
+    error: '#FF453A',
+    info: '#0A84FF',
   },
 
-  // Gradients
+  // Gradients (Simplified/Removed in favor of solid colors, keeping structure for types)
   gradients: {
-    gold: ['#F7C948', '#FFD93D', '#C9A227'],
-    cosmic: ['#9D4EDD', '#00D4FF'],
-    starfield: ['#0A0A0F', '#12121A', '#1A1A24'],
-    aurora: ['#00F5A0', '#00D4FF', '#9D4EDD'],
+    gold: ['#F7931A', '#F7931A', '#F7931A'], // Solid Orange
+    cosmic: ['#0A84FF', '#0A84FF'], // Solid Blue
+    starfield: ['#000000', '#1C1C1E', '#1C1C1E'],
+    aurora: ['#30D158', '#0A84FF', '#BF5AF2'],
   },
 
   // Transparency layers
   overlay: {
-    light: 'rgba(255, 255, 255, 0.05)',
-    medium: 'rgba(255, 255, 255, 0.1)',
-    heavy: 'rgba(0, 0, 0, 0.6)',
-    gold: 'rgba(247, 201, 72, 0.1)',
+    light: 'rgba(255, 255, 255, 0.1)',
+    medium: 'rgba(255, 255, 255, 0.15)',
+    heavy: 'rgba(0, 0, 0, 0.7)',
+    gold: 'rgba(247, 147, 26, 0.15)',
   },
 
   // Border colors
   border: {
-    subtle: 'rgba(255, 255, 255, 0.06)',
-    medium: 'rgba(255, 255, 255, 0.12)',
-    accent: 'rgba(247, 201, 72, 0.3)',
+    subtle: '#38383A',
+    medium: '#48484A',
+    accent: '#F7931A',
   },
 } as const;
 
-// Light theme - Clean and bright
+// Light theme - Clean White
 export const lightColors = {
-  // Core palette - Light foundation
+  // Core palette
   background: {
     primary: '#FFFFFF',      // Pure white
-    secondary: '#F5F5F7',    // Elevated surfaces
-    tertiary: '#EAEAEF',     // Cards and modals
-    elevated: '#E0E0E8',     // Hover states
+    secondary: '#F2F2F7',    // System Gray 6
+    tertiary: '#FFFFFF',     // Cards (White on Gray)
+    elevated: '#E5E5EA',     // System Gray 5
   },
 
-  // Starlight gold - Primary accent (adjusted for light)
+  // Primary Brand Color
   gold: {
-    pure: '#D4A017',         // Rich gold
-    bright: '#E8B800',       // Bright gold
-    muted: '#A07D14',        // Dimmed gold
-    glow: 'rgba(212, 160, 23, 0.12)', // Glow effect
+    pure: '#F7931A',         // Bitcoin Orange
+    bright: '#F7931A',       // Same for light mode (maybe slightly darker if needed)
+    muted: '#B36200',
+    glow: 'rgba(247, 147, 26, 0.1)',
   },
 
-  // Electric accents (adjusted for light backgrounds)
+  // Accents
   accent: {
-    cyan: '#0096CC',         // Lightning bolt
-    purple: '#7B2CBF',       // Cosmic purple
-    pink: '#D63B6B',         // Error/danger accent
-    green: '#00A86B',        // Success states
+    cyan: '#007AFF',
+    purple: '#AF52DE',
+    pink: '#FF2D55',
+    green: '#34C759',
   },
 
   // Text hierarchy
   text: {
-    primary: '#1A1A24',      // Headlines
-    secondary: '#5A5A6E',    // Body text
-    muted: '#8E8E9E',        // Captions
+    primary: '#000000',      // Black
+    secondary: '#3C3C43',    // Dark Gray (60%)
+    muted: '#8E8E93',        // Gray
     inverse: '#FFFFFF',      // On dark backgrounds
   },
 
-  // Status colors (adjusted for light)
+  // Status colors
   status: {
-    success: '#00A86B',
-    warning: '#E6A000',
-    error: '#E53E4F',
-    info: '#0096CC',
+    success: '#34C759',
+    warning: '#FFCC00',
+    error: '#FF3B30',
+    info: '#007AFF',
   },
 
-  // Gradients
+  // Gradients (Solid for clean look)
   gradients: {
-    gold: ['#D4A017', '#E8B800', '#A07D14'],
-    cosmic: ['#7B2CBF', '#0096CC'],
-    starfield: ['#FFFFFF', '#F5F5F7', '#EAEAEF'],
-    aurora: ['#00A86B', '#0096CC', '#7B2CBF'],
+    gold: ['#F7931A', '#F7931A', '#F7931A'],
+    cosmic: ['#007AFF', '#007AFF'],
+    starfield: ['#FFFFFF', '#F2F2F7', '#F2F2F7'],
+    aurora: ['#34C759', '#007AFF', '#AF52DE'],
   },
 
   // Transparency layers
   overlay: {
-    light: 'rgba(0, 0, 0, 0.03)',
-    medium: 'rgba(0, 0, 0, 0.06)',
-    heavy: 'rgba(0, 0, 0, 0.4)',
-    gold: 'rgba(212, 160, 23, 0.08)',
+    light: 'rgba(0, 0, 0, 0.05)',
+    medium: 'rgba(0, 0, 0, 0.1)',
+    heavy: 'rgba(0, 0, 0, 0.5)',
+    gold: 'rgba(247, 147, 26, 0.1)',
   },
 
   // Border colors
   border: {
-    subtle: 'rgba(0, 0, 0, 0.06)',
-    medium: 'rgba(0, 0, 0, 0.1)',
-    accent: 'rgba(212, 160, 23, 0.3)',
+    subtle: '#E5E5EA',
+    medium: '#D1D1D6',
+    accent: '#F7931A',
   },
 } as const;
 
-// Default export (dark theme for backwards compatibility)
+// Default export
 export const colors = darkColors;
 
 export type ColorTheme = typeof darkColors;

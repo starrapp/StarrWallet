@@ -12,10 +12,11 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors, layout, typography } from '@/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -38,6 +39,9 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   style,
 }) => {
+  // Use the hook to get current theme colors
+  const themeColors = useColors();
+
   const handlePress = () => {
     if (disabled || loading) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -52,124 +56,74 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
-  const getTextStyle = (): TextStyle => {
-    const baseStyle = size === 'sm' ? typography.labelLarge : typography.titleMedium;
+  const getBackgroundColor = (): string => {
+    if (disabled) return themeColors.background.elevated;
     
     switch (variant) {
       case 'primary':
-        return { ...baseStyle, color: colors.background.primary };
+        return themeColors.gold.pure;
       case 'secondary':
-        return { ...baseStyle, color: colors.gold.pure };
+        return 'transparent';
       case 'ghost':
-        return { ...baseStyle, color: colors.text.primary };
+        return 'transparent';
       case 'danger':
-        return { ...baseStyle, color: colors.text.primary };
+        return themeColors.status.error;
       default:
-        return { ...baseStyle, color: colors.background.primary };
+        return themeColors.gold.pure;
+    }
+  };
+
+  const getBorderColor = (): string | undefined => {
+    if (variant === 'secondary') return themeColors.gold.pure;
+    return undefined;
+  };
+
+  const getBorderWidth = (): number => {
+    if (variant === 'secondary') return 2;
+    return 0;
+  };
+
+  const getTextStyle = (): TextStyle => {
+    const baseStyle = size === 'sm' ? typography.labelLarge : typography.titleMedium;
+    
+    if (disabled) return { ...baseStyle, color: themeColors.text.muted };
+
+    switch (variant) {
+      case 'primary':
+        return { ...baseStyle, color: '#FFFFFF' }; // Always white on primary
+      case 'secondary':
+        return { ...baseStyle, color: themeColors.gold.pure };
+      case 'ghost':
+        return { ...baseStyle, color: themeColors.text.primary };
+      case 'danger':
+        return { ...baseStyle, color: '#FFFFFF' };
+      default:
+        return { ...baseStyle, color: '#FFFFFF' };
     }
   };
 
   const containerStyle: ViewStyle = {
     height: getHeight(),
-    borderRadius: layout.radius.lg,
-    opacity: disabled ? 0.5 : 1,
+    borderRadius: layout.radius.full, // Modern pill shape
+    backgroundColor: getBackgroundColor(),
+    borderColor: getBorderColor(),
+    borderWidth: getBorderWidth(),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 8,
   };
 
-  // Primary button with gradient
-  if (variant === 'primary') {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        disabled={disabled || loading}
-        activeOpacity={0.8}
-        style={[styles.container, style]}
-      >
-        <LinearGradient
-          colors={[colors.gold.bright, colors.gold.pure, colors.gold.muted]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.gradient, containerStyle]}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.background.primary} />
-          ) : (
-            <>
-              {icon}
-              <Text style={[styles.text, getTextStyle()]}>{title}</Text>
-            </>
-          )}
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  }
-
-  // Secondary button with border
-  if (variant === 'secondary') {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        disabled={disabled || loading}
-        activeOpacity={0.7}
-        style={[
-          styles.container,
-          styles.secondary,
-          containerStyle,
-          style,
-        ]}
-      >
-        {loading ? (
-          <ActivityIndicator color={colors.gold.pure} />
-        ) : (
-          <>
-            {icon}
-            <Text style={[styles.text, getTextStyle()]}>{title}</Text>
-          </>
-        )}
-      </TouchableOpacity>
-    );
-  }
-
-  // Ghost button
-  if (variant === 'ghost') {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        disabled={disabled || loading}
-        activeOpacity={0.6}
-        style={[
-          styles.container,
-          styles.ghost,
-          containerStyle,
-          style,
-        ]}
-      >
-        {loading ? (
-          <ActivityIndicator color={colors.text.primary} />
-        ) : (
-          <>
-            {icon}
-            <Text style={[styles.text, getTextStyle()]}>{title}</Text>
-          </>
-        )}
-      </TouchableOpacity>
-    );
-  }
-
-  // Danger button
   return (
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled || loading}
       activeOpacity={0.7}
-      style={[
-        styles.container,
-        styles.danger,
-        containerStyle,
-        style,
-      ]}
+      style={[containerStyle, style]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.text.primary} />
+        <ActivityIndicator color={getTextStyle().color} />
       ) : (
         <>
           {icon}
@@ -181,44 +135,8 @@ export const Button: React.FC<ButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-  },
-  gradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-  },
-  secondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    borderWidth: 1.5,
-    borderColor: colors.gold.pure,
-    backgroundColor: 'transparent',
-  },
-  ghost: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    backgroundColor: colors.overlay.light,
-  },
-  danger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    backgroundColor: colors.status.error,
-  },
   text: {
     fontWeight: '600',
+    textAlign: 'center',
   },
 });
-

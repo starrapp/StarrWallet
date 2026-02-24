@@ -1,2 +1,0 @@
-export { LNDService } from './LNDService';
-

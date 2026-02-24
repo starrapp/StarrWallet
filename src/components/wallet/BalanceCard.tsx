@@ -1,15 +1,15 @@
 /**
  * Balance Card Component
  * 
- * Displays the wallet balance with a beautiful cosmic design.
+ * Displays the wallet balance with a clean, modern design.
  */
 
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Amount } from '@/components/ui';
-import { colors, spacing, layout } from '@/theme';
+import { layout, spacing } from '@/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import type { Balance } from '@/types/wallet';
 
 interface BalanceCardProps {
@@ -23,28 +23,12 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   onRefresh,
   isLoading = false,
 }) => {
+  const colors = useColors();
   const totalBalance = balance ? balance.lightning + balance.onchain : 0;
   const hasPending = balance && (balance.pendingIncoming > 0 || balance.pendingOutgoing > 0);
 
   return (
-    <View style={styles.container}>
-      {/* Background glow effect */}
-      <View style={styles.glowContainer}>
-        <LinearGradient
-          colors={['rgba(247, 201, 72, 0.15)', 'transparent']}
-          style={styles.glow}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
-
-      {/* Star decoration */}
-      <View style={styles.starContainer}>
-        <Ionicons name="star" size={16} color={colors.gold.pure} style={styles.star} />
-        <Ionicons name="star" size={10} color={colors.gold.muted} style={[styles.star, styles.starSmall]} />
-        <Ionicons name="star" size={8} color={colors.gold.pure} style={[styles.star, styles.starTiny]} />
-      </View>
-
+    <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
       {/* Balance label */}
       <View style={styles.labelRow}>
         <Text variant="labelMedium" color={colors.text.secondary}>
@@ -68,10 +52,10 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       </View>
 
       {/* Breakdown */}
-      <View style={styles.breakdown}>
+      <View style={[styles.breakdown, { borderTopColor: colors.border.subtle }]}>
         <View style={styles.breakdownItem}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="flash" size={16} color={colors.accent.cyan} />
+          <View style={[styles.iconContainer, { backgroundColor: colors.background.tertiary }]}>
+            <Ionicons name="flash" size={16} color={colors.gold.pure} />
           </View>
           <View>
             <Text variant="labelSmall" color={colors.text.muted}>
@@ -83,11 +67,11 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           </View>
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border.subtle }]} />
 
         <View style={styles.breakdownItem}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="link" size={16} color={colors.accent.purple} />
+          <View style={[styles.iconContainer, { backgroundColor: colors.background.tertiary }]}>
+            <Ionicons name="link" size={16} color={colors.text.secondary} />
           </View>
           <View>
             <Text variant="labelSmall" color={colors.text.muted}>
@@ -127,37 +111,9 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background.secondary,
     borderRadius: layout.radius.xl,
     padding: spacing.lg,
-    position: 'relative',
     overflow: 'hidden',
-  },
-  glowContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 120,
-  },
-  glow: {
-    flex: 1,
-  },
-  starContainer: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  star: {
-    marginLeft: 4,
-  },
-  starSmall: {
-    marginTop: -8,
-  },
-  starTiny: {
-    marginTop: 4,
   },
   labelRow: {
     flexDirection: 'row',
@@ -174,7 +130,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
   },
   breakdownItem: {
     flex: 1,
@@ -186,14 +141,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.overlay.light,
     alignItems: 'center',
     justifyContent: 'center',
   },
   divider: {
     width: 1,
     height: 40,
-    backgroundColor: colors.border.subtle,
     marginHorizontal: spacing.md,
   },
   pendingContainer: {
@@ -212,4 +165,3 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-

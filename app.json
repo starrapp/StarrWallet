@@ -3,7 +3,7 @@
     "name": "Starr",
     "slug": "starr-wallet",
     "owner": "jspeigner",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "starr",
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a0a2e"
       },
-      "package": "com.starwallet",
+      "package": "com.starrwallet",
       "permissions": [
         "CAMERA",
         "USE_BIOMETRIC",
