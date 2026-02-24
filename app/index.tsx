@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { KeychainService } from '@/services/keychain';
 import { Text } from '@/components/ui';
 import { layout, spacing } from '@/theme';
-import { useColors } from '@/contexts/ThemeContext';
+import { useColors } from '@/contexts';
 
 export default function EntryScreen() {
   const router = useRouter();

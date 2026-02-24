@@ -4,17 +4,63 @@
  * Main navigation tabs for the wallet.
  */
 
+import { useMemo } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/contexts';
-import { layout } from '@/theme';
+import { layout, spacing } from '@/theme';
 
 export default function TabLayout() {
   const router = useRouter();
   const colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        tabBar: {
+          position: 'absolute',
+          height: layout.tabBarHeight,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          paddingTop: spacing.xs,
+          paddingBottom: spacing.lg,
+        },
+        tabBarBackground: {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: colors.background.primary + 'E6',
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+        },
+        tabLabel: {
+          fontSize: 10,
+          fontWeight: '500',
+          marginTop: spacing.xxs,
+        },
+        scanButtonContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        scanButton: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: colors.gold.pure,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: -20,
+          shadowColor: colors.gold.pure,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        },
+      }),
+    [colors]
+  );
 
   return (
     <Tabs
@@ -100,45 +146,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    position: 'absolute',
-    height: layout.tabBarHeight,
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    elevation: 0,
-    paddingTop: 8,
-    paddingBottom: 20,
-  },
-  tabBarBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background.primary + 'E6',
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-  },
-  tabLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  scanButtonContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scanButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.gold.pure,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -20,
-    shadowColor: colors.gold.pure,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-});

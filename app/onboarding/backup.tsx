@@ -4,17 +4,19 @@
  * Verifies the user has written down their recovery phrase.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 export default function BackupVerificationScreen() {
   const router = useRouter();
+  const colors = useColors();
   const params = useLocalSearchParams<{ mnemonic?: string }>();
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
@@ -91,6 +93,115 @@ export default function BackupVerificationScreen() {
     }
   };
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        scrollView: { flex: 1 },
+        scrollContent: { padding: spacing.lg, paddingBottom: spacing.xl },
+        header: {
+          alignItems: 'center',
+          gap: spacing.sm,
+          marginBottom: spacing.lg,
+        },
+        iconContainer: {
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: spacing.sm,
+        },
+        sectionLabel: { marginBottom: spacing.sm },
+        promptsContainer: { marginBottom: spacing.lg },
+        promptItem: { marginBottom: spacing.sm },
+        promptRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+        },
+        promptNumber: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        promptSlot: {
+          flex: 1,
+          height: 48,
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.md,
+          borderWidth: 1.5,
+          borderColor: colors.border.subtle,
+          borderStyle: 'dashed',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        promptSlotFilled: {
+          borderColor: colors.gold.pure,
+          borderStyle: 'solid',
+          backgroundColor: colors.gold.glow,
+        },
+        optionsSection: { marginBottom: spacing.lg },
+        optionsContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: spacing.sm,
+        },
+        optionButton: {
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.md,
+          borderWidth: 1.5,
+          borderColor: colors.border.subtle,
+          position: 'relative',
+          minWidth: 80,
+          alignItems: 'center',
+        },
+        optionButtonSelected: {
+          borderColor: colors.gold.pure,
+          backgroundColor: colors.gold.glow,
+        },
+        selectedBadge: {
+          position: 'absolute',
+          top: -10,
+          right: -10,
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: colors.gold.pure,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        errorCard: { marginBottom: spacing.md, borderColor: colors.status.error },
+        errorContent: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+        },
+        hintContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.xs,
+          paddingVertical: spacing.md,
+        },
+        actions: {
+          padding: spacing.lg,
+          paddingTop: spacing.md,
+          gap: spacing.md,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+          backgroundColor: colors.background.primary,
+        },
+      }),
+    [colors]
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -114,7 +225,7 @@ export default function BackupVerificationScreen() {
         {/* Word prompts - what we're asking for */}
         <View style={styles.promptsContainer}>
           <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-            SELECT THESE WORDS IN ORDER:
+            Select these words in order:
           </Text>
           {correctIndices.map((index, i) => (
             <View key={index} style={styles.promptItem}>
@@ -146,7 +257,7 @@ export default function BackupVerificationScreen() {
         {/* Word options to choose from */}
         <View style={styles.optionsSection}>
           <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-            CHOOSE FROM THESE WORDS:
+            Choose from these words:
           </Text>
           <View style={styles.optionsContainer}>
             {options.map((word) => {
@@ -221,127 +332,3 @@ export default function BackupVerificationScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  header: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  sectionLabel: {
-    marginBottom: spacing.sm,
-  },
-  promptsContainer: {
-    marginBottom: spacing.lg,
-  },
-  promptItem: {
-    marginBottom: spacing.sm,
-  },
-  promptRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  promptNumber: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  promptSlot: {
-    flex: 1,
-    height: 48,
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border.subtle,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  promptSlotFilled: {
-    borderColor: colors.gold.pure,
-    borderStyle: 'solid',
-    backgroundColor: colors.gold.glow,
-  },
-  optionsSection: {
-    marginBottom: spacing.lg,
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  optionButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border.subtle,
-    position: 'relative',
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  optionButtonSelected: {
-    borderColor: colors.gold.pure,
-    backgroundColor: colors.gold.glow,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: -10,
-    right: -10,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.gold.pure,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorCard: {
-    marginBottom: spacing.md,
-    borderColor: colors.status.error,
-  },
-  errorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  hintContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-  },
-  actions: {
-    padding: spacing.lg,
-    paddingTop: spacing.md,
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-    backgroundColor: colors.background.primary,
-  },
-});

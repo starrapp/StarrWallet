@@ -7,7 +7,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { layout, spacing } from '@/theme';
-import { useColors } from '@/contexts/ThemeContext';
+import { useColors } from '@/contexts';
 
 interface CardProps {
   children: React.ReactNode;

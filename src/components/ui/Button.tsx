@@ -15,8 +15,8 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, layout, typography } from '@/theme';
-import { useColors } from '@/contexts/ThemeContext';
+import { layout, spacing, typography } from '@/theme';
+import { useColors } from '@/contexts';
 
 interface ButtonProps {
   title: string;
@@ -111,8 +111,8 @@ export const Button: React.FC<ButtonProps> = ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 8,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.xs,
   };
 
   return (

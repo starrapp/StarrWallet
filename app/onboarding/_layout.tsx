@@ -3,9 +3,10 @@
  */
 
 import { Stack } from 'expo-router';
-import { colors } from '@/theme';
+import { useColors } from '@/contexts';
 
 export default function OnboardingLayout() {
+  const colors = useColors();
   return (
     <Stack
       screenOptions={{

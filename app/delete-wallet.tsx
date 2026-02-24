@@ -5,7 +5,7 @@
  * CRITICAL: This action is irreversible and will delete all wallet data.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -21,15 +21,76 @@ import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { BreezService } from '@/services/breez';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 const CONFIRMATION_TEXT = 'DELETE';
 
 export default function DeleteWalletScreen() {
   const router = useRouter();
+  const colors = useColors();
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [step, setStep] = useState<'warning' | 'confirm'>('warning');
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        loadingContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.md,
+          backgroundColor: colors.background.primary,
+        },
+        scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+        header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xl },
+        iconContainer: {
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          backgroundColor: colors.status.error + '20',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: spacing.sm,
+        },
+        dangerCard: { marginBottom: spacing.md, borderColor: colors.status.error },
+        warningCard: { marginBottom: spacing.lg, borderColor: colors.status.warning },
+        cardContent: {
+          flexDirection: 'row',
+          gap: spacing.md,
+          alignItems: 'flex-start',
+        },
+        cardText: { flex: 1, gap: spacing.xxs },
+        checklist: { gap: spacing.sm },
+        checklistLabel: { marginBottom: spacing.xs },
+        checkItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+        inputContainer: { gap: spacing.sm },
+        inputLabel: { marginBottom: spacing.xs },
+        input: {
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.md,
+          borderWidth: 1.5,
+          borderColor: colors.status.error,
+          padding: spacing.md,
+          fontSize: 18,
+          fontWeight: '600',
+          color: colors.text.primary,
+          textAlign: 'center',
+          letterSpacing: 2,
+        },
+        actions: {
+          padding: spacing.lg,
+          gap: spacing.md,
+          backgroundColor: colors.background.primary,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+        },
+        dangerButton: { backgroundColor: colors.status.error },
+      }),
+    [colors]
+  );
 
   const handleProceedToConfirm = async () => {
     // Require biometric authentication first
@@ -149,7 +210,7 @@ export default function DeleteWalletScreen() {
 
             <View style={styles.checklist}>
               <Text variant="labelMedium" color={colors.text.muted} style={styles.checklistLabel}>
-                BEFORE YOU CONTINUE:
+                Before you continue:
               </Text>
               <View style={styles.checkItem}>
                 <Ionicons name="checkbox-outline" size={20} color={colors.text.secondary} />
@@ -190,7 +251,7 @@ export default function DeleteWalletScreen() {
 
             <View style={styles.inputContainer}>
               <Text variant="labelMedium" color={colors.text.muted} style={styles.inputLabel}>
-                TYPE "{CONFIRMATION_TEXT}" TO CONFIRM:
+                Type "{CONFIRMATION_TEXT}" to confirm:
               </Text>
               <TextInput
                 style={styles.input}
@@ -246,92 +307,4 @@ export default function DeleteWalletScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.background.primary,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  header: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.status.error + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  dangerCard: {
-    marginBottom: spacing.md,
-    borderColor: colors.status.error,
-  },
-  warningCard: {
-    marginBottom: spacing.lg,
-    borderColor: colors.status.warning,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  cardText: {
-    flex: 1,
-    gap: spacing.xxs,
-  },
-  checklist: {
-    gap: spacing.sm,
-  },
-  checklistLabel: {
-    marginBottom: spacing.xs,
-  },
-  checkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  inputContainer: {
-    gap: spacing.sm,
-  },
-  inputLabel: {
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.status.error,
-    padding: spacing.md,
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text.primary,
-    textAlign: 'center',
-    letterSpacing: 2,
-  },
-  actions: {
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-  },
-  dangerButton: {
-    backgroundColor: colors.status.error,
-  },
-});
 

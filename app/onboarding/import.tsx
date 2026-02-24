@@ -4,7 +4,7 @@
  * Allows users to import an existing wallet via recovery phrase.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,10 +19,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Text } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
-import { colors, spacing, layout, typography } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout, typography } from '@/theme';
 
 export default function ImportWalletScreen() {
   const router = useRouter();
+  const colors = useColors();
   const [words, setWords] = useState<string[]>(Array(24).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +78,89 @@ export default function ImportWalletScreen() {
       setIsLoading(false);
     }
   };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        keyboardView: { flex: 1 },
+        scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+        backButton: {
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        iconContainer: {
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+          alignSelf: 'center',
+          marginBottom: spacing.sm,
+        },
+        header: {
+          alignItems: 'center',
+          gap: spacing.sm,
+          marginBottom: spacing.lg,
+        },
+        wordsContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: spacing.sm,
+          marginBottom: spacing.lg,
+        },
+        wordInput: {
+          width: '30%',
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.sm,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: spacing.xs,
+          borderWidth: 1,
+          borderColor: colors.border.subtle,
+        },
+        wordNumber: {
+          width: 20,
+        },
+        input: {
+          flex: 1,
+          ...typography.titleSmall,
+          color: colors.text.primary,
+          padding: spacing.xs,
+        },
+        errorContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          padding: spacing.md,
+          backgroundColor: `${colors.status.error}15`,
+          borderRadius: layout.radius.md,
+          marginBottom: spacing.md,
+        },
+        tipContainer: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: spacing.sm,
+          padding: spacing.md,
+          backgroundColor: colors.overlay.light,
+          borderRadius: layout.radius.md,
+        },
+        actions: {
+          padding: spacing.lg,
+          backgroundColor: colors.background.primary,
+        },
+      }),
+    [colors]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -168,85 +253,3 @@ export default function ImportWalletScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  header: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    padding: spacing.sm,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  wordsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  wordInput: {
-    width: '30%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  wordNumber: {
-    width: 20,
-  },
-  input: {
-    flex: 1,
-    ...typography.titleSmall,
-    color: colors.text.primary,
-    padding: spacing.xs,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: `${colors.status.error}15`,
-    borderRadius: layout.radius.md,
-    marginBottom: spacing.md,
-  },
-  tipContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.overlay.light,
-    borderRadius: layout.radius.md,
-  },
-  actions: {
-    padding: spacing.lg,
-    backgroundColor: colors.background.primary,
-  },
-});
-

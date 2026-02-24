@@ -4,7 +4,7 @@
  * Generates and displays the recovery phrase.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,13 +16,86 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 export default function CreateWalletScreen() {
   const router = useRouter();
+  const colors = useColors();
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revealed, setRevealed] = useState(false);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        loadingContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.md,
+          backgroundColor: colors.background.primary,
+        },
+        scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+        header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
+        iconContainer: {
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: spacing.sm,
+        },
+        warningCard: { marginBottom: spacing.lg, borderColor: colors.status.warning },
+        warningContent: {
+          flexDirection: 'row',
+          gap: spacing.md,
+          alignItems: 'flex-start',
+        },
+        warningText: { flex: 1, gap: spacing.xxs },
+        mnemonicContainer: {
+          minHeight: 320,
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.lg,
+          padding: spacing.md,
+          marginBottom: spacing.lg,
+        },
+        blurOverlay: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.md,
+        },
+        mnemonicGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: spacing.sm,
+        },
+        wordItem: {
+          width: '30%',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          padding: spacing.sm,
+          backgroundColor: colors.background.tertiary,
+          borderRadius: layout.radius.sm,
+        },
+        checkboxContainer: { gap: spacing.sm },
+        checkItem: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: spacing.sm,
+        },
+        actions: {
+          padding: spacing.lg,
+          gap: spacing.md,
+          backgroundColor: colors.background.primary,
+        },
+      }),
+    [colors]
+  );
 
   useEffect(() => {
     generateMnemonic();
@@ -168,89 +241,4 @@ export default function CreateWalletScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.background.primary,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  header: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  warningCard: {
-    marginBottom: spacing.lg,
-    borderColor: colors.status.warning,
-  },
-  warningContent: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  warningText: {
-    flex: 1,
-    gap: spacing.xxs,
-  },
-  mnemonicContainer: {
-    minHeight: 320,
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  blurOverlay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  mnemonicGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  wordItem: {
-    width: '30%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    padding: spacing.sm,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: layout.radius.sm,
-  },
-  checkboxContainer: {
-    gap: spacing.sm,
-  },
-  checkItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  actions: {
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background.primary,
-  },
-});
 

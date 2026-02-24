@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Text } from './Text';
 import { layout, spacing, typography } from '@/theme';
-import { useColors } from '@/contexts/ThemeContext';
+import { useColors } from '@/contexts';
 
 interface InputProps extends TextInputProps {
   label?: string;

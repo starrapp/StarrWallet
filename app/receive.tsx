@@ -2,7 +2,7 @@
  * Receive Payment Screen
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,11 +18,20 @@ import * as Haptics from 'expo-haptics';
 import { Button, Text, Input, AmountInput } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 import type { Invoice } from '@/types/wallet';
+
+function expiryCopy(expiresAt: Date): string {
+  const ms = expiresAt.getTime() - Date.now();
+  if (ms <= 0) return 'Expired';
+  const minutes = Math.ceil(ms / 60000);
+  return minutes === 1 ? 'Expires in 1 minute' : `Expires in ${minutes} minutes`;
+}
 
 export default function ReceiveScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { createInvoice, currentInvoice, isCreatingInvoice } = useWalletStore();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -51,6 +60,52 @@ export default function ReceiveScreen() {
     setAmount('');
     setDescription('');
   };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        safeArea: { flex: 1 },
+        keyboardView: { flex: 1 },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border.subtle,
+        },
+        scrollView: { flex: 1 },
+        scrollContent: {
+          padding: spacing.lg,
+          gap: spacing.lg,
+          alignItems: 'center',
+        },
+        iconContainer: { marginVertical: spacing.lg },
+        successHeader: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+        successIcon: {
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.status.success + '20',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        amountContainer: {
+          flexDirection: 'row',
+          alignItems: 'baseline',
+          gap: spacing.sm,
+        },
+        expiryInfo: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          paddingVertical: spacing.sm,
+        },
+      }),
+    [colors]
+  );
 
   return (
     <View style={styles.container}>
@@ -145,7 +200,7 @@ export default function ReceiveScreen() {
                 <View style={styles.expiryInfo}>
                   <Ionicons name="time" size={16} color={colors.text.muted} />
                   <Text variant="bodySmall" color={colors.text.muted}>
-                    Expires in 60 minutes
+                    {expiryCopy(invoice.expiresAt)}
                   </Text>
                 </View>
 
@@ -164,61 +219,3 @@ export default function ReceiveScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-    alignItems: 'center',
-  },
-  iconContainer: {
-    marginVertical: spacing.lg,
-  },
-  successHeader: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  successIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.status.success + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.sm,
-  },
-  expiryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-});
-

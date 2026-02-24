@@ -9,7 +9,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Amount } from '@/components/ui';
 import { layout, spacing } from '@/theme';
-import { useColors } from '@/contexts/ThemeContext';
+import { useColors } from '@/contexts';
 import type { Balance } from '@/types/wallet';
 
 interface BalanceCardProps {

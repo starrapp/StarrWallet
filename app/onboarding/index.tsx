@@ -2,17 +2,76 @@
  * Onboarding Welcome Screen
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text } from '@/components/ui';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 export default function OnboardingWelcome() {
   const router = useRouter();
+  const colors = useColors();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1 },
+        gradient: { flex: 1 },
+        safeArea: { flex: 1, padding: spacing.lg },
+        heroSection: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        },
+        starsContainer: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        },
+        starDecor: { position: 'absolute' },
+        logoContainer: { marginBottom: spacing.lg },
+        logoGradient: {
+          width: 120,
+          height: 120,
+          borderRadius: 60,
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: colors.gold.pure,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.5,
+          shadowRadius: 20,
+          elevation: 10,
+        },
+        featuresSection: { gap: spacing.md, marginBottom: spacing.xl },
+        featureItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.md,
+          padding: spacing.md,
+          backgroundColor: colors.overlay.light,
+          borderRadius: layout.radius.lg,
+        },
+        featureIcon: {
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        featureText: { flex: 1, gap: spacing.xxs },
+        actionsSection: { gap: spacing.md },
+        footer: { marginTop: spacing.lg, paddingBottom: spacing.md },
+      }),
+    [colors]
+  );
 
   return (
     <View style={styles.container}>
@@ -65,21 +124,33 @@ export default function OnboardingWelcome() {
 
           {/* Features */}
           <View style={styles.featuresSection}>
-            <FeatureItem
-              icon="flash"
-              title="Instant Payments"
-              description="Send and receive Bitcoin in seconds"
-            />
-            <FeatureItem
-              icon="key"
-              title="Non-Custodial"
-              description="You control your keys, your coins"
-            />
-            <FeatureItem
-              icon="shield-checkmark"
-              title="Secure Backups"
-              description="Automatic encrypted cloud backups"
-            />
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="flash" size={24} color={colors.gold.pure} />
+              </View>
+              <View style={styles.featureText}>
+                <Text variant="titleSmall" color={colors.text.primary}>Instant Payments</Text>
+                <Text variant="bodySmall" color={colors.text.secondary}>Send and receive Bitcoin in seconds</Text>
+              </View>
+            </View>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="key" size={24} color={colors.gold.pure} />
+              </View>
+              <View style={styles.featureText}>
+                <Text variant="titleSmall" color={colors.text.primary}>Non-Custodial</Text>
+                <Text variant="bodySmall" color={colors.text.secondary}>You control your keys, your coins</Text>
+              </View>
+            </View>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="shield-checkmark" size={24} color={colors.gold.pure} />
+              </View>
+              <View style={styles.featureText}>
+                <Text variant="titleSmall" color={colors.text.primary}>Secure Backups</Text>
+                <Text variant="bodySmall" color={colors.text.secondary}>Automatic encrypted cloud backups</Text>
+              </View>
+            </View>
           </View>
 
           {/* Actions */}
@@ -109,102 +180,4 @@ export default function OnboardingWelcome() {
     </View>
   );
 }
-
-// Feature item component
-interface FeatureItemProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  description: string;
-}
-
-const FeatureItem: React.FC<FeatureItemProps> = ({ icon, title, description }) => (
-  <View style={styles.featureItem}>
-    <View style={styles.featureIcon}>
-      <Ionicons name={icon} size={24} color={colors.gold.pure} />
-    </View>
-    <View style={styles.featureText}>
-      <Text variant="titleSmall" color={colors.text.primary}>
-        {title}
-      </Text>
-      <Text variant="bodySmall" color={colors.text.secondary}>
-        {description}
-      </Text>
-    </View>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  gradient: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  heroSection: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  starsContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  starDecor: {
-    position: 'absolute',
-  },
-  logoContainer: {
-    marginBottom: spacing.lg,
-  },
-  logoGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.gold.pure,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  featuresSection: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.overlay.light,
-    borderRadius: layout.radius.lg,
-  },
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureText: {
-    flex: 1,
-    gap: spacing.xxs,
-  },
-  actionsSection: {
-    gap: spacing.md,
-  },
-  footer: {
-    marginTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-});
 

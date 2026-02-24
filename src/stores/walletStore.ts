@@ -7,7 +7,6 @@
 
 import { create } from 'zustand';
 import { BreezService } from '@/services/breez';
-import { TorService } from '@/services/tor';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
 import { BREEZ_CONFIG } from '@/config';
@@ -19,7 +18,13 @@ import type {
   LSPInfo,
   WalletSettings,
   BackupState,
+  ListPaymentsFilter,
 } from '@/types/wallet';
+
+const DEFAULT_PAYMENT_FILTER: ListPaymentsFilter = {
+  limit: 20,
+  sortAscending: false,
+};
 
 // Wallet state interface
 interface WalletState {
@@ -36,6 +41,9 @@ interface WalletState {
   // Payments
   payments: LightningPayment[];
   isLoadingPayments: boolean;
+  isLoadingMorePayments: boolean;
+  hasMorePayments: boolean;
+  paymentFilter: ListPaymentsFilter;
   pendingPayment: LightningPayment | null;
 
   // Invoices
@@ -62,10 +70,15 @@ interface WalletState {
   
   refreshBalance: () => Promise<void>;
   refreshPayments: () => Promise<void>;
-  
+  listPayments: (filter: ListPaymentsFilter) => Promise<void>;
+  loadMorePayments: () => Promise<void>;
+  setPaymentFilter: (partial: Partial<ListPaymentsFilter>) => void;
+  getPayment: (paymentId: string) => Promise<LightningPayment | null>;
+
   createInvoice: (amountSats: number, description?: string) => Promise<Invoice>;
   payInvoice: (bolt11: string, amountSats?: number) => Promise<LightningPayment>;
-  
+  sendToAddress: (address: string, amountSats: number, type: 'bitcoin' | 'spark') => Promise<LightningPayment>;
+
   updateSettings: (settings: Partial<WalletSettings>) => void;
   
   syncNode: () => Promise<void>;
@@ -79,8 +92,6 @@ const defaultSettings: WalletSettings = {
   biometricEnabled: false,
   pinEnabled: false,
   autoLockMinutes: 5,
-  torEnabled: false,
-  torAutoStart: false,
   autoBackupEnabled: true,
 };
 
@@ -96,6 +107,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   payments: [],
   isLoadingPayments: false,
+  isLoadingMorePayments: false,
+  hasMorePayments: false,
+  paymentFilter: DEFAULT_PAYMENT_FILTER,
   pendingPayment: null,
 
   currentInvoice: null,
@@ -130,27 +144,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
       } else {
         throw new Error('No wallet found. Please create or import a wallet.');
-      }
-
-      // Initialize Tor service only if enabled in settings
-      const settings = get().settings;
-      if (settings.torEnabled) {
-        try {
-          await TorService.initialize();
-          console.log('[WalletStore] Tor service initialized (not started yet)');
-        } catch (error) {
-          console.error('[WalletStore] Tor initialization failed:', error);
-          // Continue without Tor
-        }
-      } else {
-        try {
-          if (TorService.isTorRunning()) {
-            await TorService.stopTor();
-            console.log('[WalletStore] Tor stopped (disabled in settings)');
-          }
-        } catch (error) {
-          console.warn('[WalletStore] Error stopping Tor:', error);
-        }
       }
 
       await BreezService.initialize(mnemonicPhrase, {
@@ -231,13 +224,58 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   refreshPayments: async () => {
+    const { paymentFilter } = get();
+    return get().listPayments({ ...paymentFilter, offset: 0 });
+  },
+
+  listPayments: async (filter: ListPaymentsFilter) => {
     set({ isLoadingPayments: true });
     try {
-      const payments = await BreezService.getPayments('all', 50);
-      set({ payments, isLoadingPayments: false });
+      const filterWithDefaults = { ...DEFAULT_PAYMENT_FILTER, ...filter, offset: filter.offset ?? 0 };
+      const payments = await BreezService.listPayments(filterWithDefaults);
+      const limit = filterWithDefaults.limit ?? 20;
+      set({
+        payments,
+        hasMorePayments: payments.length === limit,
+        paymentFilter: filterWithDefaults,
+        isLoadingPayments: false,
+      });
     } catch (error) {
-      console.error('[WalletStore] Failed to refresh payments:', error);
+      console.error('[WalletStore] Failed to list payments:', error);
       set({ isLoadingPayments: false });
+    }
+  },
+
+  loadMorePayments: async () => {
+    const { payments, paymentFilter, hasMorePayments, isLoadingPayments, isLoadingMorePayments } = get();
+    if (hasMorePayments === false || isLoadingPayments || isLoadingMorePayments) return;
+    set({ isLoadingMorePayments: true });
+    try {
+      const offset = payments.length;
+      const limit = paymentFilter.limit ?? 20;
+      const filter = { ...paymentFilter, offset, limit };
+      const next = await BreezService.listPayments(filter);
+      set((s) => ({
+        payments: [...s.payments, ...next],
+        hasMorePayments: next.length === limit,
+        isLoadingMorePayments: false,
+      }));
+    } catch (error) {
+      console.error('[WalletStore] Failed to load more payments:', error);
+      set({ isLoadingMorePayments: false });
+    }
+  },
+
+  setPaymentFilter: (partial: Partial<ListPaymentsFilter>) => {
+    set((s) => ({ paymentFilter: { ...s.paymentFilter, ...partial } }));
+  },
+
+  getPayment: async (paymentId: string) => {
+    try {
+      return await BreezService.getPayment(paymentId);
+    } catch (error) {
+      console.error('[WalletStore] Failed to get payment:', error);
+      return null;
     }
   },
 
@@ -269,6 +307,31 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       });
 
       const payment = await BreezService.payInvoice(bolt11, amountSats);
+      set((state) => ({
+        payments: [payment, ...state.payments],
+        pendingPayment: null,
+      }));
+      get().refreshBalance();
+      return payment;
+    } catch (error) {
+      set({ pendingPayment: null });
+      throw error;
+    }
+  },
+
+  sendToAddress: async (address: string, amountSats: number, type: 'bitcoin' | 'spark') => {
+    try {
+      set({
+        pendingPayment: {
+          id: 'pending',
+          type: 'send',
+          status: 'pending',
+          amountSats,
+          paymentHash: '',
+          timestamp: new Date(),
+        },
+      });
+      const payment = await BreezService.sendToAddress(address, amountSats, type);
       set((state) => ({
         payments: [payment, ...state.payments],
         pendingPayment: null,

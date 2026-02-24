@@ -11,28 +11,48 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import { Text } from '@/components/ui';
 import { layout, spacing } from '@/theme';
-import { useColors } from '@/contexts/ThemeContext';
+import { useColors } from '@/contexts';
 import type { LightningPayment } from '@/types/wallet';
 
 interface TransactionListProps {
   transactions: LightningPayment[];
   onTransactionPress?: (tx: LightningPayment) => void;
   onRefresh?: () => void;
+  onEndReached?: () => void;
   isLoading?: boolean;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
 }
 
 export const TransactionList: React.FC<TransactionListProps> = ({
   transactions,
   onTransactionPress,
   onRefresh,
+  onEndReached,
   isLoading = false,
+  isLoadingMore = false,
+  hasMore = false,
 }) => {
   const colors = useColors();
+
+  const renderFooter = () => {
+    if (!hasMore || !onEndReached) return null;
+    if (isLoadingMore) {
+      return (
+        <View style={styles.footer}>
+          <ActivityIndicator size="small" color={colors.gold.pure} />
+          <Text variant="bodySmall" color={colors.text.muted}>Loading more...</Text>
+        </View>
+      );
+    }
+    return null;
+  };
 
   const renderTransaction = ({ item }: { item: LightningPayment }) => (
     <TransactionItem
@@ -74,6 +94,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       contentContainerStyle={
         transactions.length === 0 ? styles.emptyList : styles.list
       }
+      ListFooterComponent={renderFooter}
+      onEndReached={onEndReached}
+      onEndReachedThreshold={0.3}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -179,6 +202,11 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
 const styles = StyleSheet.create({
   list: {
     paddingBottom: spacing.xxl,
+  },
+  footer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   emptyList: {
     flex: 1,

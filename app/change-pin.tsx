@@ -4,7 +4,7 @@
  * Allows users to set up or change their wallet PIN.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,7 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Text, Button } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 type Step = 'current' | 'new' | 'confirm';
 
@@ -27,6 +28,7 @@ const PIN_LENGTH = 6;
 
 export default function ChangePINScreen() {
   const router = useRouter();
+  const colors = useColors();
   const [step, setStep] = useState<Step>('current');
   const [currentPIN, setCurrentPIN] = useState('');
   const [newPIN, setNewPIN] = useState('');
@@ -40,9 +42,105 @@ export default function ChangePINScreen() {
   }, []);
 
   useEffect(() => {
-    // Focus the hidden input when step changes
     inputRef.current?.focus();
   }, [step]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        hiddenInput: { position: 'absolute', opacity: 0, height: 0 },
+        content: { flex: 1, paddingHorizontal: spacing.lg },
+        header: {
+          alignItems: 'center',
+          gap: spacing.sm,
+          marginTop: spacing.xl,
+          marginBottom: spacing.xl,
+        },
+        backButton: {
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: colors.overlay.light,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        iconContainer: {
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: spacing.sm,
+        },
+        pinContainer: {
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: spacing.md,
+          marginBottom: spacing.lg,
+        },
+        pinDot: {
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: colors.background.tertiary,
+          borderWidth: 2,
+          borderColor: colors.border.subtle,
+        },
+        pinDotFilled: {
+          backgroundColor: colors.gold.pure,
+          borderColor: colors.gold.pure,
+        },
+        pinDotError: { borderColor: colors.status.error },
+        errorContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.xs,
+          marginBottom: spacing.md,
+        },
+        stepIndicator: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.xs,
+          marginBottom: spacing.xl,
+        },
+        stepDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: colors.background.tertiary,
+        },
+        stepDotActive: { backgroundColor: colors.gold.pure },
+        stepLine: {
+          width: 32,
+          height: 2,
+          backgroundColor: colors.background.tertiary,
+        },
+        stepLineActive: { backgroundColor: colors.gold.pure },
+        numpad: {
+          flex: 1,
+          justifyContent: 'center',
+          maxHeight: 320,
+        },
+        numpadRow: { flexDirection: 'row', justifyContent: 'center' },
+        numpadKey: {
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: spacing.sm,
+        },
+        numpadKeyEmpty: { width: 72, height: 72, margin: spacing.sm },
+      }),
+    [colors]
+  );
 
   const checkExistingPIN = async () => {
     const state = await KeychainService.getState();
@@ -271,120 +369,4 @@ export default function ChangePINScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    height: 0,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-  },
-  header: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.overlay.light,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  pinContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  pinDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.background.tertiary,
-    borderWidth: 2,
-    borderColor: colors.border.subtle,
-  },
-  pinDotFilled: {
-    backgroundColor: colors.gold.pure,
-    borderColor: colors.gold.pure,
-  },
-  pinDotError: {
-    borderColor: colors.status.error,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.background.tertiary,
-  },
-  stepDotActive: {
-    backgroundColor: colors.gold.pure,
-  },
-  stepLine: {
-    width: 32,
-    height: 2,
-    backgroundColor: colors.background.tertiary,
-  },
-  stepLineActive: {
-    backgroundColor: colors.gold.pure,
-  },
-  numpad: {
-    flex: 1,
-    justifyContent: 'center',
-    maxHeight: 320,
-  },
-  numpadRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  numpadKey: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: spacing.sm,
-  },
-  numpadKeyEmpty: {
-    width: 72,
-    height: 72,
-    margin: spacing.sm,
-  },
-});
 

@@ -4,7 +4,7 @@
  * View and manage Lightning channels.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,10 +20,12 @@ import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
 import { BreezService } from '@/services/breez';
 import { useWalletStore } from '@/stores/walletStore';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 import type { LSPInfo } from '@/types/wallet';
 
 export default function ChannelsScreen() {
+  const colors = useColors();
   const { isInitialized, isInitializing } = useWalletStore();
   const [currentLSP, setCurrentLSP] = useState<LSPInfo | null>(null);
   const [availableLSPs, setAvailableLSPs] = useState<LSPInfo[]>([]);
@@ -42,6 +44,138 @@ export default function ChannelsScreen() {
       setLoadError('Wallet not initialized');
     }
   }, [isInitialized, isInitializing]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        safeArea: { flex: 1 },
+        header: {
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.md,
+          gap: spacing.xxs,
+        },
+        scrollView: { flex: 1 },
+        scrollContent: {
+          padding: spacing.lg,
+          paddingBottom: layout.tabBarHeight + spacing.xl,
+        },
+        section: { marginBottom: spacing.xl },
+        sectionTitle: { marginBottom: spacing.md },
+        sectionHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: spacing.md,
+        },
+        lspCard: { padding: spacing.md },
+        lspHeader: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: spacing.md,
+        },
+        lspIcon: {
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        lspInfo: { flex: 1, marginLeft: spacing.md },
+        statusBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xxs,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: spacing.xxs,
+          backgroundColor: colors.status.success + '20',
+          borderRadius: layout.radius.full,
+        },
+        statusDot: {
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: colors.status.success,
+        },
+        lspStats: {
+          flexDirection: 'row',
+          paddingTop: spacing.md,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+        },
+        statItem: { flex: 1, alignItems: 'center', gap: spacing.xxs },
+        statDivider: {
+          width: 1,
+          height: '100%',
+          backgroundColor: colors.border.subtle,
+        },
+        emptyCard: {
+          padding: spacing.xl,
+          alignItems: 'center',
+          gap: spacing.sm,
+        },
+        lspList: { gap: spacing.sm },
+        lspListItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: spacing.md,
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.lg,
+          gap: spacing.md,
+        },
+        lspListIcon: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.accent.cyan + '20',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        lspListInfo: { flex: 1 },
+        lspListHeader: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+        },
+        lspListItemActive: {
+          borderWidth: 1.5,
+          borderColor: colors.gold.pure,
+          backgroundColor: colors.gold.glow,
+        },
+        lspListIconActive: { backgroundColor: colors.gold.glow },
+        currentBadge: {
+          paddingHorizontal: spacing.xs,
+          paddingVertical: 2,
+          backgroundColor: colors.gold.pure + '20',
+          borderRadius: layout.radius.sm,
+        },
+        infoCard: { padding: spacing.md },
+        infoContent: {
+          flexDirection: 'row',
+          gap: spacing.md,
+          alignItems: 'flex-start',
+        },
+        infoText: { flex: 1, gap: spacing.xs },
+        loadingContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.md,
+        },
+        loadingText: { marginTop: spacing.sm },
+        errorContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: spacing.xl,
+          gap: spacing.md,
+        },
+        errorTitle: { marginTop: spacing.sm },
+        errorText: { marginTop: spacing.xs, maxWidth: 300 },
+      }),
+    [colors]
+  );
 
   const loadData = async () => {
     if (!isInitialized) {
@@ -351,170 +485,4 @@ export default function ChannelsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.xxs,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: layout.tabBarHeight + spacing.xl,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    marginBottom: spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  lspCard: {
-    padding: spacing.md,
-  },
-  lspHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  lspIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lspInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    backgroundColor: colors.status.success + '20',
-    borderRadius: layout.radius.full,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.status.success,
-  },
-  lspStats: {
-    flexDirection: 'row',
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xxs,
-  },
-  statDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: colors.border.subtle,
-  },
-  emptyCard: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  lspList: {
-    gap: spacing.sm,
-  },
-  lspListItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.background.secondary,
-    borderRadius: layout.radius.lg,
-    gap: spacing.md,
-  },
-  lspListIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accent.cyan + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lspListInfo: {
-    flex: 1,
-  },
-  lspListHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  lspListItemActive: {
-    borderWidth: 1.5,
-    borderColor: colors.gold.pure,
-    backgroundColor: colors.gold.glow,
-  },
-  lspListIconActive: {
-    backgroundColor: colors.gold.glow,
-  },
-  currentBadge: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    backgroundColor: colors.gold.pure + '20',
-    borderRadius: layout.radius.sm,
-  },
-  infoCard: {
-    padding: spacing.md,
-  },
-  infoContent: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  infoText: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  loadingText: {
-    marginTop: spacing.sm,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  errorTitle: {
-    marginTop: spacing.sm,
-  },
-  errorText: {
-    marginTop: spacing.xs,
-    maxWidth: 300,
-  },
-});
 

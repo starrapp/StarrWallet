@@ -13,7 +13,6 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
 import { ThemeProvider, useTheme } from '@/contexts';
-import { colors } from '@/theme';
 
 // Keep splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
@@ -88,6 +87,12 @@ function RootLayoutInner() {
             presentation: 'modal',
           }} 
         />
+        <Stack.Screen 
+          name="payment/[id]" 
+          options={{ 
+            animation: 'slide_from_right',
+          }} 
+        />
       </Stack>
     </View>
   );
@@ -102,9 +107,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
+  container: { flex: 1 },
 });
 

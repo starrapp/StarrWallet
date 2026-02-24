@@ -4,7 +4,7 @@
  * For displaying and scanning Lightning invoices.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,7 +17,8 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Card } from '@/components/ui';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 interface QRDisplayProps {
   value: string;
@@ -32,7 +33,82 @@ export const QRDisplay: React.FC<QRDisplayProps> = ({
   label,
   onCopy,
 }) => {
+  const colors = useColors();
   const [copied, setCopied] = useState(false);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { alignItems: 'center', gap: spacing.md },
+        qrContainer: { position: 'relative', padding: spacing.md },
+        qrBackground: {
+          padding: spacing.md,
+          backgroundColor: colors.text.primary,
+          borderRadius: layout.radius.lg,
+        },
+        corner: {
+          position: 'absolute',
+          width: 24,
+          height: 24,
+          borderColor: colors.gold.pure,
+        },
+        cornerTopLeft: {
+          top: 0,
+          left: 0,
+          borderTopWidth: 3,
+          borderLeftWidth: 3,
+          borderTopLeftRadius: layout.radius.sm,
+        },
+        cornerTopRight: {
+          top: 0,
+          right: 0,
+          borderTopWidth: 3,
+          borderRightWidth: 3,
+          borderTopRightRadius: layout.radius.sm,
+        },
+        cornerBottomLeft: {
+          bottom: 0,
+          left: 0,
+          borderBottomWidth: 3,
+          borderLeftWidth: 3,
+          borderBottomLeftRadius: layout.radius.sm,
+        },
+        cornerBottomRight: {
+          bottom: 0,
+          right: 0,
+          borderBottomWidth: 3,
+          borderRightWidth: 3,
+          borderBottomRightRadius: layout.radius.sm,
+        },
+        valueContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.sm,
+          backgroundColor: colors.background.tertiary,
+          borderRadius: layout.radius.md,
+        },
+        actions: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.lg,
+          marginTop: spacing.sm,
+        },
+        actionButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+        },
+        actionDivider: {
+          width: 1,
+          height: 24,
+          backgroundColor: colors.border.subtle,
+        },
+      }),
+    [colors]
+  );
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(value);
@@ -135,8 +211,20 @@ export const QRCompact: React.FC<QRCompactProps> = ({
   value,
   size = 80,
 }) => {
+  const colors = useColors();
+  const compactStyle = useMemo(
+    () =>
+      StyleSheet.create({
+        compactContainer: {
+          padding: spacing.xs,
+          backgroundColor: colors.text.primary,
+          borderRadius: layout.radius.sm,
+        },
+      }),
+    [colors]
+  );
   return (
-    <View style={styles.compactContainer}>
+    <View style={compactStyle.compactContainer}>
       <QRCodeSVG
         value={value}
         size={size}
@@ -146,86 +234,4 @@ export const QRCompact: React.FC<QRCompactProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  qrContainer: {
-    position: 'relative',
-    padding: spacing.md,
-  },
-  qrBackground: {
-    padding: spacing.md,
-    backgroundColor: colors.text.primary,
-    borderRadius: layout.radius.lg,
-  },
-  corner: {
-    position: 'absolute',
-    width: 24,
-    height: 24,
-    borderColor: colors.gold.pure,
-  },
-  cornerTopLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: layout.radius.sm,
-  },
-  cornerTopRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: layout.radius.sm,
-  },
-  cornerBottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: layout.radius.sm,
-  },
-  cornerBottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: layout.radius.sm,
-  },
-  valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: layout.radius.md,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  actionDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: colors.border.subtle,
-  },
-  compactContainer: {
-    padding: spacing.xs,
-    backgroundColor: colors.text.primary,
-    borderRadius: layout.radius.sm,
-  },
-});
 

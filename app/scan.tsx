@@ -2,7 +2,7 @@
  * QR Scanner Screen
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,16 +17,129 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Text, Button } from '@/components/ui';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCAN_AREA_SIZE = SCREEN_WIDTH * 0.7;
 
 export default function ScanScreen() {
   const router = useRouter();
+  const colors = useColors();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [torch, setTorch] = useState(false);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        centerContent: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: spacing.lg,
+        },
+        permissionContent: {
+          alignItems: 'center',
+          gap: spacing.lg,
+          padding: spacing.xl,
+        },
+        overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+        topSection: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.md,
+        },
+        closeButton: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        torchButton: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        torchActive: { backgroundColor: colors.gold.glow },
+        scanAreaContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+        scanArea: {
+          width: SCAN_AREA_SIZE,
+          height: SCAN_AREA_SIZE,
+          position: 'relative',
+        },
+        corner: {
+          position: 'absolute',
+          width: 40,
+          height: 40,
+          borderColor: colors.gold.pure,
+        },
+        cornerTL: {
+          top: 0,
+          left: 0,
+          borderTopWidth: 4,
+          borderLeftWidth: 4,
+          borderTopLeftRadius: layout.radius.md,
+        },
+        cornerTR: {
+          top: 0,
+          right: 0,
+          borderTopWidth: 4,
+          borderRightWidth: 4,
+          borderTopRightRadius: layout.radius.md,
+        },
+        cornerBL: {
+          bottom: 0,
+          left: 0,
+          borderBottomWidth: 4,
+          borderLeftWidth: 4,
+          borderBottomLeftRadius: layout.radius.md,
+        },
+        cornerBR: {
+          bottom: 0,
+          right: 0,
+          borderBottomWidth: 4,
+          borderRightWidth: 4,
+          borderBottomRightRadius: layout.radius.md,
+        },
+        bottomSection: {
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          padding: spacing.xl,
+          paddingBottom: spacing.xxxl,
+          alignItems: 'center',
+          gap: spacing.lg,
+        },
+        hint: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+        pasteButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.md,
+          backgroundColor: colors.gold.glow,
+          borderRadius: layout.radius.full,
+          borderWidth: 1,
+          borderColor: colors.gold.pure,
+        },
+        rescanButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.sm,
+        },
+      }),
+    [colors]
+  );
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
@@ -44,7 +157,7 @@ export default function ScanScreen() {
         params: { invoice },
       });
     } else if (lowerData.startsWith('bitcoin:')) {
-      // Bitcoin URI (could contain Lightning invoice)
+      // Bitcoin URI (optional lightning= in query)
       const queryString = data.split('?')[1];
       if (queryString) {
         const params = new URLSearchParams(queryString);
@@ -57,9 +170,10 @@ export default function ScanScreen() {
           return;
         }
       }
-      // On-chain address - for future implementation
-      Alert.alert('On-chain Not Supported', 'On-chain Bitcoin addresses are not yet supported. Please use a Lightning invoice.');
-      setScanned(false);
+      router.replace({
+        pathname: '/send',
+        params: { invoice: data },
+      });
     } else {
       // Assume it's an invoice
       router.replace({
@@ -215,127 +329,3 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  permissionContent: {
-    alignItems: 'center',
-    gap: spacing.lg,
-    padding: spacing.xl,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
-  },
-  topSection: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  torchButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  torchActive: {
-    backgroundColor: colors.gold.glow,
-  },
-  scanAreaContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scanArea: {
-    width: SCAN_AREA_SIZE,
-    height: SCAN_AREA_SIZE,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderColor: colors.gold.pure,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderTopLeftRadius: layout.radius.md,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderTopRightRadius: layout.radius.md,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderBottomLeftRadius: layout.radius.md,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderBottomRightRadius: layout.radius.md,
-  },
-  bottomSection: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  hint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  pasteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.gold.glow,
-    borderRadius: layout.radius.full,
-    borderWidth: 1,
-    borderColor: colors.gold.pure,
-  },
-  rescanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-});

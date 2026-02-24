@@ -100,6 +100,102 @@ export interface BackupState {
   isAutoBackupEnabled: boolean;
 }
 
+// --- Parsed input (Breez SDK parse)
+export type ParsedInputType =
+  | 'bolt11_invoice'
+  | 'bitcoin_address'
+  | 'spark_address'
+  | 'spark_invoice'
+  | 'lnurl_pay'
+  | 'lnurl_withdraw'
+  | 'unknown';
+
+export interface ParsedBolt11 {
+  type: 'bolt11_invoice';
+  bolt11: string;
+  paymentHash: string;
+  amountMsat?: number;
+  description?: string;
+  payee?: string;
+  expiry?: number; // seconds from creation
+}
+
+export interface ParsedBitcoinAddress {
+  type: 'bitcoin_address';
+  address: string;
+}
+
+export interface ParsedSparkAddress {
+  type: 'spark_address';
+  address: string;
+}
+
+export interface ParsedSparkInvoice {
+  type: 'spark_invoice';
+  amount?: number;
+  tokenIdentifier?: string;
+  description?: string;
+  expiryTime?: number;
+  senderPublicKey?: string;
+}
+
+export interface ParsedLnurlPay {
+  type: 'lnurl_pay';
+  minSendable: number;
+  maxSendable: number;
+}
+
+export interface ParsedLnurlWithdraw {
+  type: 'lnurl_withdraw';
+  minWithdrawable: number;
+  maxWithdrawable: number;
+}
+
+export type ParsedInput =
+  | ParsedBolt11
+  | ParsedBitcoinAddress
+  | ParsedSparkAddress
+  | ParsedSparkInvoice
+  | ParsedLnurlPay
+  | ParsedLnurlWithdraw
+  | { type: 'unknown'; raw: string };
+
+// --- Prepare send payment (Breez SDK prepareSendPayment)
+export type SendPaymentMethodType = 'lightning' | 'spark_transfer' | 'onchain';
+
+export interface PrepareSendResult {
+  paymentMethod: SendPaymentMethodType;
+  amountSats: number;
+  /** Lightning network fee (sats) */
+  lightningFeeSats?: number;
+  /** Spark transfer fee (sats), when invoice supports both */
+  sparkTransferFeeSats?: number;
+  /** On-chain fee estimate (sats), for Bitcoin/Spark address */
+  onchainFeeSats?: number;
+  /** Description or recipient from request */
+  description?: string;
+}
+
+// --- List payments request (filters + pagination)
+export interface ListPaymentsFilter {
+  typeFilter?: ('send' | 'receive')[];
+  statusFilter?: ('pending' | 'completed' | 'failed' | 'expired')[];
+  fromTimestamp?: number;
+  toTimestamp?: number;
+  offset?: number;
+  limit?: number;
+  sortAscending?: boolean;
+}
+
+// --- Unclaimed deposit (on-chain claim)
+export interface UnclaimedDeposit {
+  txid: string;
+  vout: number;
+  amountSats: number;
+  requiredFeeSats: number;
+  claimError?: string;
+}
+
 // Error types
 export interface WalletError {
   code: string;
@@ -125,10 +221,6 @@ export interface WalletSettings {
   
   // Network
   preferredLSP?: string;
-  
-  // Tor
-  torEnabled: boolean;
-  torAutoStart: boolean;
   
   // Backup
   autoBackupEnabled: boolean;

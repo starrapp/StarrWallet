@@ -4,7 +4,7 @@
  * Configure biometric authentication and backup settings.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,10 +13,12 @@ import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
-import { colors, spacing, layout } from '@/theme';
+import { useColors } from '@/contexts';
+import { spacing, layout } from '@/theme';
 
 export default function SecuritySetupScreen() {
   const router = useRouter();
+  const colors = useColors();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState<string>('');
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -84,6 +86,56 @@ export default function SecuritySetupScreen() {
         return 'Biometric Authentication';
     }
   };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1, backgroundColor: colors.background.primary },
+        content: { flex: 1, padding: spacing.lg },
+        header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xl },
+        iconContainer: {
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.gold.glow,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: spacing.sm,
+        },
+        optionsContainer: { gap: spacing.md, marginBottom: spacing.xl },
+        optionCard: { padding: spacing.md },
+        optionContent: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.md,
+        },
+        optionIcon: {
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: colors.overlay.light,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        optionText: { flex: 1, gap: spacing.xxs },
+        recommendedContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.xs,
+          paddingVertical: spacing.sm,
+        },
+        infoCard: { padding: spacing.md },
+        infoContent: {
+          flexDirection: 'row',
+          gap: spacing.md,
+          alignItems: 'flex-start',
+        },
+        infoText: { flex: 1, gap: spacing.xs },
+        actions: { padding: spacing.lg, gap: spacing.md },
+      }),
+    [colors]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -207,76 +259,4 @@ export default function SecuritySetupScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  header: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold.glow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  optionsContainer: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  optionCard: {
-    padding: spacing.md,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.overlay.light,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionText: {
-    flex: 1,
-    gap: spacing.xxs,
-  },
-  recommendedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  infoCard: {
-    padding: spacing.md,
-  },
-  infoContent: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  infoText: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  actions: {
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-});
 
