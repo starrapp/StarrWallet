@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
-import { LSPManager } from '@/services/lsp';
+import { BreezService } from '@/services/breez';
 import { useWalletStore } from '@/stores/walletStore';
 import { colors, spacing, layout } from '@/theme';
 import type { LSPInfo } from '@/types/wallet';
@@ -55,8 +55,8 @@ export default function ChannelsScreen() {
     
     try {
       const [current, available] = await Promise.all([
-        LSPManager.getCurrentLSP(),
-        LSPManager.getAvailableLSPs(),
+        BreezService.getCurrentLSP(),
+        BreezService.getAvailableLSPs(),
       ]);
       setCurrentLSP(current);
       setAvailableLSPs(available);
@@ -93,7 +93,8 @@ export default function ChannelsScreen() {
               setIsConnecting(lsp.id);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               
-              const success = await LSPManager.connectToLSP(lsp.id);
+              await BreezService.selectLSP(lsp.id);
+              const success = true;
               
               if (success) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

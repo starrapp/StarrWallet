@@ -7,14 +7,10 @@
 
 import { create } from 'zustand';
 import { BreezService } from '@/services/breez';
-import { LNDService } from '@/services/lnd';
 import { TorService } from '@/services/tor';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
-import { LSPManager } from '@/services/lsp';
 import { BREEZ_CONFIG } from '@/config';
-import { isLNDConfigured } from '@/config/lnd';
-import { isOnionAddress } from '@/utils/tor';
 import type {
   Balance,
   LightningPayment,
@@ -142,71 +138,32 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         try {
           await TorService.initialize();
           console.log('[WalletStore] Tor service initialized (not started yet)');
-          
-          // Auto-start Tor only if both enabled and auto-start is enabled
-          if (settings.torAutoStart && isLNDConfigured()) {
-            const lndRestUrl = process.env.EXPO_PUBLIC_LND_REST_URL || '';
-            if (isOnionAddress(lndRestUrl)) {
-              try {
-                await TorService.startTor();
-                console.log('[WalletStore] Tor auto-started for .onion LND connection');
-              } catch (error) {
-                console.warn('[WalletStore] Tor auto-start failed:', error);
-                // Continue without Tor - user can start manually
-              }
-            }
-          }
         } catch (error) {
           console.error('[WalletStore] Tor initialization failed:', error);
           // Continue without Tor
         }
       } else {
-        // Ensure Tor is stopped if disabled
         try {
           if (TorService.isTorRunning()) {
             await TorService.stopTor();
             console.log('[WalletStore] Tor stopped (disabled in settings)');
           }
         } catch (error) {
-          // Ignore errors when stopping Tor
           console.warn('[WalletStore] Error stopping Tor:', error);
         }
       }
 
-      // Initialize LND service if configured (takes priority over Breez)
-      if (isLNDConfigured()) {
-        try {
-          await LNDService.initialize();
-          console.log('[WalletStore] LND service initialized');
-        } catch (error) {
-          console.error('[WalletStore] LND initialization failed:', error);
-          // Continue with Breez if LND fails
-        }
-      }
+      await BreezService.initialize(mnemonicPhrase, {
+        workingDir: BREEZ_CONFIG.WORKING_DIR,
+        network: BREEZ_CONFIG.NETWORK,
+      });
 
-      // Initialize Breez SDK with mnemonic (if LND not configured or failed)
-      if (!isLNDConfigured() || !LNDService.isInitialized()) {
-        await BreezService.initialize(mnemonicPhrase, {
-          workingDir: BREEZ_CONFIG.WORKING_DIR,
-          network: BREEZ_CONFIG.NETWORK,
-        });
-      }
-
-      // Initialize backup service
       await BackupService.initialize();
 
-      // Initialize LSP manager
-      await LSPManager.initialize();
-
-      // Get initial data (use LND if available, otherwise Breez)
       const [balance, nodeInfo, currentLSP, backupState] = await Promise.all([
-        LNDService.isInitialized()
-          ? LNDService.getBalance()
-          : BreezService.getBalance(),
-        LNDService.isInitialized()
-          ? LNDService.getInfo()
-          : BreezService.getNodeInfo(),
-        LSPManager.getCurrentLSP(),
+        BreezService.getBalance(),
+        BreezService.getNodeInfo(),
+        BreezService.getCurrentLSP(),
         BackupService.getBackupState(),
       ]);
 
@@ -265,9 +222,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshBalance: async () => {
     set({ isLoadingBalance: true });
     try {
-      const balance = LNDService.isInitialized()
-        ? await LNDService.getBalance()
-        : await BreezService.getBalance();
+      const balance = await BreezService.getBalance();
       set({ balance, isLoadingBalance: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh balance:', error);
@@ -275,13 +230,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  // Refresh payment history
   refreshPayments: async () => {
     set({ isLoadingPayments: true });
     try {
-      const payments = LNDService.isInitialized()
-        ? await LNDService.listPayments()
-        : await BreezService.getPayments('all', 50);
+      const payments = await BreezService.getPayments('all', 50);
       set({ payments, isLoadingPayments: false });
     } catch (error) {
       console.error('[WalletStore] Failed to refresh payments:', error);
@@ -289,13 +241,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  // Create invoice for receiving
   createInvoice: async (amountSats: number, description?: string) => {
     set({ isCreatingInvoice: true });
     try {
-      const invoice = LNDService.isInitialized()
-        ? await LNDService.createInvoice(amountSats, description)
-        : await BreezService.createInvoice(amountSats, description);
+      const invoice = await BreezService.createInvoice(amountSats, description);
       set({ currentInvoice: invoice, isCreatingInvoice: false });
       return invoice;
     } catch (error) {
@@ -304,36 +253,27 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  // Pay invoice
   payInvoice: async (bolt11: string, amountSats?: number) => {
     try {
-      // Parse invoice first for validation and display (use Breez for parsing even with LND)
       const parsed = await BreezService.parseInvoice(bolt11);
-      
       set({
         pendingPayment: {
           id: 'pending',
           type: 'send',
           status: 'pending',
-          amountSats: amountSats || (parsed.amountMsat ? parsed.amountMsat / 1000 : 0),
+          amountSats: amountSats ?? (parsed.amountMsat ? parsed.amountMsat / 1000 : 0),
           paymentHash: parsed.paymentHash,
           description: parsed.description,
           timestamp: new Date(),
         },
       });
 
-      const payment = LNDService.isInitialized()
-        ? await LNDService.payInvoice(bolt11, amountSats)
-        : await BreezService.payInvoice(bolt11, amountSats);
-      
+      const payment = await BreezService.payInvoice(bolt11, amountSats);
       set((state) => ({
         payments: [payment, ...state.payments],
         pendingPayment: null,
       }));
-
-      // Refresh balance
       get().refreshBalance();
-
       return payment;
     } catch (error) {
       set({ pendingPayment: null });
@@ -351,15 +291,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   // Sync node with network
   syncNode: async () => {
     try {
-      if (LNDService.isInitialized()) {
-        // LND doesn't have explicit sync, just refresh balance
-        const balance = await LNDService.getBalance();
-        set({ balance });
-      } else {
-        await BreezService.syncNode();
-        const balance = await BreezService.getBalance();
-        set({ balance });
-      }
+      await BreezService.syncNode();
+      const balance = await BreezService.getBalance();
+      set({ balance });
     } catch (error) {
       console.error('[WalletStore] Sync failed:', error);
     }
