@@ -15,6 +15,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@breeztech/breez-sdk-spark": "^0.10.0",
     "@expo/html-elements": "^0.13.7",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "3.0.1",
