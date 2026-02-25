@@ -141,15 +141,6 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
 export default function HomeScreen() {
   const router = useRouter();
   const colors = useColors();
-<<<<<<< HEAD
-  
-  // Guard: Ensure colors is available before rendering
-  if (!colors || !colors.background || !colors.text) {
-    return null; // Wait for theme to load
-  }
-  
-=======
->>>>>>> archive/breez-sdk-implementation
   const {
     balance,
     payments,
@@ -353,22 +344,8 @@ export default function HomeScreen() {
   );
 }
 
-<<<<<<< HEAD
-// Compact transaction item for home screen
-import { formatDistanceToNow } from 'date-fns';
-import type { LightningPayment } from '@/types/wallet';
-import type { ColorTheme } from '@/theme/colors';
-
-const TransactionItem: React.FC<{ transaction: LightningPayment; colors: ColorTheme }> = ({ transaction, colors }) => {
-  // Guard: Ensure colors is valid
-  if (!colors || !colors.background || !colors.text) {
-    return null;
-  }
-  
-=======
 const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transaction }) => {
   const colors = useColors();
->>>>>>> archive/breez-sdk-implementation
   const isReceive = transaction.type === 'receive';
   const styles = getStyles(colors);
 
@@ -402,8 +379,6 @@ const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transact
   );
 };
 
-<<<<<<< HEAD
-=======
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -516,4 +491,3 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
 });
->>>>>>> archive/breez-sdk-implementation

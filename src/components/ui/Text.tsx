@@ -62,14 +62,8 @@ export const Amount: React.FC<AmountProps> = ({
   color,
   style,
 }) => {
-<<<<<<< HEAD
   const colors = useColors();
   const amountColor = color || colors.text.primary;
-=======
-  const themeColors = useColors();
-  const textColor = color || themeColors.text.primary;
-
->>>>>>> archive/breez-sdk-implementation
   const formatAmount = (amount: number): string => {
     return amount.toLocaleString('en-US');
   };
@@ -83,11 +77,7 @@ export const Amount: React.FC<AmountProps> = ({
   };
 
   return (
-<<<<<<< HEAD
     <RNText style={[typography[getVariant()], { color: amountColor }, style]}>
-=======
-    <RNText style={[typography[getVariant()], { color: textColor }, style]}>
->>>>>>> archive/breez-sdk-implementation
       {formatAmount(sats)}
       {showUnit && (
         <RNText style={[styles.unit, { color: themeColors.text.secondary }]}>
