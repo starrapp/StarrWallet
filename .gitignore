@@ -15,14 +15,11 @@ web-build/
 *.mobileprovision
 
 # iOS
-ios/Pods/
-ios/build/
+ios/
 *.ipa
 
 # Android
-android/.gradle/
-android/app/build/
-android/build/
+android/
 *.apk
 *.aab
 
