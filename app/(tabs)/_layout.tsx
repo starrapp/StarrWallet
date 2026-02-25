@@ -102,7 +102,7 @@ export default function TabLayout() {
           title: '',
           tabBarButton: (props) => (
             <Pressable
-              {...props}
+              {...(props as any)}
               style={styles.scanButtonContainer}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

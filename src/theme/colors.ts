@@ -140,4 +140,4 @@ export const lightColors = {
 // Default export
 export const colors = darkColors;
 
-export type ColorTheme = typeof darkColors;
+export type ColorTheme = typeof darkColors | typeof lightColors;

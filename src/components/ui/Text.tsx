@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Text as RNText, TextStyle, StyleSheet } from 'react-native';
+import { Text as RNText, TextStyle, StyleSheet, StyleProp } from 'react-native';
 import { typography } from '@/theme';
 import { useColors } from '@/contexts';
 
@@ -16,7 +16,7 @@ interface TextProps {
   variant?: TextVariant;
   color?: string;
   align?: 'left' | 'center' | 'right';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }
 
@@ -52,7 +52,7 @@ interface AmountProps {
   size?: 'sm' | 'md' | 'lg';
   showUnit?: boolean;
   color?: string;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
 }
 
 export const Amount: React.FC<AmountProps> = ({
@@ -80,7 +80,7 @@ export const Amount: React.FC<AmountProps> = ({
     <RNText style={[typography[getVariant()], { color: amountColor }, style]}>
       {formatAmount(sats)}
       {showUnit && (
-        <RNText style={[styles.unit, { color: themeColors.text.secondary }]}>
+        <RNText style={[styles.unit, { color: colors.text.secondary }]}>
           {' '}sats
         </RNText>
       )}

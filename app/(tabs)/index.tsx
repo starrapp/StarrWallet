@@ -16,12 +16,14 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { formatDistanceToNow } from 'date-fns';
 import { Text } from '@/components/ui';
 import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import type { ColorTheme } from '@/theme/colors';
+import type { LightningPayment } from '@/types/wallet';
 
 // Styles function - defined before component to ensure it's available
 const getStyles = (colors: ColorTheme) => StyleSheet.create({
@@ -68,7 +70,7 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
   actionButton: {
     flex: 1,
   },
-  actionGradient: {
+  actionCard: {
     alignItems: 'center',
     padding: spacing.md,
     borderRadius: layout.radius.lg,
@@ -323,7 +325,7 @@ export default function HomeScreen() {
             {recentTransactions.length > 0 ? (
               <View style={styles.transactionsList}>
                 {recentTransactions.map((tx) => (
-                  <TransactionItem key={tx.id} transaction={tx} colors={colors} />
+                  <TransactionItem key={tx.id} transaction={tx} />
                 ))}
               </View>
             ) : (
@@ -378,116 +380,3 @@ const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transact
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: layout.tabBarHeight + spacing.xl,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  actionCard: {
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: layout.radius.xl,
-    gap: spacing.sm,
-    height: 120,
-    justifyContent: 'center',
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recentSection: {
-    marginTop: spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  transactionsList: {
-    gap: spacing.sm,
-  },
-  txItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: layout.radius.lg,
-    gap: spacing.md,
-  },
-  txIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txDetails: {
-    flex: 1,
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: spacing.xl,
-    gap: spacing.sm,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: layout.radius.md,
-    borderWidth: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-});

@@ -22,11 +22,12 @@ const TYPE_OPTIONS: { value: 'all' | 'send' | 'receive'; label: string }[] = [
   { value: 'receive', label: 'Received' },
 ];
 
-const STATUS_OPTIONS: { value: 'all' | 'completed' | 'pending' | 'failed'; label: string }[] = [
+const STATUS_OPTIONS: { value: 'all' | 'completed' | 'pending' | 'failed' | 'expired'; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'completed', label: 'Completed' },
   { value: 'pending', label: 'Pending' },
   { value: 'failed', label: 'Failed' },
+  { value: 'expired', label: 'Expired' },
 ];
 
 const DATE_OPTIONS: { value: 'all' | '7' | '30'; label: string; fromTimestamp?: number }[] = [
@@ -63,7 +64,7 @@ export default function HistoryScreen() {
   const buildFilter = useCallback(
     (
       type: 'all' | 'send' | 'receive',
-      status: 'all' | 'completed' | 'pending' | 'failed',
+      status: 'all' | 'completed' | 'pending' | 'failed' | 'expired',
       dateRange: 'all' | '7' | '30'
     ): ListPaymentsFilter => {
       const f: ListPaymentsFilter = {
@@ -116,7 +117,7 @@ export default function HistoryScreen() {
   );
 
   const applyStatus = useCallback(
-    (value: 'all' | 'completed' | 'pending' | 'failed') => {
+    (value: 'all' | 'completed' | 'pending' | 'failed' | 'expired') => {
       listPayments(buildFilter(currentType, value, currentDateRange));
     },
     [buildFilter, currentType, currentDateRange, listPayments]

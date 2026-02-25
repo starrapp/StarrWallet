@@ -2,7 +2,7 @@
  * Settings Screen
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -25,6 +25,7 @@ import { BackupService } from '@/services/backup';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import type { ColorTheme } from '@/theme/colors';
 
 // Currency options
 const BITCOIN_UNITS = [
@@ -63,6 +64,7 @@ export default function SettingsScreen() {
   const { settings, updateSettings, performBackup, backupState } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const colors = useColors();
+  const styles = useMemo(() => createSettingsStyles(colors), [colors]);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
@@ -512,6 +514,9 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
   trailing,
   onPress,
 }) => {
+  const colors = useColors();
+  const styles = useMemo(() => createSettingsItemStyles(colors), [colors]);
+
   const content = (
     <View style={styles.itemContainer}>
       <View style={styles.itemIcon}>
@@ -544,7 +549,7 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
   return content;
 };
 
-const styles = StyleSheet.create({
+const createSettingsStyles = (colors: ColorTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -670,5 +675,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
+  },
+});
+
+const createSettingsItemStyles = (colors: ColorTheme) => StyleSheet.create({
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.background.secondary,
+    borderRadius: layout.radius.lg,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  itemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.gold.glow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemContent: {
+    flex: 1,
   },
 });

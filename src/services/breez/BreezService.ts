@@ -21,6 +21,8 @@ import type {
 
 import { isBreezConfigured } from '@/config/breez';
 
+import init, { BreezSdk, defaultConfig } from '@breeztech/breez-sdk-spark';
+
 export type PaymentEventHandler = (payment: LightningPayment) => void;
 export type SyncEventHandler = () => void;
 export type ConnectionEventHandler = (connected: boolean) => void;
@@ -57,7 +59,7 @@ const STUB_LSP: LSPInfo = {
 
 class BreezServiceStub {
   private isInitialized = false;
-  private eventListeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
+  private eventListeners: Map<string, Set<(...args: any[]) => void>> = new Map();
 
   isConfigured(): boolean {
     return isBreezConfigured();
@@ -321,18 +323,18 @@ class BreezServiceStub {
   on(event: 'payment', handler: PaymentEventHandler): void;
   on(event: 'sync', handler: SyncEventHandler): void;
   on(event: 'connection', handler: ConnectionEventHandler): void;
-  on(event: string, handler: (...args: unknown[]) => void): void {
+  on(event: string, handler: (...args: any[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
     }
     this.eventListeners.get(event)!.add(handler);
   }
 
-  off(event: string, handler: (...args: unknown[]) => void): void {
+  off(event: string, handler: (...args: any[]) => void): void {
     this.eventListeners.get(event)?.delete(handler);
   }
 
-  private emit(event: string, ...args: unknown[]): void {
+  private emit(event: string, ...args: any[]): void {
     this.eventListeners.get(event)?.forEach((handler) => handler(...args));
   }
 }

@@ -66,17 +66,8 @@ This requires creating native modules:
 
 ## Service Architecture
 
-The LDK service (`src/services/ldk/LDKService.ts`) provides:
-
-- `initialize(mnemonic?)` - Initialize LDK Node connection
-- `getInfo()` - Get node information
-- `getBalance()` - Get wallet balance
-- `createInvoice()` - Create Lightning invoice
-- `payInvoice()` - Pay Lightning invoice
-- `listPayments()` - List payment history
-- `parseInvoice()` - Parse BOLT11 invoice
-- `syncNode()` - Sync with network
-- `getCurrentLSP()` - Get LSP information
+`src/services/ldk/LDKService.ts` was removed from this app codebase.
+Current wallet flows use `BreezService` and related store actions.
 
 ## Wallet Store Integration
 

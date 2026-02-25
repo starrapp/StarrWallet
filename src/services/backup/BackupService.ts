@@ -45,7 +45,7 @@ interface BackupResult {
 
 class BackupServiceImpl {
   private autoBackupEnabled = false;
-  private backupInterval: NodeJS.Timeout | null = null;
+  private backupInterval: ReturnType<typeof setInterval> | null = null;
 
   /**
    * Initialize the backup service
@@ -364,4 +364,3 @@ class BackupServiceImpl {
 
 // Singleton instance
 export const BackupService = new BackupServiceImpl();
-
