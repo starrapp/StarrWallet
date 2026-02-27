@@ -1,1 +1,1 @@
-export { BREEZ_CONFIG, isBreezConfigured } from './breez';
+export { BREEZ_CONFIG } from './breez';

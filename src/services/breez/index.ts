@@ -1,2 +1,2 @@
 export { BreezService } from './BreezService';
-export type { BreezConfig, BreezServiceConfig } from './BreezService';
+export type { BreezServiceConfig } from './BreezService';

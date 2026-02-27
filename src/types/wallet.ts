@@ -2,19 +2,12 @@
  * Core wallet types for Starr
  */
 
-// Wallet state
-export interface WalletState {
-  isInitialized: boolean;
-  isUnlocked: boolean;
-  isConnected: boolean;
-  hasBackup: boolean;
-}
-
 // Balance information
 export interface Balance {
   // Lightning balance in satoshis
   lightning: number;
-  // On-chain balance in satoshis (if applicable)
+  // TODO(starr): Spark getInfo() does not expose on-chain balance yet.
+  // Keep for existing Balance UI; remove/hide On-chain section when UI is updated.
   onchain: number;
   // Pending incoming in satoshis
   pendingIncoming: number;
@@ -25,13 +18,14 @@ export interface Balance {
 }
 
 // Transaction types
-export type TransactionType = 'send' | 'receive';
+// TODO(starr): `expired` is kept for History UI filter compatibility.
+// Spark listPayments exposes only completed/pending/failed.
 export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'expired';
 
 // Lightning payment
 export interface LightningPayment {
   id: string;
-  type: TransactionType;
+  type: 'send' | 'receive';
   status: TransactionStatus;
   amountSats: number;
   feeSats?: number;
@@ -54,6 +48,7 @@ export interface Invoice {
 }
 
 // LSP (Liquidity Service Provider) information
+// TODO(starr): Spark SDK has no LSP management API. Remove this type after Channels UI removal.
 export interface LSPInfo {
   id: string;
   name: string;
@@ -67,27 +62,10 @@ export interface LSPInfo {
   isDefault: boolean;
 }
 
-// Channel information
-export interface Channel {
-  id: string;
-  state: 'pending' | 'active' | 'inactive' | 'closing' | 'closed';
-  localBalance: number;
-  remoteBalance: number;
-  capacity: number;
-  remotePubkey: string;
-  shortChannelId?: string;
-  isUsable: boolean;
-}
-
 // Node information
 export interface NodeInfo {
   id: string;
-  alias?: string;
-  color?: string;
   pubkey: string;
-  network: 'bitcoin' | 'testnet' | 'signet' | 'regtest';
-  blockHeight: number;
-  channelsCount: number;
 }
 
 // Backup types
@@ -101,15 +79,6 @@ export interface BackupState {
 }
 
 // --- Parsed input (Breez SDK parse)
-export type ParsedInputType =
-  | 'bolt11_invoice'
-  | 'bitcoin_address'
-  | 'spark_address'
-  | 'spark_invoice'
-  | 'lnurl_pay'
-  | 'lnurl_withdraw'
-  | 'unknown';
-
 export interface ParsedBolt11 {
   type: 'bolt11_invoice';
   bolt11: string;
@@ -161,10 +130,8 @@ export type ParsedInput =
   | { type: 'unknown'; raw: string };
 
 // --- Prepare send payment (Breez SDK prepareSendPayment)
-export type SendPaymentMethodType = 'lightning' | 'spark_transfer' | 'onchain';
-
 export interface PrepareSendResult {
-  paymentMethod: SendPaymentMethodType;
+  paymentMethod: 'lightning' | 'spark_transfer' | 'onchain';
   amountSats: number;
   /** Lightning network fee (sats) */
   lightningFeeSats?: number;
@@ -179,6 +146,8 @@ export interface PrepareSendResult {
 // --- List payments request (filters + pagination)
 export interface ListPaymentsFilter {
   typeFilter?: ('send' | 'receive')[];
+  // TODO(starr): `expired` exists only for current History UI filter.
+  // Spark SDK listPayments does not return `expired`.
   statusFilter?: ('pending' | 'completed' | 'failed' | 'expired')[];
   fromTimestamp?: number;
   toTimestamp?: number;
@@ -187,43 +156,31 @@ export interface ListPaymentsFilter {
   sortAscending?: boolean;
 }
 
-// --- Unclaimed deposit (on-chain claim)
-export interface UnclaimedDeposit {
-  txid: string;
-  vout: number;
-  amountSats: number;
-  requiredFeeSats: number;
-  claimError?: string;
-}
-
-// Error types
-export interface WalletError {
-  code: string;
-  message: string;
-  details?: unknown;
-}
-
 // Currency types
-export type BitcoinUnit = 'BTC' | 'SATS';
-export type FiatCurrency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY' | 'INR' | 'MXN' | 'BRL' | 'KRW';
-export type Currency = BitcoinUnit | FiatCurrency;
+export type Currency =
+  | 'BTC'
+  | 'SATS'
+  | 'USD'
+  | 'EUR'
+  | 'GBP'
+  | 'JPY'
+  | 'CAD'
+  | 'AUD'
+  | 'CHF'
+  | 'CNY'
+  | 'INR'
+  | 'MXN'
+  | 'BRL'
+  | 'KRW';
 
 // Settings
 export interface WalletSettings {
   // Display
   currency: Currency;
-  theme: 'dark' | 'light' | 'system';
-  
+
   // Security
   biometricEnabled: boolean;
-  pinEnabled: boolean;
-  autoLockMinutes: number;
-  
-  // Network
-  preferredLSP?: string;
-  
+
   // Backup
   autoBackupEnabled: boolean;
-  backupProvider?: 'icloud' | 'google' | 'local';
 }
-

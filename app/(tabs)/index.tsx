@@ -92,10 +92,10 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  transactionsList: {
+  paymentsList: {
     gap: spacing.sm,
   },
-  txItem: {
+  paymentItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
@@ -103,14 +103,14 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
     borderRadius: layout.radius.lg,
     gap: spacing.md,
   },
-  txIcon: {
+  paymentIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  txDetails: {
+  paymentDetails: {
     flex: 1,
   },
   emptyState: {
@@ -145,13 +145,13 @@ export default function HomeScreen() {
   const colors = useColors();
   const {
     balance,
-    payments,
+    recentPayments,
     isLoadingBalance,
-    isLoadingPayments,
+    isLoadingRecentPayments,
     isInitializing,
     initError,
     refreshBalance,
-    refreshPayments,
+    refreshRecentPayments,
     initializeWallet,
     isInitialized,
   } = useWalletStore();
@@ -166,7 +166,7 @@ export default function HomeScreen() {
   }, [isInitialized, isInitializing, initError]);
 
   const handleRefresh = async () => {
-    await Promise.all([refreshBalance(), refreshPayments()]);
+    await Promise.all([refreshBalance(), refreshRecentPayments()]);
   };
 
   const handleSend = () => {
@@ -178,8 +178,6 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/receive');
   };
-
-  const recentTransactions = payments.slice(0, 5);
 
   const styles = getStyles(colors);
   
@@ -269,7 +267,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isLoadingBalance || isLoadingPayments}
+              refreshing={isLoadingBalance || isLoadingRecentPayments}
               onRefresh={handleRefresh}
               tintColor={colors.gold.pure}
             />
@@ -313,7 +311,7 @@ export default function HomeScreen() {
               <Text variant="titleMedium" color={colors.text.primary}>
                 Recent Activity
               </Text>
-              {payments.length > 5 && (
+              {recentPayments.length > 0 && (
                 <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
                   <Text variant="labelMedium" color={colors.gold.pure}>
                     See All
@@ -322,17 +320,17 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {recentTransactions.length > 0 ? (
-              <View style={styles.transactionsList}>
-                {recentTransactions.map((tx) => (
-                  <TransactionItem key={tx.id} transaction={tx} />
+            {recentPayments.length > 0 ? (
+              <View style={styles.paymentsList}>
+                {recentPayments.map((payment) => (
+                  <PaymentItem key={payment.id} payment={payment} />
                 ))}
               </View>
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="flash-outline" size={48} color={colors.text.muted} />
                 <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-                  No transactions yet
+                  No payments yet
                 </Text>
                 <Text variant="bodySmall" color={colors.text.muted} align="center">
                   Send or receive your first Lightning payment
@@ -346,15 +344,15 @@ export default function HomeScreen() {
   );
 }
 
-const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transaction }) => {
+const PaymentItem: React.FC<{ payment: LightningPayment }> = ({ payment }) => {
   const colors = useColors();
-  const isReceive = transaction.type === 'receive';
+  const isReceive = payment.type === 'receive';
   const styles = getStyles(colors);
 
   return (
-    <View style={[styles.txItem, { backgroundColor: colors.background.secondary }]}>
+    <View style={[styles.paymentItem, { backgroundColor: colors.background.secondary }]}>
       <View style={[
-        styles.txIcon,
+        styles.paymentIcon,
         { backgroundColor: isReceive ? colors.status.success + '20' : colors.text.muted + '20' },
       ]}>
         <Ionicons
@@ -363,19 +361,19 @@ const TransactionItem: React.FC<{ transaction: LightningPayment }> = ({ transact
           color={isReceive ? colors.status.success : colors.text.primary}
         />
       </View>
-      <View style={styles.txDetails}>
+      <View style={styles.paymentDetails}>
         <Text variant="titleSmall" numberOfLines={1} color={colors.text.primary}>
-          {transaction.description || (isReceive ? 'Received' : 'Sent')}
+          {payment.description || (isReceive ? 'Received' : 'Sent')}
         </Text>
         <Text variant="bodySmall" color={colors.text.muted}>
-          {formatDistanceToNow(transaction.timestamp, { addSuffix: true })}
+          {formatDistanceToNow(payment.timestamp, { addSuffix: true })}
         </Text>
       </View>
       <Text
         variant="titleSmall"
         color={isReceive ? colors.status.success : colors.text.primary}
       >
-        {isReceive ? '+' : '-'}{transaction.amountSats.toLocaleString()}
+        {isReceive ? '+' : '-'}{payment.amountSats.toLocaleString()}
       </Text>
     </View>
   );

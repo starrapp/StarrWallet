@@ -49,6 +49,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "@breeztech/breez-sdk-spark-react-native",
       "expo-dev-client",
       "expo-router",
       "expo-secure-store",

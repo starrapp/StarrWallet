@@ -4,9 +4,10 @@
  * List payments with filters (type, status) and pagination (load more).
  */
 
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
 import { TransactionList } from '@/components/wallet';
@@ -45,14 +46,14 @@ export default function HistoryScreen() {
     isLoadingMorePayments,
     hasMorePayments,
     paymentFilter,
-    refreshPayments,
     listPayments,
-    loadMorePayments,
   } = useWalletStore();
 
-  useEffect(() => {
-    refreshPayments();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      listPayments();
+    }, [listPayments])
+  );
 
   const handleTransactionPress = useCallback(
     (tx: LightningPayment) => {
@@ -68,19 +69,17 @@ export default function HistoryScreen() {
       dateRange: 'all' | '7' | '30'
     ): ListPaymentsFilter => {
       const f: ListPaymentsFilter = {
-        ...paymentFilter,
-        offset: 0,
         limit: 20,
+        offset: 0,
         sortAscending: false,
       };
       if (type !== 'all') f.typeFilter = [type];
       if (status !== 'all') f.statusFilter = [status];
       const dateOpt = DATE_OPTIONS.find((o) => o.value === dateRange);
       if (dateOpt?.fromTimestamp != null) f.fromTimestamp = dateOpt.fromTimestamp;
-      else delete f.fromTimestamp;
       return f;
     },
-    [paymentFilter]
+    []
   );
 
   const currentDateRange = useMemo((): 'all' | '7' | '30' => {
@@ -111,21 +110,21 @@ export default function HistoryScreen() {
 
   const applyType = useCallback(
     (value: 'all' | 'send' | 'receive') => {
-      listPayments(buildFilter(value, currentStatus, currentDateRange));
+      listPayments({ filter: buildFilter(value, currentStatus, currentDateRange) });
     },
     [buildFilter, currentStatus, currentDateRange, listPayments]
   );
 
   const applyStatus = useCallback(
     (value: 'all' | 'completed' | 'pending' | 'failed' | 'expired') => {
-      listPayments(buildFilter(currentType, value, currentDateRange));
+      listPayments({ filter: buildFilter(currentType, value, currentDateRange) });
     },
     [buildFilter, currentType, currentDateRange, listPayments]
   );
 
   const applyDateRange = useCallback(
     (value: 'all' | '7' | '30') => {
-      listPayments(buildFilter(currentType, currentStatus, value));
+      listPayments({ filter: buildFilter(currentType, currentStatus, value) });
     },
     [buildFilter, currentType, currentStatus, listPayments]
   );
@@ -266,8 +265,8 @@ export default function HistoryScreen() {
           <TransactionList
             transactions={payments}
             onTransactionPress={handleTransactionPress}
-            onRefresh={refreshPayments}
-            onEndReached={loadMorePayments}
+            onRefresh={() => listPayments()}
+            onEndReached={() => listPayments({ append: true })}
             isLoading={isLoadingPayments}
             isLoadingMore={isLoadingMorePayments}
             hasMore={hasMorePayments}
