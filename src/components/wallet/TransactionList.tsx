@@ -19,6 +19,7 @@ import { Text } from '@/components/ui';
 import { layout, spacing } from '@/theme';
 import { useColors } from '@/contexts';
 import type { LightningPayment } from '@/types/wallet';
+import { formatSignedSats } from '@/utils/format';
 
 interface TransactionListProps {
   transactions: LightningPayment[];
@@ -129,11 +130,6 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
     return isReceive ? 'arrow-down' : 'arrow-up';
   };
 
-  const formatAmount = (sats: number): string => {
-    const prefix = isReceive ? '+' : '-';
-    return `${prefix}${sats.toLocaleString()}`;
-  };
-
   const formatTime = (date: Date): string => {
     return formatDistanceToNow(date, { addSuffix: true });
   };
@@ -189,7 +185,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
           variant="titleSmall"
           color={isReceive ? colors.status.success : colors.text.primary}
         >
-          {formatAmount(transaction.amountSats)}
+          {formatSignedSats(transaction.amountSats, isReceive ? '+' : '-')}
         </Text>
         <Text variant="labelSmall" color={colors.text.muted}>
           sats

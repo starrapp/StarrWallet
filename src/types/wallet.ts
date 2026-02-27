@@ -5,14 +5,14 @@
 // Balance information
 export interface Balance {
   // Lightning balance in satoshis
-  lightning: number;
+  lightning: bigint;
   // TODO(starr): Spark getInfo() does not expose on-chain balance yet.
   // Keep for existing Balance UI; remove/hide On-chain section when UI is updated.
-  onchain: number;
-  // Pending incoming in satoshis
-  pendingIncoming: number;
-  // Pending outgoing in satoshis
-  pendingOutgoing: number;
+  onchain: bigint;
+  // TODO(starr): remove after Pending balances UI is removed.
+  // Spark SDK does not expose pending incoming/outgoing balances.
+  pendingIncoming: bigint;
+  pendingOutgoing: bigint;
   // Last updated timestamp
   lastUpdated: Date;
 }
@@ -27,8 +27,8 @@ export interface LightningPayment {
   id: string;
   type: 'send' | 'receive';
   status: TransactionStatus;
-  amountSats: number;
-  feeSats?: number;
+  amountSats: bigint;
+  feeSats?: bigint;
   description?: string;
   invoice?: string;
   paymentHash: string;
@@ -41,7 +41,7 @@ export interface LightningPayment {
 export interface Invoice {
   bolt11: string;
   paymentHash: string;
-  amountSats?: number;
+  amountSats?: bigint;
   description?: string;
   expiresAt: Date;
   createdAt: Date;
@@ -83,7 +83,7 @@ export interface ParsedBolt11 {
   type: 'bolt11_invoice';
   bolt11: string;
   paymentHash: string;
-  amountMsat?: number;
+  amountMsat?: bigint;
   description?: string;
   payee?: string;
   expiry?: number; // seconds from creation
@@ -101,23 +101,23 @@ export interface ParsedSparkAddress {
 
 export interface ParsedSparkInvoice {
   type: 'spark_invoice';
-  amount?: number;
+  amount?: bigint;
   tokenIdentifier?: string;
   description?: string;
-  expiryTime?: number;
+  expiryTime?: bigint;
   senderPublicKey?: string;
 }
 
 export interface ParsedLnurlPay {
   type: 'lnurl_pay';
-  minSendable: number;
-  maxSendable: number;
+  minSendable: bigint;
+  maxSendable: bigint;
 }
 
 export interface ParsedLnurlWithdraw {
   type: 'lnurl_withdraw';
-  minWithdrawable: number;
-  maxWithdrawable: number;
+  minWithdrawable: bigint;
+  maxWithdrawable: bigint;
 }
 
 export type ParsedInput =
@@ -132,13 +132,13 @@ export type ParsedInput =
 // --- Prepare send payment (Breez SDK prepareSendPayment)
 export interface PrepareSendResult {
   paymentMethod: 'lightning' | 'spark_transfer' | 'onchain';
-  amountSats: number;
+  amountSats: bigint;
   /** Lightning network fee (sats) */
-  lightningFeeSats?: number;
+  lightningFeeSats?: bigint;
   /** Spark transfer fee (sats), when invoice supports both */
-  sparkTransferFeeSats?: number;
+  sparkTransferFeeSats?: bigint;
   /** On-chain fee estimate (sats), for Bitcoin/Spark address */
-  onchainFeeSats?: number;
+  onchainFeeSats?: bigint;
   /** Description or recipient from request */
   description?: string;
 }

@@ -76,9 +76,9 @@ interface WalletState {
   listPayments: (options?: { filter?: ListPaymentsFilter; append?: boolean }) => Promise<void>;
   getPayment: (paymentId: string) => Promise<LightningPayment | null>;
 
-  createInvoice: (amountSats: number, description?: string) => Promise<Invoice>;
-  payInvoice: (bolt11: string, amountSats?: number) => Promise<LightningPayment>;
-  sendToAddress: (address: string, amountSats: number, type: 'bitcoin' | 'spark') => Promise<LightningPayment>;
+  createInvoice: (amountSats: bigint, description?: string) => Promise<Invoice>;
+  payInvoice: (bolt11: string, amountSats?: bigint) => Promise<LightningPayment>;
+  sendToAddress: (address: string, amountSats: bigint, type: 'bitcoin' | 'spark') => Promise<LightningPayment>;
 
   updateSettings: (settings: Partial<WalletSettings>) => void;
 
@@ -323,7 +323,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  createInvoice: async (amountSats: number, description?: string) => {
+  createInvoice: async (amountSats: bigint, description?: string) => {
     set({ isCreatingInvoice: true });
     try {
       const invoice = await BreezService.createInvoice(amountSats, description);
@@ -335,13 +335,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  payInvoice: async (bolt11: string, amountSats?: number) => {
+  payInvoice: async (bolt11: string, amountSats?: bigint) => {
     const payment = await BreezService.payInvoice(bolt11, amountSats);
     get().refreshBalance();
     return payment;
   },
 
-  sendToAddress: async (address: string, amountSats: number, type: 'bitcoin' | 'spark') => {
+  sendToAddress: async (address: string, amountSats: bigint, type: 'bitcoin' | 'spark') => {
     const payment = await BreezService.sendToAddress(address, amountSats, type);
     get().refreshBalance();
     return payment;

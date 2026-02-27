@@ -20,6 +20,7 @@ import { Button, Text, Card } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { formatSats, formatSignedSats } from '@/utils/format';
 import type { LightningPayment } from '@/types/wallet';
 
 export default function PaymentDetailScreen() {
@@ -165,7 +166,7 @@ export default function PaymentDetailScreen() {
               />
             </View>
             <Text variant="headlineMedium" color={colors.text.primary} align="center">
-              {isReceive ? '+' : '-'}{payment.amountSats.toLocaleString()} sats
+              {formatSignedSats(payment.amountSats, isReceive ? '+' : '-')} sats
             </Text>
             <Text variant="bodyMedium" color={colors.text.secondary} align="center">
               {payment.description ?? (isReceive ? 'Received' : 'Sent')}
@@ -198,13 +199,13 @@ export default function PaymentDetailScreen() {
                 </Text>
               </>
             )}
-            {payment.feeSats != null && payment.feeSats > 0 && (
+            {payment.feeSats != null && payment.feeSats > 0n && (
               <>
                 <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
                   Fee
                 </Text>
                 <Text variant="bodyMedium" color={colors.text.primary}>
-                  {payment.feeSats} sats
+                  {formatSats(payment.feeSats)} sats
                 </Text>
               </>
             )}

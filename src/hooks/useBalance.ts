@@ -1,6 +1,6 @@
 /**
  * Balance Hook
- * 
+ *
  * Convenient hook for accessing and formatting balance data.
  */
 
@@ -10,22 +10,20 @@ import { formatSats, satsToBtc } from '@/utils/format';
 
 interface UseBalanceReturn {
   // Raw values
-  lightning: number;
-  onchain: number;
-  total: number;
-  pendingIncoming: number;
-  pendingOutgoing: number;
-  
+  lightning: bigint;
+  onchain: bigint;
+  total: bigint;
+
   // Formatted values
   lightningFormatted: string;
   onchainFormatted: string;
   totalFormatted: string;
   totalBtc: string;
-  
+
   // State
   isLoading: boolean;
   lastUpdated: Date | null;
-  
+
   // Actions
   refresh: () => Promise<void>;
 }
@@ -34,18 +32,14 @@ export const useBalance = (): UseBalanceReturn => {
   const { balance, isLoadingBalance, refreshBalance } = useWalletStore();
 
   const computed = useMemo(() => {
-    const lightning = balance?.lightning ?? 0;
-    const onchain = balance?.onchain ?? 0;
+    const lightning = balance?.lightning ?? 0n;
+    const onchain = balance?.onchain ?? 0n;
     const total = lightning + onchain;
-    const pendingIncoming = balance?.pendingIncoming ?? 0;
-    const pendingOutgoing = balance?.pendingOutgoing ?? 0;
 
     return {
       lightning,
       onchain,
       total,
-      pendingIncoming,
-      pendingOutgoing,
       lightningFormatted: formatSats(lightning),
       onchainFormatted: formatSats(onchain),
       totalFormatted: formatSats(total),
@@ -60,4 +54,3 @@ export const useBalance = (): UseBalanceReturn => {
     refresh: refreshBalance,
   };
 };
-

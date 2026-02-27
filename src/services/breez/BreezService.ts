@@ -101,29 +101,13 @@ class BreezServiceImpl {
     const sdk = this.requireSdk();
     const info = await sdk.getInfo({ ensureSynced: false });
 
-    let pendingIncoming = 0;
-    let pendingOutgoing = 0;
-
-    try {
-      const pending = await sdk.listPayments({
-        ...this.emptyListPaymentsRequest(),
-        statusFilter: [PaymentStatus.Pending],
-      });
-
-      for (const payment of pending.payments) {
-        const amount = this.bigintToNumber(payment.amount) ?? 0;
-        if (payment.paymentType === PaymentType.Receive) pendingIncoming += amount;
-        else pendingOutgoing += amount;
-      }
-    } catch {
-      // Keep pending balances at 0 if payments query fails.
-    }
-
     return {
-      lightning: this.bigintToNumber(info.balanceSats) ?? 0,
-      onchain: 0,
-      pendingIncoming,
-      pendingOutgoing,
+      lightning: info.balanceSats,
+      onchain: 0n,
+      // TODO(starr): remove after Pending balances UI is removed.
+      // Spark SDK does not expose pending incoming/outgoing balances.
+      pendingIncoming: 0n,
+      pendingOutgoing: 0n,
       lastUpdated: new Date(),
     };
   }
@@ -139,7 +123,7 @@ class BreezServiceImpl {
   }
 
   async createInvoice(
-    amountSats: number,
+    amountSats: bigint,
     description?: string,
     expireSeconds: number = 3600
   ): Promise<Invoice> {
@@ -148,7 +132,7 @@ class BreezServiceImpl {
     const receiveResponse = await sdk.receivePayment({
       paymentMethod: ReceivePaymentMethod.Bolt11Invoice.new({
         description: description ?? 'Starr Wallet Payment',
-        amountSats: BigInt(amountSats),
+        amountSats,
         expirySecs: expireSeconds,
         paymentHash: undefined,
       }),
@@ -175,7 +159,7 @@ class BreezServiceImpl {
     return response.paymentRequest;
   }
 
-  async payInvoice(bolt11: string, amountSats?: number): Promise<LightningPayment> {
+  async payInvoice(bolt11: string, amountSats?: bigint): Promise<LightningPayment> {
     const sdk = this.requireSdk();
     const prepareResponse = await this.prepareSendPaymentResponse(bolt11, amountSats);
 
@@ -194,7 +178,7 @@ class BreezServiceImpl {
 
   async sendToAddress(
     address: string,
-    amountSats: number,
+    amountSats: bigint,
     type: 'bitcoin' | 'spark'
   ): Promise<LightningPayment> {
     const sdk = this.requireSdk();
@@ -220,7 +204,7 @@ class BreezServiceImpl {
   async parseInvoice(bolt11: string): Promise<{
     bolt11: string;
     paymentHash: string;
-    amountMsat?: number;
+    amountMsat?: bigint;
     description: string;
     payee: string;
     expiry: number;
@@ -237,7 +221,7 @@ class BreezServiceImpl {
     return {
       bolt11: details.invoice.bolt11,
       paymentHash: details.paymentHash,
-      amountMsat: this.bigintToNumber(details.amountMsat),
+      amountMsat: details.amountMsat,
       description: details.description ?? '',
       payee: details.payeePubkey,
       expiry: Number(details.expiry),
@@ -260,7 +244,7 @@ class BreezServiceImpl {
 
   async prepareSendPayment(
     paymentRequest: string,
-    amountSats?: number
+    amountSats?: bigint
   ): Promise<PrepareSendResult> {
     const prepareResponse = await this.prepareSendPaymentResponse(paymentRequest, amountSats);
     const method = prepareResponse.paymentMethod;
@@ -269,9 +253,9 @@ class BreezServiceImpl {
       const details = method.inner;
       return {
         paymentMethod: 'lightning',
-        amountSats: this.bigintToNumber(prepareResponse.amount) ?? 0,
-        lightningFeeSats: this.bigintToNumber(details.lightningFeeSats),
-        sparkTransferFeeSats: this.bigintToNumber(details.sparkTransferFeeSats),
+        amountSats: prepareResponse.amount,
+        lightningFeeSats: details.lightningFeeSats,
+        sparkTransferFeeSats: details.sparkTransferFeeSats,
         description: details.invoiceDetails.description,
       };
     }
@@ -279,24 +263,24 @@ class BreezServiceImpl {
     if (method.tag === SendPaymentMethod_Tags.BitcoinAddress) {
       return {
         paymentMethod: 'onchain',
-        amountSats: this.bigintToNumber(prepareResponse.amount) ?? 0,
-        onchainFeeSats: this.bigintToNumber(method.inner.feeQuote.speedMedium.userFeeSat),
+        amountSats: prepareResponse.amount,
+        onchainFeeSats: method.inner.feeQuote.speedMedium.userFeeSat,
       };
     }
 
     if (method.tag === SendPaymentMethod_Tags.SparkAddress) {
       return {
         paymentMethod: 'spark_transfer',
-        amountSats: this.bigintToNumber(prepareResponse.amount) ?? 0,
-        sparkTransferFeeSats: this.bigintToNumber(method.inner.fee),
+        amountSats: prepareResponse.amount,
+        sparkTransferFeeSats: method.inner.fee,
       };
     }
 
     if (method.tag === SendPaymentMethod_Tags.SparkInvoice) {
       return {
         paymentMethod: 'spark_transfer',
-        amountSats: this.bigintToNumber(prepareResponse.amount) ?? 0,
-        sparkTransferFeeSats: this.bigintToNumber(method.inner.fee),
+        amountSats: prepareResponse.amount,
+        sparkTransferFeeSats: method.inner.fee,
         description: method.inner.sparkInvoiceDetails.description,
       };
     }
@@ -343,15 +327,15 @@ class BreezServiceImpl {
   // TODO(starr): add UI for claiming unclaimed deposits:
   // 1) list via listUnclaimedDeposits() and show claimError details
   // 2) for MaxDepositClaimFeeExceeded, show requiredFeeSats and ask user confirmation
-  async claimDeposit(txid: string, vout: number, maxFeeSats: number): Promise<void> {
+  async claimDeposit(txid: string, vout: number, maxFeeSats: bigint): Promise<void> {
     const sdk = this.requireSdk();
 
     await sdk.claimDeposit({
       txid,
       vout,
       maxFee:
-        maxFeeSats > 0
-          ? MaxFee.Fixed.new({ amount: BigInt(maxFeeSats) })
+        maxFeeSats > 0n
+          ? MaxFee.Fixed.new({ amount: maxFeeSats })
           : undefined,
     });
   }
@@ -569,13 +553,13 @@ class BreezServiceImpl {
 
   private async prepareSendPaymentResponse(
     paymentRequest: string,
-    amountSats?: number
+    amountSats?: bigint
   ): Promise<PrepareSendPaymentResponse> {
     const sdk = this.requireSdk();
 
     return sdk.prepareSendPayment({
       paymentRequest,
-      amount: amountSats != null ? BigInt(amountSats) : undefined,
+      amount: amountSats != null ? amountSats : undefined,
       tokenIdentifier: undefined,
       conversionOptions: undefined,
       feePolicy: undefined,
@@ -590,7 +574,7 @@ class BreezServiceImpl {
           type: 'bolt11_invoice',
           bolt11: details.invoice.bolt11,
           paymentHash: details.paymentHash,
-          amountMsat: this.bigintToNumber(details.amountMsat),
+          amountMsat: details.amountMsat,
           description: details.description,
           payee: details.payeePubkey,
           expiry: Number(details.expiry),
@@ -610,10 +594,10 @@ class BreezServiceImpl {
         const details = input.inner[0];
         return {
           type: 'spark_invoice',
-          amount: this.bigintToNumber(details.amount),
+          amount: details.amount,
           tokenIdentifier: details.tokenIdentifier,
           description: details.description,
-          expiryTime: this.bigintToNumber(details.expiryTime),
+          expiryTime: details.expiryTime,
           senderPublicKey: details.senderPublicKey,
         };
       }
@@ -621,24 +605,24 @@ class BreezServiceImpl {
         const details = input.inner[0];
         return {
           type: 'lnurl_pay',
-          minSendable: this.bigintToNumber(details.minSendable) ?? 0,
-          maxSendable: this.bigintToNumber(details.maxSendable) ?? 0,
+          minSendable: details.minSendable,
+          maxSendable: details.maxSendable,
         };
       }
       case InputType_Tags.LightningAddress: {
         const details = input.inner[0];
         return {
           type: 'lnurl_pay',
-          minSendable: this.bigintToNumber(details.payRequest.minSendable) ?? 0,
-          maxSendable: this.bigintToNumber(details.payRequest.maxSendable) ?? 0,
+          minSendable: details.payRequest.minSendable,
+          maxSendable: details.payRequest.maxSendable,
         };
       }
       case InputType_Tags.LnurlWithdraw: {
         const details = input.inner[0];
         return {
           type: 'lnurl_withdraw',
-          minWithdrawable: this.bigintToNumber(details.minWithdrawable) ?? 0,
-          maxWithdrawable: this.bigintToNumber(details.maxWithdrawable) ?? 0,
+          minWithdrawable: details.minWithdrawable,
+          maxWithdrawable: details.maxWithdrawable,
         };
       }
       case InputType_Tags.Bip21: {
@@ -696,14 +680,12 @@ class BreezServiceImpl {
       }
     }
 
-    const feeSats = this.bigintToNumber(payment.fees);
-
     return {
       id: payment.id,
       type,
       status,
-      amountSats: this.bigintToNumber(payment.amount) ?? 0,
-      feeSats: feeSats && feeSats > 0 ? feeSats : undefined,
+      amountSats: payment.amount,
+      feeSats: payment.fees > 0n ? payment.fees : undefined,
       description,
       invoice,
       paymentHash,
@@ -726,16 +708,7 @@ class BreezServiceImpl {
   }
 
   private toDate(timestamp: bigint): Date {
-    const value = this.bigintToNumber(timestamp) ?? 0;
-    return new Date(value * 1000);
-  }
-
-  private bigintToNumber(value: bigint | undefined): number | undefined {
-    if (value == null) return undefined;
-    const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-    if (value > maxSafe) return Number.MAX_SAFE_INTEGER;
-    if (value < -maxSafe) return Number.MIN_SAFE_INTEGER;
-    return Number(value);
+    return new Date(Number(timestamp) * 1000);
   }
 
   private generateIdempotencyKey(): string {

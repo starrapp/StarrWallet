@@ -15,6 +15,7 @@ import {
 import { Text } from './Text';
 import { layout, spacing, typography } from '@/theme';
 import { useColors } from '@/contexts';
+import { formatSats } from '@/utils/format';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -106,7 +107,7 @@ interface AmountInputProps {
   onChangeValue: (value: string) => void;
   label?: string;
   error?: string;
-  maxAmount?: number;
+  maxAmount?: bigint;
 }
 
 export const AmountInput: React.FC<AmountInputProps> = ({
@@ -153,7 +154,7 @@ export const AmountInput: React.FC<AmountInputProps> = ({
       
       {maxAmount !== undefined && (
         <Text variant="bodySmall" color={colors.text.muted} style={styles.hint}>
-          Max: {maxAmount.toLocaleString()} sats
+          Max: {formatSats(maxAmount)} sats
         </Text>
       )}
       

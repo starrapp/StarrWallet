@@ -20,6 +20,7 @@ import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { formatSats } from '@/utils/format';
 import type { Invoice } from '@/types/wallet';
 
 function expiryCopy(expiresAt: Date): string {
@@ -39,8 +40,20 @@ export default function ReceiveScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const handleCreateInvoice = async () => {
-    const amountSats = parseInt(amount);
-    if (!amountSats || amountSats <= 0) {
+    if (!amount.trim()) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    let amountSats: bigint;
+    try {
+      amountSats = BigInt(amount);
+    } catch {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    if (amountSats <= 0n) {
       setError('Please enter a valid amount');
       return;
     }
@@ -183,7 +196,7 @@ export default function ReceiveScreen() {
                 {/* Amount */}
                 <View style={styles.amountContainer}>
                   <Text variant="amountLarge" color={colors.gold.pure}>
-                    {invoice.amountSats?.toLocaleString()}
+                    {invoice.amountSats != null ? formatSats(invoice.amountSats) : '0'}
                   </Text>
                   <Text variant="titleMedium" color={colors.text.secondary}>
                     sats

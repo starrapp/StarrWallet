@@ -8,6 +8,7 @@ import React from 'react';
 import { Text as RNText, TextStyle, StyleSheet, StyleProp } from 'react-native';
 import { typography } from '@/theme';
 import { useColors } from '@/contexts';
+import { formatSats } from '@/utils/format';
 
 type TextVariant = keyof typeof typography;
 
@@ -48,7 +49,7 @@ export const Text: React.FC<TextProps> = ({
 
 // Amount display component
 interface AmountProps {
-  sats: number;
+  sats: bigint;
   size?: 'sm' | 'md' | 'lg';
   showUnit?: boolean;
   color?: string;
@@ -64,9 +65,6 @@ export const Amount: React.FC<AmountProps> = ({
 }) => {
   const colors = useColors();
   const amountColor = color || colors.text.primary;
-  const formatAmount = (amount: number): string => {
-    return amount.toLocaleString('en-US');
-  };
 
   const getVariant = (): TextVariant => {
     switch (size) {
@@ -78,7 +76,7 @@ export const Amount: React.FC<AmountProps> = ({
 
   return (
     <RNText style={[typography[getVariant()], { color: amountColor }, style]}>
-      {formatAmount(sats)}
+      {formatSats(sats)}
       {showUnit && (
         <RNText style={[styles.unit, { color: colors.text.secondary }]}>
           {' '}sats

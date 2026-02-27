@@ -24,6 +24,7 @@ import { useWalletStore } from '@/stores/walletStore';
 import { BreezService } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { formatSats, msatToSatCeil } from '@/utils/format';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11 } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -71,9 +72,6 @@ export default function SendScreen() {
         const result = await BreezService.parse(invoice.trim());
         if (!cancelled) {
           setParsed(result);
-          if (result.type === 'bolt11_invoice' && result.amountMsat != null) {
-            setAmount((prev) => (prev ? prev : String(Math.ceil(result.amountMsat! / 1000))));
-          }
         }
       } catch {
         if (!cancelled) setParsed({ type: 'unknown', raw: invoice });
@@ -94,22 +92,26 @@ export default function SendScreen() {
     setShowConfirm(false);
   }, []);
 
-  const getAmountSats = useCallback((): number | undefined => {
-    const n = parseInt(amount, 10);
-    if (!Number.isNaN(n) && n > 0) return n;
-    if (parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null) {
-      return Math.ceil(parsed.amountMsat / 1000);
+  const getAmountSats = useCallback((): bigint | undefined => {
+    if (amount.trim().length > 0) {
+      try {
+        const value = BigInt(amount);
+        if (value > 0n) return value;
+      } catch {
+        // Ignore invalid bigint input.
+      }
     }
     return undefined;
-  }, [amount, parsed]);
+  }, [amount]);
 
   const handlePrepareAndConfirm = async () => {
     if (!invoice.trim()) {
       setError('Please enter an invoice or address');
       return;
     }
-    const amountSats = getAmountSats();
-    if (parsed?.type === 'bolt11_invoice' && !amountSats && !(parsed as ParsedBolt11).amountMsat) {
+    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
+    const amountSats = isFixedBolt11 ? undefined : getAmountSats();
+    if (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null && amountSats == null) {
       setError('Please enter an amount (this invoice has no amount)');
       return;
     }
@@ -134,15 +136,17 @@ export default function SendScreen() {
 
   const handleSend = async () => {
     if (!prepareResult || !invoice.trim()) return;
-    const amountSats = getAmountSats() ?? prepareResult.amountSats;
-    if (amountSats == null || amountSats <= 0) {
+    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
+    const requestedAmountSats = isFixedBolt11 ? undefined : getAmountSats();
+    const amountSats = requestedAmountSats ?? prepareResult.amountSats;
+    if (amountSats <= 0n) {
       setError('Please enter an amount');
       return;
     }
     setIsLoading(true);
     try {
       if (prepareResult.paymentMethod === 'lightning') {
-        await payInvoice(invoice.trim(), amountSats);
+        await payInvoice(invoice.trim(), requestedAmountSats);
       } else if (prepareResult.paymentMethod === 'onchain' && parsed?.type === 'bitcoin_address') {
         await sendToAddress(parsed.address, amountSats, 'bitcoin');
       } else if (prepareResult.paymentMethod === 'spark_transfer' && parsed?.type === 'spark_address') {
@@ -155,7 +159,7 @@ export default function SendScreen() {
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Payment sent', `Successfully sent ${amountSats.toLocaleString()} sats`, [
+      Alert.alert('Payment sent', `Successfully sent ${formatSats(amountSats)} sats`, [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err) {
@@ -305,7 +309,7 @@ export default function SendScreen() {
                       <View style={styles.invoiceRow}>
                         <Text variant="labelMedium" color={colors.text.muted}>Amount</Text>
                         <Text variant="bodyMedium" color={colors.text.primary}>
-                          {Math.ceil((parsed as ParsedBolt11).amountMsat! / 1000).toLocaleString()} sats
+                          {formatSats(msatToSatCeil((parsed as ParsedBolt11).amountMsat!))} sats
                         </Text>
                       </View>
                     )}
@@ -322,12 +326,14 @@ export default function SendScreen() {
               </Card>
             )}
 
-            {/* Amount input (for Lightning when sendable, or when amountless) */}
-            {(parsed?.type === 'bolt11_invoice' || parsed?.type === 'bitcoin_address' || parsed?.type === 'spark_address') && (
+            {/* Amount input (only for amountless invoices and addresses) */}
+            {(parsed?.type === 'bitcoin_address'
+              || parsed?.type === 'spark_address'
+              || (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null)) && (
               <AmountInput
                 value={amount}
                 onChangeValue={setAmount}
-                label={parsed.type === 'bolt11_invoice' && (parsed as ParsedBolt11).amountMsat != null ? 'Amount (optional override)' : 'Amount to send'}
+                label="Amount to send"
                 maxAmount={balance?.lightning}
               />
             )}
@@ -341,22 +347,22 @@ export default function SendScreen() {
                 <View style={styles.invoiceRow}>
                   <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
                   <Text variant="titleSmall" color={colors.text.primary}>
-                    {prepareResult.amountSats.toLocaleString()} sats
+                    {formatSats(prepareResult.amountSats)} sats
                   </Text>
                 </View>
-                {prepareResult.lightningFeeSats != null && prepareResult.lightningFeeSats > 0 && (
+                {prepareResult.lightningFeeSats != null && prepareResult.lightningFeeSats > 0n && (
                   <View style={styles.invoiceRow}>
                     <Text variant="bodyMedium" color={colors.text.secondary}>Network fee</Text>
                     <Text variant="bodyMedium" color={colors.text.primary}>
-                      {prepareResult.lightningFeeSats} sats
+                      {formatSats(prepareResult.lightningFeeSats)} sats
                     </Text>
                   </View>
                 )}
-                {prepareResult.sparkTransferFeeSats != null && prepareResult.sparkTransferFeeSats > 0 && (
+                {prepareResult.sparkTransferFeeSats != null && prepareResult.sparkTransferFeeSats > 0n && (
                   <View style={styles.invoiceRow}>
                     <Text variant="bodyMedium" color={colors.text.secondary}>Spark fee</Text>
                     <Text variant="bodyMedium" color={colors.text.primary}>
-                      {prepareResult.sparkTransferFeeSats} sats
+                      {formatSats(prepareResult.sparkTransferFeeSats)} sats
                     </Text>
                   </View>
                 )}
@@ -364,7 +370,7 @@ export default function SendScreen() {
                   <View style={styles.invoiceRow}>
                     <Text variant="bodyMedium" color={colors.text.secondary}>On-chain fee</Text>
                     <Text variant="bodyMedium" color={colors.text.primary}>
-                      ~{prepareResult.onchainFeeSats} sats
+                      ~{formatSats(prepareResult.onchainFeeSats)} sats
                     </Text>
                   </View>
                 )}
@@ -379,7 +385,7 @@ export default function SendScreen() {
             <View style={styles.balanceInfo}>
               <Ionicons name="wallet" size={16} color={colors.text.muted} />
               <Text variant="bodySmall" color={colors.text.muted}>
-                Available: {balance?.lightning.toLocaleString() ?? 0} sats
+                Available: {balance ? formatSats(balance.lightning) : '0'} sats
               </Text>
             </View>
           </ScrollView>

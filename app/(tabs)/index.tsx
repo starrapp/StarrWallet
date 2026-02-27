@@ -22,6 +22,7 @@ import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { formatSignedSats } from '@/utils/format';
 import type { ColorTheme } from '@/theme/colors';
 import type { LightningPayment } from '@/types/wallet';
 
@@ -373,7 +374,7 @@ const PaymentItem: React.FC<{ payment: LightningPayment }> = ({ payment }) => {
         variant="titleSmall"
         color={isReceive ? colors.status.success : colors.text.primary}
       >
-        {isReceive ? '+' : '-'}{payment.amountSats.toLocaleString()}
+        {formatSignedSats(payment.amountSats, isReceive ? '+' : '-')}
       </Text>
     </View>
   );

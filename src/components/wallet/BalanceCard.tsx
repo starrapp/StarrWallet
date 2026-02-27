@@ -11,6 +11,7 @@ import { Text, Amount } from '@/components/ui';
 import { layout, spacing } from '@/theme';
 import { useColors } from '@/contexts';
 import type { Balance } from '@/types/wallet';
+import { formatSats } from '@/utils/format';
 
 interface BalanceCardProps {
   balance: Balance | null;
@@ -24,8 +25,9 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   isLoading = false,
 }) => {
   const colors = useColors();
-  const totalBalance = balance ? balance.lightning + balance.onchain : 0;
-  const hasPending = balance && (balance.pendingIncoming > 0 || balance.pendingOutgoing > 0);
+  const lightning = balance?.lightning ?? 0n;
+  const onchain = balance?.onchain ?? 0n;
+  const totalBalance = lightning + onchain;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
@@ -62,7 +64,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               Lightning
             </Text>
             <Text variant="titleSmall" color={colors.text.primary}>
-              {(balance?.lightning || 0).toLocaleString()} sats
+              {formatSats(lightning)} sats
             </Text>
           </View>
         </View>
@@ -78,33 +80,12 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               On-chain
             </Text>
             <Text variant="titleSmall" color={colors.text.primary}>
-              {(balance?.onchain || 0).toLocaleString()} sats
+              {formatSats(onchain)} sats
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Pending indicator */}
-      {hasPending && (
-        <View style={styles.pendingContainer}>
-          {balance.pendingIncoming > 0 && (
-            <View style={styles.pendingItem}>
-              <Ionicons name="arrow-down" size={12} color={colors.status.success} />
-              <Text variant="labelSmall" color={colors.status.success}>
-                +{balance.pendingIncoming.toLocaleString()} incoming
-              </Text>
-            </View>
-          )}
-          {balance.pendingOutgoing > 0 && (
-            <View style={styles.pendingItem}>
-              <Ionicons name="arrow-up" size={12} color={colors.status.warning} />
-              <Text variant="labelSmall" color={colors.status.warning}>
-                -{balance.pendingOutgoing.toLocaleString()} outgoing
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
     </View>
   );
 };
@@ -148,18 +129,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
     marginHorizontal: spacing.md,
-  },
-  pendingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-  },
-  pendingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
   },
   spinning: {
     opacity: 0.5,

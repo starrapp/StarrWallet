@@ -5,23 +5,33 @@
 /**
  * Format satoshis with thousands separator
  */
-export const formatSats = (sats: number): string => {
+export const formatSats = (sats: bigint): string => {
   return sats.toLocaleString('en-US');
+};
+
+/**
+ * Format satoshis with explicit sign prefix
+ */
+export const formatSignedSats = (sats: bigint, sign: '+' | '-'): string => {
+  return `${sign}${formatSats(sats)}`;
 };
 
 /**
  * Format satoshis to BTC string
  */
-export const satsToBtc = (sats: number): string => {
-  const btc = sats / 100_000_000;
-  return btc.toFixed(8);
+export const satsToBtc = (sats: bigint): string => {
+  const sign = sats < 0n ? '-' : '';
+  const abs = sats < 0n ? -sats : sats;
+  const whole = abs / 100_000_000n;
+  const frac = (abs % 100_000_000n).toString().padStart(8, '0');
+  return `${sign}${whole.toString()}.${frac}`;
 };
 
 /**
  * Parse BTC to satoshis
  */
-export const btcToSats = (btc: number): number => {
-  return Math.round(btc * 100_000_000);
+export const btcToSats = (btc: number): bigint => {
+  return BigInt(Math.round(btc * 100_000_000));
 };
 
 /**
@@ -56,15 +66,22 @@ export const formatPaymentHash = (hash: string): string => {
 /**
  * Format millisats to sats with proper rounding
  */
-export const msatToSat = (msat: number): number => {
-  return Math.floor(msat / 1000);
+export const msatToSat = (msat: bigint): bigint => {
+  return msat / 1000n;
+};
+
+/**
+ * Convert millisats to sats with ceiling rounding
+ */
+export const msatToSatCeil = (msat: bigint): bigint => {
+  return (msat + 999n) / 1000n;
 };
 
 /**
  * Format sats to millisats
  */
-export const satToMsat = (sat: number): number => {
-  return sat * 1000;
+export const satToMsat = (sat: bigint): bigint => {
+  return sat * 1000n;
 };
 
 /**
@@ -84,4 +101,3 @@ export const formatBytes = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
-
