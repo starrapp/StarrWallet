@@ -11,7 +11,8 @@
       "@/utils/*": ["src/utils/*"],
       "@/hooks/*": ["src/hooks/*"],
       "@/types/*": ["src/types/*"],
-      "@/theme/*": ["src/theme/*"]
+      "@/theme/*": ["src/theme/*"],
+      "uniffi-bindgen-react-native": ["src/types/uniffi-bindgen-react-native-shim.d.ts"]
     }
   },
   "include": [
@@ -21,4 +22,3 @@
     "expo-env.d.ts"
   ]
 }
-

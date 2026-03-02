@@ -18,9 +18,7 @@ export interface Balance {
 }
 
 // Transaction types
-// TODO(starr): `expired` is kept for History UI filter compatibility.
-// Spark listPayments exposes only completed/pending/failed.
-export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'expired';
+export type TransactionStatus = 'pending' | 'completed' | 'failed';
 
 // Lightning payment
 export interface LightningPayment {
@@ -110,14 +108,11 @@ export interface ParsedSparkInvoice {
 
 export interface ParsedLnurlPay {
   type: 'lnurl_pay';
-  minSendable: bigint;
-  maxSendable: bigint;
-}
-
-export interface ParsedLnurlWithdraw {
-  type: 'lnurl_withdraw';
-  minWithdrawable: bigint;
-  maxWithdrawable: bigint;
+  domain: string;
+  address?: string; // Lightning address if resolved via LN address
+  commentAllowed: number;
+  minSendable: bigint; // millisats
+  maxSendable: bigint; // millisats
 }
 
 export type ParsedInput =
@@ -126,29 +121,20 @@ export type ParsedInput =
   | ParsedSparkAddress
   | ParsedSparkInvoice
   | ParsedLnurlPay
-  | ParsedLnurlWithdraw
   | { type: 'unknown'; raw: string };
 
-// --- Prepare send payment (Breez SDK prepareSendPayment)
+// --- Prepare send payment (Breez SDK prepareSendPayment / prepareLnurlPay)
 export interface PrepareSendResult {
-  paymentMethod: 'lightning' | 'spark_transfer' | 'onchain';
+  paymentMethod: 'lightning' | 'spark_transfer' | 'onchain' | 'lnurl_pay';
   amountSats: bigint;
-  /** Lightning network fee (sats) */
-  lightningFeeSats?: bigint;
-  /** Spark transfer fee (sats), when invoice supports both */
-  sparkTransferFeeSats?: bigint;
-  /** On-chain fee estimate (sats), for Bitcoin/Spark address */
-  onchainFeeSats?: bigint;
-  /** Description or recipient from request */
+  feeSats: bigint;
   description?: string;
 }
 
 // --- List payments request (filters + pagination)
 export interface ListPaymentsFilter {
   typeFilter?: ('send' | 'receive')[];
-  // TODO(starr): `expired` exists only for current History UI filter.
-  // Spark SDK listPayments does not return `expired`.
-  statusFilter?: ('pending' | 'completed' | 'failed' | 'expired')[];
+  statusFilter?: ('pending' | 'completed' | 'failed')[];
   fromTimestamp?: number;
   toTimestamp?: number;
   offset?: number;

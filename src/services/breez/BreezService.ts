@@ -12,15 +12,24 @@ import type {
   ListPaymentsFilter,
 } from '@/types/wallet';
 
+// Unsupported SDK input types (parsed but not actionable):
+// - LnurlWithdraw: not needed for this wallet
+// - LnurlAuth: no authentication use-case
+// - Bolt12Offer / Bolt12Invoice / Bolt12InvoiceRequest: BOLT12 not yet supported
+// - SilentPaymentAddress: not yet supported
+// - Url: generic URL, not a payment type
 import {
   connect,
   defaultConfig,
   InputType_Tags,
+  ListPaymentsRequest as SdkListPaymentsRequest,
+  LnurlPayRequest,
   MaxFee,
   Network,
   PaymentDetails_Tags,
   PaymentStatus,
   PaymentType,
+  PrepareLnurlPayRequest,
   ReceivePaymentMethod,
   Seed,
   SendPaymentMethod_Tags,
@@ -29,10 +38,24 @@ import {
   type DepositInfo,
   type InputType,
   type ListPaymentsRequest,
+  type LnurlPayRequestDetails,
   type Payment,
   type PrepareSendPaymentResponse,
   type SdkEvent,
 } from '@breeztech/breez-sdk-spark-react-native';
+
+/** Extract a readable message from Breez SDK errors (SdkError / UniffiError). */
+export function formatSdkError(err: unknown): string {
+  if (err != null && typeof err === 'object') {
+    const e = err as Record<string, unknown>;
+    // SdkError has tag + inner[0] with the actual message
+    if (typeof e.tag === 'string' && Array.isArray(e.inner) && typeof e.inner[0] === 'string') {
+      return `${e.tag}: ${e.inner[0]}`;
+    }
+  }
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 export type PaymentEventHandler = (payment: LightningPayment) => void;
 export type SyncEventHandler = () => void;
@@ -159,38 +182,37 @@ class BreezServiceImpl {
     return response.paymentRequest;
   }
 
-  async payInvoice(bolt11: string, amountSats?: bigint): Promise<LightningPayment> {
+  async sendPayment(input: string, amountSats?: bigint): Promise<LightningPayment> {
     const sdk = this.requireSdk();
-    const prepareResponse = await this.prepareSendPaymentResponse(bolt11, amountSats);
+    const raw = input.trim();
+    const parsed = await sdk.parse(raw);
 
-    if (prepareResponse.paymentMethod.tag !== SendPaymentMethod_Tags.Bolt11Invoice) {
-      throw new Error('Payment request is not a Lightning invoice');
+    // LNURL-Pay / Lightning Address → separate SDK flow
+    if (parsed.tag === InputType_Tags.LnurlPay || parsed.tag === InputType_Tags.LightningAddress) {
+      const payRequest: LnurlPayRequestDetails =
+        parsed.tag === InputType_Tags.LightningAddress
+          ? parsed.inner[0].payRequest
+          : parsed.inner[0];
+
+      if (amountSats == null) {
+        throw new Error('Amount is required for LNURL-Pay');
+      }
+
+      const prepareResponse = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
+        amountSats,
+        payRequest,
+      }));
+
+      const response = await sdk.lnurlPay(LnurlPayRequest.new({
+        prepareResponse,
+        idempotencyKey: this.generateIdempotencyKey(),
+      }));
+
+      return this.mapPayment(response.payment);
     }
 
-    const response = await sdk.sendPayment({
-      prepareResponse,
-      options: undefined,
-      idempotencyKey: this.generateIdempotencyKey(),
-    });
-
-    return this.mapPayment(response.payment);
-  }
-
-  async sendToAddress(
-    address: string,
-    amountSats: bigint,
-    type: 'bitcoin' | 'spark'
-  ): Promise<LightningPayment> {
-    const sdk = this.requireSdk();
-    const prepareResponse = await this.prepareSendPaymentResponse(address, amountSats);
-
-    if (type === 'bitcoin' && prepareResponse.paymentMethod.tag !== SendPaymentMethod_Tags.BitcoinAddress) {
-      throw new Error('Payment request is not a Bitcoin address');
-    }
-
-    if (type === 'spark' && prepareResponse.paymentMethod.tag !== SendPaymentMethod_Tags.SparkAddress) {
-      throw new Error('Payment request is not a Spark address');
-    }
+    // Standard flow: Bolt11, Bitcoin address, Spark address, Spark invoice
+    const prepareResponse = await this.prepareSendPaymentResponse(raw, amountSats);
 
     const response = await sdk.sendPayment({
       prepareResponse,
@@ -243,19 +265,48 @@ class BreezServiceImpl {
   }
 
   async prepareSendPayment(
-    paymentRequest: string,
+    input: string,
     amountSats?: bigint
   ): Promise<PrepareSendResult> {
-    const prepareResponse = await this.prepareSendPaymentResponse(paymentRequest, amountSats);
+    const sdk = this.requireSdk();
+    const raw = input.trim();
+    const parsed = await sdk.parse(raw);
+
+    // LNURL-Pay / Lightning Address → separate SDK prepare
+    if (parsed.tag === InputType_Tags.LnurlPay || parsed.tag === InputType_Tags.LightningAddress) {
+      const payRequest: LnurlPayRequestDetails =
+        parsed.tag === InputType_Tags.LightningAddress
+          ? parsed.inner[0].payRequest
+          : parsed.inner[0];
+
+      if (amountSats == null) {
+        throw new Error('Amount is required for LNURL-Pay');
+      }
+
+      const response = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
+        amountSats,
+        payRequest,
+      }));
+
+      return {
+        paymentMethod: 'lnurl_pay',
+        amountSats: response.amountSats,
+        feeSats: response.feeSats,
+        description: payRequest.domain,
+      };
+    }
+
+    // Standard flow
+    const prepareResponse = await this.prepareSendPaymentResponse(raw, amountSats);
     const method = prepareResponse.paymentMethod;
 
     if (method.tag === SendPaymentMethod_Tags.Bolt11Invoice) {
       const details = method.inner;
+      const fee = (details.lightningFeeSats ?? 0n) + (details.sparkTransferFeeSats ?? 0n);
       return {
         paymentMethod: 'lightning',
         amountSats: prepareResponse.amount,
-        lightningFeeSats: details.lightningFeeSats,
-        sparkTransferFeeSats: details.sparkTransferFeeSats,
+        feeSats: fee,
         description: details.invoiceDetails.description,
       };
     }
@@ -264,7 +315,7 @@ class BreezServiceImpl {
       return {
         paymentMethod: 'onchain',
         amountSats: prepareResponse.amount,
-        onchainFeeSats: method.inner.feeQuote.speedMedium.userFeeSat,
+        feeSats: method.inner.feeQuote.speedMedium.userFeeSat,
       };
     }
 
@@ -272,7 +323,7 @@ class BreezServiceImpl {
       return {
         paymentMethod: 'spark_transfer',
         amountSats: prepareResponse.amount,
-        sparkTransferFeeSats: method.inner.fee,
+        feeSats: method.inner.fee,
       };
     }
 
@@ -280,7 +331,7 @@ class BreezServiceImpl {
       return {
         paymentMethod: 'spark_transfer',
         amountSats: prepareResponse.amount,
-        sparkTransferFeeSats: method.inner.fee,
+        feeSats: method.inner.fee,
         description: method.inner.sparkInvoiceDetails.description,
       };
     }
@@ -290,15 +341,6 @@ class BreezServiceImpl {
 
   async listPayments(filter?: ListPaymentsFilter): Promise<LightningPayment[]> {
     const sdk = this.requireSdk();
-
-    const statusFilter = filter?.statusFilter;
-    if (
-      statusFilter &&
-      statusFilter.length > 0 &&
-      statusFilter.every((status) => status === 'expired')
-    ) {
-      return [];
-    }
 
     const response = await sdk.listPayments(this.toSdkListPaymentsRequest(filter));
     return response.payments.map((payment) => this.mapPayment(payment));
@@ -441,7 +483,7 @@ class BreezServiceImpl {
       case SdkEvent_Tags.PaymentFailed: {
         const payment = this.mapPayment(event.inner.payment);
         // Avoid duplicating outgoing sends in UI. Outgoing sends are already
-        // returned by payInvoice/sendToAddress.
+        // returned by sendPayment.
         if (payment.type === 'receive') {
           this.emit('payment', payment);
         }
@@ -485,70 +527,35 @@ class BreezServiceImpl {
     };
   }
 
-  private emptyListPaymentsRequest(): ListPaymentsRequest {
-    return {
-      typeFilter: undefined,
-      statusFilter: undefined,
-      assetFilter: undefined,
-      paymentDetailsFilter: undefined,
-      fromTimestamp: undefined,
-      toTimestamp: undefined,
-      offset: undefined,
-      limit: undefined,
-      sortAscending: undefined,
-    };
-  }
-
   private toSdkListPaymentsRequest(filter?: ListPaymentsFilter): ListPaymentsRequest {
-    const request = this.emptyListPaymentsRequest();
+    const statusFilter = filter?.statusFilter?.length
+      ? filter.statusFilter
+          .map((status) =>
+            status === 'completed'
+              ? PaymentStatus.Completed
+              : status === 'pending'
+                ? PaymentStatus.Pending
+                : PaymentStatus.Failed
+          )
+      : undefined;
 
-    if (filter?.typeFilter?.length) {
-      request.typeFilter = filter.typeFilter.map((type) =>
-        type === 'send' ? PaymentType.Send : PaymentType.Receive
-      );
-    }
-
-    if (filter?.statusFilter?.length) {
-      const sdkStatuses = filter.statusFilter
-        .filter((status) => status !== 'expired')
-        .map((status) => {
-          switch (status) {
-            case 'completed':
-              return PaymentStatus.Completed;
-            case 'pending':
-              return PaymentStatus.Pending;
-            case 'failed':
-              return PaymentStatus.Failed;
-            default:
-              return undefined;
-          }
-        })
-        .filter((status): status is PaymentStatus => status != null);
-
-      request.statusFilter = sdkStatuses.length > 0 ? sdkStatuses : undefined;
-    }
-
-    if (filter?.fromTimestamp != null) {
-      request.fromTimestamp = BigInt(Math.max(0, Math.floor(filter.fromTimestamp)));
-    }
-
-    if (filter?.toTimestamp != null) {
-      request.toTimestamp = BigInt(Math.max(0, Math.floor(filter.toTimestamp)));
-    }
-
-    if (filter?.offset != null) {
-      request.offset = Math.max(0, Math.floor(filter.offset));
-    }
-
-    if (filter?.limit != null) {
-      request.limit = Math.max(1, Math.floor(filter.limit));
-    }
-
-    if (filter?.sortAscending != null) {
-      request.sortAscending = filter.sortAscending;
-    }
-
-    return request;
+    return SdkListPaymentsRequest.new({
+      typeFilter: filter?.typeFilter?.length
+        ? filter.typeFilter.map((type) =>
+            type === 'send' ? PaymentType.Send : PaymentType.Receive
+          )
+        : undefined,
+      statusFilter,
+      fromTimestamp:
+        filter?.fromTimestamp != null
+          ? BigInt(Math.max(0, Math.floor(filter.fromTimestamp)))
+          : undefined,
+      toTimestamp:
+        filter?.toTimestamp != null ? BigInt(Math.max(0, Math.floor(filter.toTimestamp))) : undefined,
+      offset: filter?.offset != null ? Math.max(0, Math.floor(filter.offset)) : undefined,
+      limit: filter?.limit != null ? Math.max(1, Math.floor(filter.limit)) : undefined,
+      sortAscending: filter?.sortAscending,
+    });
   }
 
   private async prepareSendPaymentResponse(
@@ -605,6 +612,8 @@ class BreezServiceImpl {
         const details = input.inner[0];
         return {
           type: 'lnurl_pay',
+          domain: details.domain,
+          commentAllowed: details.commentAllowed,
           minSendable: details.minSendable,
           maxSendable: details.maxSendable,
         };
@@ -613,16 +622,11 @@ class BreezServiceImpl {
         const details = input.inner[0];
         return {
           type: 'lnurl_pay',
+          domain: details.payRequest.domain,
+          address: details.address,
+          commentAllowed: details.payRequest.commentAllowed,
           minSendable: details.payRequest.minSendable,
           maxSendable: details.payRequest.maxSendable,
-        };
-      }
-      case InputType_Tags.LnurlWithdraw: {
-        const details = input.inner[0];
-        return {
-          type: 'lnurl_withdraw',
-          minWithdrawable: details.minWithdrawable,
-          maxWithdrawable: details.maxWithdrawable,
         };
       }
       case InputType_Tags.Bip21: {

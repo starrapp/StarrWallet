@@ -1,7 +1,8 @@
 /**
  * Send Payment Screen
  *
- * Supports: BOLT11 invoice, Bitcoin address, Spark address (stub).
+ * Supports: BOLT11 invoice, Bitcoin address, Spark address/invoice,
+ * LNURL-Pay, Lightning address.
  * Flow: parse input → show type & details → prepare (fees) → confirm → send.
  */
 
@@ -21,11 +22,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
-import { BreezService } from '@/services/breez';
+import { BreezService, formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { formatSats, msatToSatCeil } from '@/utils/format';
-import type { ParsedInput, PrepareSendResult, ParsedBolt11 } from '@/types/wallet';
+import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   bolt11_invoice: 'Lightning invoice',
@@ -33,7 +34,6 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   spark_address: 'Spark address',
   spark_invoice: 'Spark invoice',
   lnurl_pay: 'LNURL-Pay',
-  lnurl_withdraw: 'LNURL-Withdraw',
   unknown: 'Unknown',
 };
 
@@ -41,9 +41,10 @@ export default function SendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ invoice?: string }>();
   const colors = useColors();
-  const { balance, payInvoice, sendToAddress } = useWalletStore();
+  const { balance, sendPayment } = useWalletStore();
   const [invoice, setInvoice] = useState('');
   const [amount, setAmount] = useState('');
+  const [comment, setComment] = useState('');
   const [parsed, setParsed] = useState<ParsedInput | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [prepareResult, setPrepareResult] = useState<PrepareSendResult | null>(null);
@@ -104,19 +105,26 @@ export default function SendScreen() {
     return undefined;
   }, [amount]);
 
+  const needsAmount =
+    parsed?.type === 'bitcoin_address'
+    || parsed?.type === 'spark_address'
+    || parsed?.type === 'spark_invoice'
+    || parsed?.type === 'lnurl_pay'
+    || (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null);
+
   const handlePrepareAndConfirm = async () => {
     if (!invoice.trim()) {
       setError('Please enter an invoice or address');
       return;
     }
-    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
-    const amountSats = isFixedBolt11 ? undefined : getAmountSats();
-    if (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null && amountSats == null) {
-      setError('Please enter an amount (this invoice has no amount)');
+    if (parsed?.type === 'unknown') {
+      setError('Unrecognized payment request');
       return;
     }
-    if (parsed?.type !== 'bolt11_invoice' && parsed?.type !== 'bitcoin_address' && parsed?.type !== 'spark_address') {
-      setError('Only Lightning invoices and Bitcoin/Spark addresses are supported for sending right now.');
+    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
+    const amountSats = isFixedBolt11 ? undefined : getAmountSats();
+    if (needsAmount && amountSats == null) {
+      setError('Please enter an amount');
       return;
     }
     if (balance && amountSats != null && amountSats > balance.lightning) {
@@ -130,7 +138,7 @@ export default function SendScreen() {
       setPrepareResult(result);
       setShowConfirm(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to prepare payment');
+      setError(formatSdkError(err));
     }
   };
 
@@ -145,17 +153,7 @@ export default function SendScreen() {
     }
     setIsLoading(true);
     try {
-      if (prepareResult.paymentMethod === 'lightning') {
-        await payInvoice(invoice.trim(), requestedAmountSats);
-      } else if (prepareResult.paymentMethod === 'onchain' && parsed?.type === 'bitcoin_address') {
-        await sendToAddress(parsed.address, amountSats, 'bitcoin');
-      } else if (prepareResult.paymentMethod === 'spark_transfer' && parsed?.type === 'spark_address') {
-        await sendToAddress(parsed.address, amountSats, 'spark');
-      } else {
-        setError('Unsupported payment type for send');
-        setIsLoading(false);
-        return;
-      }
+      await sendPayment(invoice.trim(), requestedAmountSats);
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -164,7 +162,7 @@ export default function SendScreen() {
       ]);
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(err instanceof Error ? err.message : 'Payment failed');
+      setError(formatSdkError(err));
     } finally {
       setIsLoading(false);
     }
@@ -251,7 +249,7 @@ export default function SendScreen() {
             {/* Payment request input */}
             <Input
               label="Payment request"
-              placeholder="Lightning invoice, Bitcoin or Spark address..."
+              placeholder="Invoice, address, or LNURL..."
               value={invoice}
               onChangeText={handleInvoiceChange}
               multiline
@@ -284,7 +282,9 @@ export default function SendScreen() {
                     Type
                   </Text>
                   <Text variant="bodyMedium" color={colors.text.primary}>
-                    {PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type}
+                    {parsed.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).address
+                      ? 'Lightning address'
+                      : (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type)}
                   </Text>
                 </View>
                 {parsed.type === 'bolt11_invoice' && (
@@ -323,18 +323,51 @@ export default function SendScreen() {
                     )}
                   </>
                 )}
+                {parsed.type === 'lnurl_pay' && (
+                  <>
+                    {(parsed as ParsedLnurlPay).address && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>Address</Text>
+                        <Text variant="bodyMedium" color={colors.text.primary}>
+                          {(parsed as ParsedLnurlPay).address}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.invoiceRow}>
+                      <Text variant="labelMedium" color={colors.text.muted}>Domain</Text>
+                      <Text variant="bodyMedium" color={colors.text.primary}>
+                        {(parsed as ParsedLnurlPay).domain}
+                      </Text>
+                    </View>
+                    <View style={styles.invoiceRow}>
+                      <Text variant="labelMedium" color={colors.text.muted}>Range</Text>
+                      <Text variant="bodySmall" color={colors.text.secondary}>
+                        {formatSats(msatToSatCeil((parsed as ParsedLnurlPay).minSendable))} – {formatSats(msatToSatCeil((parsed as ParsedLnurlPay).maxSendable))} sats
+                      </Text>
+                    </View>
+                  </>
+                )}
               </Card>
             )}
 
-            {/* Amount input (only for amountless invoices and addresses) */}
-            {(parsed?.type === 'bitcoin_address'
-              || parsed?.type === 'spark_address'
-              || (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null)) && (
+            {/* Amount input (for amountless invoices, addresses, LNURL) */}
+            {needsAmount && (
               <AmountInput
                 value={amount}
                 onChangeValue={setAmount}
                 label="Amount to send"
                 maxAmount={balance?.lightning}
+              />
+            )}
+
+            {/* Comment input for LNURL-Pay when supported */}
+            {parsed?.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).commentAllowed > 0 && (
+              <Input
+                label="Comment (optional)"
+                placeholder="Add a message..."
+                value={comment}
+                onChangeText={setComment}
+                maxLength={(parsed as ParsedLnurlPay).commentAllowed}
               />
             )}
 
@@ -350,27 +383,11 @@ export default function SendScreen() {
                     {formatSats(prepareResult.amountSats)} sats
                   </Text>
                 </View>
-                {prepareResult.lightningFeeSats != null && prepareResult.lightningFeeSats > 0n && (
+                {prepareResult.feeSats > 0n && (
                   <View style={styles.invoiceRow}>
-                    <Text variant="bodyMedium" color={colors.text.secondary}>Network fee</Text>
+                    <Text variant="bodyMedium" color={colors.text.secondary}>Fee</Text>
                     <Text variant="bodyMedium" color={colors.text.primary}>
-                      {formatSats(prepareResult.lightningFeeSats)} sats
-                    </Text>
-                  </View>
-                )}
-                {prepareResult.sparkTransferFeeSats != null && prepareResult.sparkTransferFeeSats > 0n && (
-                  <View style={styles.invoiceRow}>
-                    <Text variant="bodyMedium" color={colors.text.secondary}>Spark fee</Text>
-                    <Text variant="bodyMedium" color={colors.text.primary}>
-                      {formatSats(prepareResult.sparkTransferFeeSats)} sats
-                    </Text>
-                  </View>
-                )}
-                {prepareResult.onchainFeeSats != null && (
-                  <View style={styles.invoiceRow}>
-                    <Text variant="bodyMedium" color={colors.text.secondary}>On-chain fee</Text>
-                    <Text variant="bodyMedium" color={colors.text.primary}>
-                      ~{formatSats(prepareResult.onchainFeeSats)} sats
+                      {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatSats(prepareResult.feeSats)} sats
                     </Text>
                   </View>
                 )}
