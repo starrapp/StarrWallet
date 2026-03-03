@@ -125,6 +125,7 @@ export default function TabLayout() {
           },
         }}
       />
+      {/* TODO(starr): Delete channels tab. Spark SDK has no channel/LSP management API. */}
       <Tabs.Screen
         name="channels"
         options={{

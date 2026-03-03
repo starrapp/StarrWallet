@@ -1,6 +1,8 @@
+// TODO(starr): Delete this screen. Spark SDK has no channel/LSP management API.
+// Remove the corresponding tab in _layout.tsx and clean up LSP types/stubs.
 /**
  * Channels Screen
- * 
+ *
  * View and manage Lightning channels.
  */
 
