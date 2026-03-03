@@ -1,3 +1,4 @@
+// TODO(starr): remove — unused, all consumers access useWalletStore directly.
 /**
  * Balance Hook
  *

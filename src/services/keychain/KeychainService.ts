@@ -1,10 +1,10 @@
 /**
  * Keychain Service
- * 
+ *
  * Secure key management using platform-native secure storage.
  * - iOS: Keychain Services with Secure Enclave
  * - Android: Keystore with hardware-backed security
- * 
+ *
  * CRITICAL SECURITY NOTES:
  * - Seed phrases are the ONLY way to recover funds
  * - Never log, transmit, or store seeds in plain text
@@ -48,7 +48,7 @@ class KeychainServiceImpl {
     if (value !== 'true') {
       return false;
     }
-    
+
     // Verify that mnemonic actually exists (data consistency check)
     try {
       const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC_ENCRYPTED, SECURE_OPTIONS);
@@ -91,7 +91,7 @@ class KeychainServiceImpl {
     const entropyHex = Array.from(entropy)
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
-    
+
     const mnemonic = bip39.entropyToMnemonic(entropyHex);
     return mnemonic;
   }
@@ -322,6 +322,7 @@ class KeychainServiceImpl {
     );
   }
 
+  // TODO(starr): remove getLastBackupDate — unused, backup date tracked via BackupService.
   /**
    * Get last backup date
    */

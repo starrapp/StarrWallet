@@ -69,6 +69,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           </View>
         </View>
 
+        {/* TODO(starr): remove On-chain section. Spark SDK does not expose on-chain balance (always 0). */}
         <View style={[styles.divider, { backgroundColor: colors.border.subtle }]} />
 
         <View style={styles.breakdownItem}>

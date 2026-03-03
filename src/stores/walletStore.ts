@@ -53,10 +53,10 @@ interface WalletState {
   currentInvoice: Invoice | null;
   isCreatingInvoice: boolean;
 
-  // Node info
+  // TODO(starr): remove nodeInfo after UI review — currently fetched but never read by any screen.
   nodeInfo: NodeInfo | null;
 
-  // LSP
+  // TODO(starr): remove LSP state after deleting channels UI.
   currentLSP: LSPInfo | null;
   availableLSPs: LSPInfo[];
 

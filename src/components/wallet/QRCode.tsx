@@ -201,6 +201,7 @@ export const QRDisplay: React.FC<QRDisplayProps> = ({
   );
 };
 
+// TODO(starr): remove QRCompact — exported but unused by any screen.
 // Compact QR for transaction details
 interface QRCompactProps {
   value: string;

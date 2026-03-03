@@ -60,7 +60,7 @@ export interface LSPInfo {
   isDefault: boolean;
 }
 
-// Node information
+// TODO(starr): remove NodeInfo after UI review — fetched at init but never read by any screen.
 export interface NodeInfo {
   id: string;
   pubkey: string;
@@ -72,6 +72,7 @@ export type BackupType = 'cloud' | 'local' | 'manual';
 export interface BackupState {
   lastBackup?: Date;
   backupType?: BackupType;
+  // TODO(starr): remove channelStateHash — Spark has no channel state concept.
   channelStateHash?: string;
   isAutoBackupEnabled: boolean;
 }

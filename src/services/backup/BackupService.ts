@@ -1,17 +1,13 @@
+// TODO(starr): rewrite BackupService for Spark — all "channel state" references are outdated.
+// Spark SDK manages its own state; this service should back up wallet metadata only.
 /**
  * Backup Service
- * 
- * CRITICAL: Channel state backup is the most important safety feature.
- * Without proper backups, users can lose ALL their Lightning funds.
- * 
+ *
  * Backup Strategy:
  * 1. Automatic encrypted backups to cloud (iCloud/Google Drive)
  * 2. Local encrypted backups
  * 3. Manual export option
  * 4. Redundant backup to multiple providers
- * 
- * Channel state backup for Lightning Network wallet.
- * Backup implementation will be provided by the new Lightning service.
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
@@ -28,6 +24,7 @@ const BACKUP_KEYS = {
   LAST_HASH: 'starr_backup_hash',
 } as const;
 
+// TODO(starr): remove channelState field — Spark has no channel state.
 interface BackupData {
   version: number;
   timestamp: string;
@@ -229,6 +226,7 @@ class BackupServiceImpl {
     return this.saveLocalBackup(data);
   }
 
+  // TODO(starr): remove unused methods (exportBackupData, verifyBackup, listBackups) or add UI.
   /**
    * Export backup data for manual backup
    */

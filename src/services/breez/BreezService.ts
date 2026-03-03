@@ -395,6 +395,7 @@ class BreezServiceImpl {
     return [];
   }
 
+  // TODO(starr): remove LSP stubs after deleting channels UI.
   async selectLSP(_lspId: string): Promise<void> {
     // Spark SDK does not expose LSP management APIs.
   }
