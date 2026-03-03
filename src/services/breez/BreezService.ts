@@ -174,6 +174,7 @@ class BreezServiceImpl {
     };
   }
 
+  // TODO(starr): should we expose an on-chain receive address to the user?
   async getOnchainReceiveAddress(): Promise<string> {
     const sdk = this.requireSdk();
     const response = await sdk.receivePayment({
