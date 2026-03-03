@@ -19,6 +19,7 @@ import type {
   WalletSettings,
   BackupState,
   ListPaymentsFilter,
+  UnclaimedDeposit,
 } from '@/types/wallet';
 
 const DEFAULT_PAYMENT_FILTER: ListPaymentsFilter = {
@@ -53,6 +54,10 @@ interface WalletState {
   currentInvoice: Invoice | null;
   isCreatingInvoice: boolean;
 
+  // Unclaimed on-chain deposits
+  unclaimedDeposits: UnclaimedDeposit[];
+  isLoadingUnclaimed: boolean;
+
   // TODO(starr): remove nodeInfo after UI review — currently fetched but never read by any screen.
   nodeInfo: NodeInfo | null;
 
@@ -75,6 +80,8 @@ interface WalletState {
   refreshRecentPayments: () => Promise<void>;
   listPayments: (options?: { filter?: ListPaymentsFilter; append?: boolean }) => Promise<void>;
   getPayment: (paymentId: string) => Promise<LightningPayment | null>;
+  fetchUnclaimedDeposits: () => Promise<void>;
+  claimDeposit: (txid: string, vout: number, maxFeeSats: number) => Promise<void>;
 
   createInvoice: (amountSats: bigint, description?: string) => Promise<Invoice>;
   sendPayment: (input: string, amountSats?: bigint, comment?: string) => Promise<LightningPayment>;
@@ -112,6 +119,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   currentInvoice: null,
   isCreatingInvoice: false,
+
+  unclaimedDeposits: [],
+  isLoadingUnclaimed: false,
 
   nodeInfo: null,
 
@@ -319,6 +329,27 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     } catch (error) {
       console.error('[WalletStore] Failed to get payment:', error);
       return null;
+    }
+  },
+
+fetchUnclaimedDeposits: async () => {
+    set({ isLoadingUnclaimed: true });
+    try {
+      const list = await BreezService.getUnclaimedDeposits();
+      set({ unclaimedDeposits: list, isLoadingUnclaimed: false });
+    } catch (error) {
+      console.error('[WalletStore] Failed to fetch unclaimed deposits:', error);
+      set({ unclaimedDeposits: [], isLoadingUnclaimed: false });
+    }
+  },
+
+  claimDeposit: async (txid: string, vout: number, maxFeeSats: number) => {
+    try {
+      await BreezService.claimDeposit(txid, vout, maxFeeSats);
+      get().fetchUnclaimedDeposits();
+      get().refreshBalance();
+    } catch (error) {
+      throw error;
     }
   },
 

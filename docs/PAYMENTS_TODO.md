@@ -17,7 +17,7 @@ Reference: [Breez SDK Spark – Payment fundamentals](https://sdk-doc-spark.bree
 | list-1 | List payments: filters (type, status, date range) | Done |
 | list-2 | List payments: pagination | Done |
 | list-3 | List payments: payment detail screen (getPayment by id) | Done |
-| claim-1 | On-chain: unclaimed deposits list + manual claim with fee approval | Pending |
+| claim-1 | On-chain: unclaimed deposits list + manual claim with fee approval | Done (in Receive screen) |
 | claim-2 | On-chain: max deposit claim fee in settings | Pending |
 | lnurl-1 | LNURL-Pay and LNURL-Withdraw flows | Pending |
 | tokens-1 | Tokens: asset filter and token-aware UI | Pending |

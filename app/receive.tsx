@@ -1,8 +1,10 @@
 /**
  * Receive Payment Screen
+ *
+ * Create Lightning invoices and claim unclaimed on-chain deposits.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,18 +12,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Button, Text, Input, AmountInput } from '@/components/ui';
+import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { formatSats } from '@/utils/format';
-import type { Invoice } from '@/types/wallet';
+import type { Invoice, UnclaimedDeposit } from '@/types/wallet';
 
 function expiryCopy(expiresAt: Date): string {
   const ms = expiresAt.getTime() - Date.now();
@@ -33,11 +36,59 @@ function expiryCopy(expiresAt: Date): string {
 export default function ReceiveScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { createInvoice, currentInvoice, isCreatingInvoice } = useWalletStore();
+  const {
+    createInvoice,
+    currentInvoice,
+    isCreatingInvoice,
+    unclaimedDeposits,
+    isLoadingUnclaimed,
+    fetchUnclaimedDeposits,
+    claimDeposit,
+  } = useWalletStore();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [claimingTxid, setClaimingTxid] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnclaimedDeposits();
+    }, [fetchUnclaimedDeposits])
+  );
+
+  const handleClaimDeposit = useCallback(
+    (d: UnclaimedDeposit) => {
+      const netSats = d.amountSats - d.requiredFeeSats;
+      Alert.alert(
+        'Claim deposit',
+        `Amount: ${d.amountSats.toLocaleString()} sats\nFee: ${d.requiredFeeSats.toLocaleString()} sats\nYou will receive: ${netSats.toLocaleString()} sats`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Claim',
+            onPress: async () => {
+              setClaimingTxid(d.txid);
+              try {
+                await claimDeposit(d.txid, d.vout, d.requiredFeeSats);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('Deposit claimed', 'The funds have been added to your balance.');
+              } catch (err) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert(
+                  'Claim failed',
+                  err instanceof Error ? err.message : 'Could not claim deposit. Try again later.'
+                );
+              } finally {
+                setClaimingTxid(null);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [claimDeposit]
+  );
 
   const handleCreateInvoice = async () => {
     if (!amount.trim()) {
@@ -115,6 +166,28 @@ export default function ReceiveScreen() {
           alignItems: 'center',
           gap: spacing.xs,
           paddingVertical: spacing.sm,
+        },
+        unclaimedSection: {
+          width: '100%',
+          marginTop: spacing.xl,
+          paddingTop: spacing.lg,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+          gap: spacing.md,
+        },
+        unclaimedCard: {
+          padding: spacing.md,
+          gap: spacing.sm,
+        },
+        unclaimedRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        unclaimedActions: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          marginTop: spacing.xs,
         },
       }),
     [colors]
@@ -226,6 +299,58 @@ export default function ReceiveScreen() {
                 />
               </>
             )}
+
+            {/* Unclaimed on-chain deposits */}
+            <View style={styles.unclaimedSection}>
+              <Text variant="labelMedium" color={colors.text.muted}>
+                Unclaimed on-chain deposits
+              </Text>
+              {isLoadingUnclaimed ? (
+                <View style={{ padding: spacing.lg, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={colors.gold.pure} />
+                </View>
+              ) : unclaimedDeposits.length === 0 ? (
+                <Text variant="bodySmall" color={colors.text.muted}>
+                  No unclaimed deposits. When you receive Bitcoin to your on-chain address and auto-claim fails (e.g. low fee), they will appear here so you can claim manually.
+                </Text>
+              ) : (
+                unclaimedDeposits.map((d) => (
+                  <Card key={`${d.txid}-${d.vout}`} variant="outlined" style={styles.unclaimedCard}>
+                    <View style={styles.unclaimedRow}>
+                      <Text variant="labelMedium" color={colors.text.muted}>
+                        Amount
+                      </Text>
+                      <Text variant="titleSmall" color={colors.text.primary}>
+                        {d.amountSats.toLocaleString()} sats
+                      </Text>
+                    </View>
+                    <View style={styles.unclaimedRow}>
+                      <Text variant="labelMedium" color={colors.text.muted}>
+                        Claim fee
+                      </Text>
+                      <Text variant="bodyMedium" color={colors.text.secondary}>
+                        {d.requiredFeeSats.toLocaleString()} sats
+                      </Text>
+                    </View>
+                    {d.claimError && (
+                      <Text variant="bodySmall" color={colors.status.error}>
+                        {d.claimError}
+                      </Text>
+                    )}
+                    <View style={styles.unclaimedActions}>
+                      <Button
+                        title={claimingTxid === d.txid ? 'Claiming...' : 'Claim'}
+                        variant="primary"
+                        size="sm"
+                        onPress={() => handleClaimDeposit(d)}
+                        disabled={claimingTxid != null}
+                        loading={claimingTxid === d.txid}
+                      />
+                    </View>
+                  </Card>
+                ))
+              )}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
