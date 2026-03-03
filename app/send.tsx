@@ -134,7 +134,7 @@ export default function SendScreen() {
 
     setError(null);
     try {
-      const result = await BreezService.prepareSendPayment(invoice.trim(), amountSats);
+      const result = await BreezService.prepareSendPayment(invoice.trim(), amountSats, comment || undefined);
       setPrepareResult(result);
       setShowConfirm(true);
     } catch (err) {
@@ -153,7 +153,7 @@ export default function SendScreen() {
     }
     setIsLoading(true);
     try {
-      await sendPayment(invoice.trim(), requestedAmountSats);
+      await sendPayment(invoice.trim(), requestedAmountSats, comment || undefined);
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

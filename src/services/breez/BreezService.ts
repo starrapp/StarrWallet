@@ -182,7 +182,7 @@ class BreezServiceImpl {
     return response.paymentRequest;
   }
 
-  async sendPayment(input: string, amountSats?: bigint): Promise<LightningPayment> {
+  async sendPayment(input: string, amountSats?: bigint, comment?: string): Promise<LightningPayment> {
     const sdk = this.requireSdk();
     const raw = input.trim();
     const parsed = await sdk.parse(raw);
@@ -200,6 +200,7 @@ class BreezServiceImpl {
 
       const prepareResponse = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
         amountSats,
+        comment: comment || undefined,
         payRequest,
       }));
 
@@ -266,7 +267,8 @@ class BreezServiceImpl {
 
   async prepareSendPayment(
     input: string,
-    amountSats?: bigint
+    amountSats?: bigint,
+    comment?: string,
   ): Promise<PrepareSendResult> {
     const sdk = this.requireSdk();
     const raw = input.trim();
@@ -285,6 +287,7 @@ class BreezServiceImpl {
 
       const response = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
         amountSats,
+        comment: comment || undefined,
         payRequest,
       }));
 

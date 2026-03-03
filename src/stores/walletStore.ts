@@ -77,7 +77,7 @@ interface WalletState {
   getPayment: (paymentId: string) => Promise<LightningPayment | null>;
 
   createInvoice: (amountSats: bigint, description?: string) => Promise<Invoice>;
-  sendPayment: (input: string, amountSats?: bigint) => Promise<LightningPayment>;
+  sendPayment: (input: string, amountSats?: bigint, comment?: string) => Promise<LightningPayment>;
 
   updateSettings: (settings: Partial<WalletSettings>) => void;
 
@@ -334,8 +334,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  sendPayment: async (input: string, amountSats?: bigint) => {
-    const payment = await BreezService.sendPayment(input, amountSats);
+  sendPayment: async (input: string, amountSats?: bigint, comment?: string) => {
+    const payment = await BreezService.sendPayment(input, amountSats, comment);
     get().refreshBalance();
     return payment;
   },
