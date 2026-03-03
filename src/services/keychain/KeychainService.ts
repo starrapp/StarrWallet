@@ -22,7 +22,6 @@ const KEYS = {
   SEED_ENCRYPTED: 'starr_seed_encrypted',
   MNEMONIC_ENCRYPTED: 'starr_mnemonic_encrypted',
   SEED_HASH: 'starr_seed_hash',
-  PIN_HASH: 'starr_pin_hash',
   WALLET_INITIALIZED: 'starr_wallet_initialized',
   BIOMETRIC_ENABLED: 'starr_biometric_enabled',
   LAST_BACKUP_DATE: 'starr_last_backup',
@@ -36,7 +35,6 @@ const SECURE_OPTIONS: SecureStore.SecureStoreOptions = {
 interface KeychainState {
   isInitialized: boolean;
   hasBiometric: boolean;
-  hasPin: boolean;
 }
 
 class KeychainServiceImpl {
@@ -68,16 +66,14 @@ class KeychainServiceImpl {
    * Get current keychain state
    */
   async getState(): Promise<KeychainState> {
-    const [initialized, biometric, pin] = await Promise.all([
+    const [initialized, biometric] = await Promise.all([
       SecureStore.getItemAsync(KEYS.WALLET_INITIALIZED, SECURE_OPTIONS),
       SecureStore.getItemAsync(KEYS.BIOMETRIC_ENABLED, SECURE_OPTIONS),
-      SecureStore.getItemAsync(KEYS.PIN_HASH, SECURE_OPTIONS),
     ]);
 
     return {
       isInitialized: initialized === 'true',
       hasBiometric: biometric === 'true',
-      hasPin: !!pin,
     };
   }
 
@@ -104,32 +100,15 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Store the seed phrase securely
-   * CRITICAL: This is the most sensitive operation in the wallet
+   * Validate the seed phrase. We do not persist the mnemonic; the user is
+   * responsible for backing it up. The wallet is initialized in-session only.
    */
   async storeSeedPhrase(mnemonic: string): Promise<void> {
     if (!this.validateSeedPhrase(mnemonic)) {
       throw new Error('Invalid seed phrase');
     }
-
-    // Convert mnemonic to seed bytes
-    const seedBuffer = await bip39.mnemonicToSeed(mnemonic);
-    const seedHex = Buffer.from(seedBuffer).toString('hex');
-
-    // Create a hash for verification (not the actual seed)
-    const hash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      mnemonic
-    );
-
-    // Store encrypted seed, mnemonic, and hash
-    // Note: Mnemonic is stored separately for Lightning Network initialization
-    await SecureStore.setItemAsync(KEYS.SEED_ENCRYPTED, seedHex, SECURE_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.MNEMONIC_ENCRYPTED, mnemonic, SECURE_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.SEED_HASH, hash, SECURE_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.WALLET_INITIALIZED, 'true', SECURE_OPTIONS);
-
-    console.log('[KeychainService] Seed phrase stored securely');
+    // No persistence: mnemonic is passed through onboarding and used to
+    // initialize the wallet in-session. App will show onboarding on next launch.
   }
 
   /**
@@ -179,40 +158,6 @@ class KeychainServiceImpl {
     }
 
     return mnemonic;
-  }
-
-  /**
-   * Set up PIN authentication
-   */
-  async setupPin(pin: string): Promise<void> {
-    if (pin.length < 4) {
-      throw new Error('PIN must be at least 4 digits');
-    }
-
-    const hash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      pin
-    );
-
-    await SecureStore.setItemAsync(KEYS.PIN_HASH, hash, SECURE_OPTIONS);
-    console.log('[KeychainService] PIN set up');
-  }
-
-  /**
-   * Verify PIN
-   */
-  async verifyPin(pin: string): Promise<boolean> {
-    const storedHash = await SecureStore.getItemAsync(KEYS.PIN_HASH, SECURE_OPTIONS);
-    if (!storedHash) {
-      return false;
-    }
-
-    const inputHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      pin
-    );
-
-    return storedHash === inputHash;
   }
 
   /**
@@ -278,19 +223,12 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Generic user authentication (biometric or PIN)
+   * Authenticate user with biometrics only.
    */
   async authenticateUser(): Promise<boolean> {
     const state = await this.getState();
-
-    if (state.hasBiometric) {
-      const biometricResult = await this.authenticateBiometric();
-      if (biometricResult) return true;
-    }
-
-    // Fall back to PIN if biometric fails or isn't set up
-    // In production, you'd show a PIN entry UI here
-    return false;
+    if (!state.hasBiometric) return false;
+    return this.authenticateBiometric();
   }
 
   /**
@@ -302,7 +240,6 @@ class KeychainServiceImpl {
       SecureStore.deleteItemAsync(KEYS.SEED_ENCRYPTED),
       SecureStore.deleteItemAsync(KEYS.MNEMONIC_ENCRYPTED),
       SecureStore.deleteItemAsync(KEYS.SEED_HASH),
-      SecureStore.deleteItemAsync(KEYS.PIN_HASH),
       SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED),
       SecureStore.deleteItemAsync(KEYS.BIOMETRIC_ENABLED),
       SecureStore.deleteItemAsync(KEYS.LAST_BACKUP_DATE),
@@ -320,15 +257,6 @@ class KeychainServiceImpl {
       new Date().toISOString(),
       SECURE_OPTIONS
     );
-  }
-
-  // TODO(starr): remove getLastBackupDate — unused, backup date tracked via BackupService.
-  /**
-   * Get last backup date
-   */
-  async getLastBackupDate(): Promise<Date | null> {
-    const date = await SecureStore.getItemAsync(KEYS.LAST_BACKUP_DATE, SECURE_OPTIONS);
-    return date ? new Date(date) : null;
   }
 }
 

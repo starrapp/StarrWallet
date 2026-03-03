@@ -67,21 +67,7 @@ function RootLayoutInner() {
           }} 
         />
         <Stack.Screen 
-          name="recovery-phrase" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
           name="delete-wallet" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
-          name="change-pin" 
           options={{ 
             animation: 'slide_from_bottom',
             presentation: 'modal',

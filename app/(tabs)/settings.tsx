@@ -19,8 +19,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
-import { Text, Card } from '@/components/ui';
+import { Text, Card, Input } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
+import type { MaxDepositClaimFeeSetting } from '@/types/wallet';
 import { BackupService } from '@/services/backup';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';
@@ -59,6 +60,23 @@ const EXTERNAL_LINKS = {
 // Get app version from expo constants
 const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
 
+function getMaxDepositClaimFeeSubtitle(setting: MaxDepositClaimFeeSetting): string {
+  switch (setting.type) {
+    case 'conservative':
+      return 'Conservative (1 sats/vbyte)';
+    case 'network_recommended':
+      return `Network recommended (+${setting.leewaySatPerVbyte ?? 1} sats/vbyte)`;
+    case 'rate':
+      return `Custom rate (${setting.satPerVbyte ?? 10} sats/vbyte)`;
+    case 'fixed':
+      return `Custom max (${setting.amountSats ?? 1000} sats)`;
+    case 'disabled':
+      return 'No automatic claiming';
+    default:
+      return 'Conservative (1 sats/vbyte)';
+  }
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings, performBackup, backupState } = useWalletStore();
@@ -69,6 +87,7 @@ export default function SettingsScreen() {
   const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showMaxDepositClaimFeeModal, setShowMaxDepositClaimFeeModal] = useState(false);
 
   useEffect(() => {
     checkBiometric();
@@ -98,17 +117,6 @@ export default function SettingsScreen() {
     } catch (error) {
       Alert.alert('Backup Failed', 'Failed to create backup. Please try again.');
     }
-  };
-
-  const handleShowRecoveryPhrase = () => {
-    Alert.alert(
-      'View Recovery Phrase',
-      'You will need to authenticate to view your recovery phrase. Never share it with anyone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', onPress: () => router.push('/recovery-phrase') },
-      ]
-    );
   };
 
   const handleCurrencySelect = (currency: string) => {
@@ -207,20 +215,6 @@ export default function SettingsScreen() {
                 }
               />
             )}
-
-            <SettingsItem
-              icon="key"
-              title="Recovery Phrase"
-              subtitle="View your 24-word backup"
-              onPress={handleShowRecoveryPhrase}
-            />
-
-            <SettingsItem
-              icon="lock-closed"
-              title="Change PIN"
-              subtitle="Update your wallet PIN"
-              onPress={() => router.push('/change-pin')}
-            />
           </View>
 
           {/* Backup Section */}
@@ -269,6 +263,19 @@ export default function SettingsScreen() {
               title="Theme"
               subtitle={themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}
               onPress={() => setShowThemeModal(true)}
+            />
+          </View>
+
+          {/* Deposits / On-chain Section */}
+          <View style={styles.section}>
+            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+              Deposits
+            </Text>
+            <SettingsItem
+              icon="cash-outline"
+              title="Max fee for auto-claim"
+              subtitle={getMaxDepositClaimFeeSubtitle(settings.maxDepositClaimFee)}
+              onPress={() => setShowMaxDepositClaimFeeModal(true)}
             />
           </View>
 
@@ -494,6 +501,172 @@ export default function SettingsScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+
+      {/* Max deposit claim fee Modal */}
+      <Modal
+        visible={showMaxDepositClaimFeeModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMaxDepositClaimFeeModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <SafeAreaView style={styles.modalSafeArea}>
+            <View style={styles.modalHeader}>
+              <Text variant="headlineSmall" color={colors.text.primary}>
+                Max fee for auto-claim
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowMaxDepositClaimFeeModal(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            <Text variant="bodySmall" color={colors.text.muted} style={styles.modalHint}>
+              Maximum fee the wallet will pay to automatically claim on-chain deposits. Takes effect after next unlock.
+            </Text>
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalSection}>
+                {(
+                  [
+                    { type: 'conservative' as const, label: 'Conservative', description: '1 sats/vbyte (default)' },
+                    { type: 'network_recommended' as const, label: 'Network recommended', description: 'Fastest fee + leeway' },
+                    { type: 'rate' as const, label: 'Custom rate', description: 'Max sats per vbyte' },
+                    { type: 'fixed' as const, label: 'Custom max sats', description: 'Max total fee in sats' },
+                    { type: 'disabled' as const, label: 'Disabled', description: 'No automatic claiming' },
+                  ] as const
+                ).map(({ type, label, description }) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.currencyOption,
+                      settings.maxDepositClaimFee.type === type && styles.currencyOptionSelected,
+                    ]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      const current = settings.maxDepositClaimFee;
+                      if (type === 'network_recommended') {
+                        updateSettings({
+                          maxDepositClaimFee: {
+                            type: 'network_recommended',
+                            leewaySatPerVbyte: current.type === 'network_recommended' ? current.leewaySatPerVbyte ?? 1 : 1,
+                          },
+                        });
+                      } else if (type === 'rate') {
+                        updateSettings({
+                          maxDepositClaimFee: {
+                            type: 'rate',
+                            satPerVbyte: current.type === 'rate' ? current.satPerVbyte ?? 10 : 10,
+                          },
+                        });
+                      } else if (type === 'fixed') {
+                        updateSettings({
+                          maxDepositClaimFee: {
+                            type: 'fixed',
+                            amountSats: current.type === 'fixed' ? current.amountSats ?? 1000 : 1000,
+                          },
+                        });
+                      } else {
+                        updateSettings({ maxDepositClaimFee: { type } });
+                      }
+                    }}
+                  >
+                    <View style={styles.currencyInfo}>
+                      <Text variant="titleMedium" color={colors.text.primary}>
+                        {label}
+                      </Text>
+                      <Text variant="bodySmall" color={colors.text.muted}>
+                        {description}
+                      </Text>
+                    </View>
+                    {settings.maxDepositClaimFee.type === type && (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.gold.pure} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {settings.maxDepositClaimFee.type === 'network_recommended' && (
+                <View style={styles.modalSection}>
+                  <Text variant="labelMedium" color={colors.gold.pure} style={styles.modalSectionLabel}>
+                    Leeway (sats/vbyte)
+                  </Text>
+                  <View style={styles.leewayRow}>
+                    {[0, 1, 2].map((leeway) => (
+                      <TouchableOpacity
+                        key={leeway}
+                        style={[
+                          styles.leewayChip,
+                          (settings.maxDepositClaimFee.leewaySatPerVbyte ?? 1) === leeway && styles.leewayChipSelected,
+                        ]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          updateSettings({
+                            maxDepositClaimFee: {
+                              type: 'network_recommended',
+                              leewaySatPerVbyte: leeway,
+                            },
+                          });
+                        }}
+                      >
+                        <Text
+                          variant="bodyMedium"
+                          color={(settings.maxDepositClaimFee.leewaySatPerVbyte ?? 1) === leeway ? colors.gold.pure : colors.text.secondary}
+                        >
+                          {leeway}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+              {settings.maxDepositClaimFee.type === 'rate' && (
+                <View style={styles.modalSection}>
+                  <Input
+                    label="Sats per vbyte"
+                    keyboardType="number-pad"
+                    value={String(settings.maxDepositClaimFee.satPerVbyte ?? 10)}
+                    onChangeText={(t) => {
+                      const n = parseInt(t.replace(/\D/g, ''), 10);
+                      if (!Number.isNaN(n) && n >= 1 && n <= 1000) {
+                        updateSettings({
+                          maxDepositClaimFee: { type: 'rate', satPerVbyte: n },
+                        });
+                      } else if (t === '') {
+                        updateSettings({
+                          maxDepositClaimFee: { type: 'rate', satPerVbyte: 1 },
+                        });
+                      }
+                    }}
+                    containerStyle={styles.modalInput}
+                  />
+                </View>
+              )}
+              {settings.maxDepositClaimFee.type === 'fixed' && (
+                <View style={styles.modalSection}>
+                  <Input
+                    label="Max fee (sats)"
+                    keyboardType="number-pad"
+                    value={String(settings.maxDepositClaimFee.amountSats ?? 1000)}
+                    onChangeText={(t) => {
+                      const n = parseInt(t.replace(/\D/g, ''), 10);
+                      if (!Number.isNaN(n) && n >= 1 && n <= 1000000) {
+                        updateSettings({
+                          maxDepositClaimFee: { type: 'fixed', amountSats: n },
+                        });
+                      } else if (t === '') {
+                        updateSettings({
+                          maxDepositClaimFee: { type: 'fixed', amountSats: 1 },
+                        });
+                      }
+                    }}
+                    containerStyle={styles.modalInput}
+                  />
+                </View>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -635,6 +808,10 @@ const createSettingsStyles = (colors: ColorTheme) => StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
+  modalHint: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
   modalSection: {
     marginBottom: spacing.xl,
   },
@@ -644,6 +821,25 @@ const createSettingsStyles = (colors: ColorTheme) => StyleSheet.create({
   fiatHint: {
     marginBottom: spacing.md,
     marginTop: -spacing.sm,
+  },
+  leewayRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  leewayChip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: layout.radius.md,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  leewayChipSelected: {
+    borderColor: colors.gold.pure,
+    backgroundColor: colors.gold.glow,
+  },
+  modalInput: {
+    marginTop: spacing.sm,
   },
   currencyOption: {
     flexDirection: 'row',

@@ -85,7 +85,10 @@ export default function BackupVerificationScreen() {
     
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.push('/onboarding/security');
+      router.push({
+        pathname: '/onboarding/security',
+        params: { mnemonic: params.mnemonic ?? '' },
+      });
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError('Incorrect words or wrong order. Please check your recovery phrase and try again.');

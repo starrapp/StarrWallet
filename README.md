@@ -9,7 +9,6 @@ A beautiful, non-custodial Bitcoin Lightning wallet for iOS and Android.
 - ⚡ **Instant Lightning Payments** - Send and receive Bitcoin in seconds
 - 🔐 **Non-Custodial** - You control your keys, your coins
 - 🛡️ **Secure Backups** - Automatic encrypted channel state backups
-- 🌐 **Multi-LSP Support** - Redundant liquidity providers for reliability
 - 🎨 **Beautiful UI** - Cosmic dark theme with smooth animations
 - 📱 **Cross-Platform** - iOS and Android from a single codebase
 
@@ -25,7 +24,6 @@ Starr is built with Lightning Network integration using:
 
 ### Features
 - Non-custodial Lightning wallet
-- Channel management via LSP
 - Invoice creation and payment
 - Payment history tracking
 - Secure key management
@@ -101,10 +99,9 @@ starr/
 │   │   ├── ui/           # Base UI components
 │   │   └── wallet/       # Wallet-specific components
 │   ├── services/          # Core services
-│   │   ├── lnd/          # LND integration
+│   │   ├── breez/        # Breez SDK integration
 │   │   ├── keychain/     # Secure key storage
-│   │   ├── backup/       # Backup management
-│   │   └── lsp/          # LSP management
+│   │   └── backup/       # Backup management
 │   ├── stores/            # Zustand state stores
 │   ├── theme/             # Design system
 │   ├── types/             # TypeScript types
@@ -172,7 +169,6 @@ The Breez SDK implementation has been archived in the `archive/breez-sdk-impleme
    - ✅ Node information
    - ✅ Invoice creation and parsing
    - ✅ Payment history
-   - ✅ LSP information and selection
    - ✅ Node synchronization
    - ✅ Backup functions
    - ✅ SDK shutdown

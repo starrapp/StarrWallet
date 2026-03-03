@@ -45,25 +45,13 @@ export interface Invoice {
   createdAt: Date;
 }
 
-// LSP (Liquidity Service Provider) information
-// TODO(starr): Spark SDK has no LSP management API. Remove this type after Channels UI removal.
-export interface LSPInfo {
-  id: string;
-  name: string;
-  host: string;
-  pubkey: string;
-  baseFeeSats: number;
-  feeRate: number; // PPM (parts per million)
-  minChannelSize: number;
-  maxChannelSize: number;
-  isActive: boolean;
-  isDefault: boolean;
-}
-
-// TODO(starr): remove NodeInfo after UI review — fetched at init but never read by any screen.
-export interface NodeInfo {
-  id: string;
-  pubkey: string;
+// Unclaimed on-chain deposit (from Breez listUnclaimedDeposits)
+export interface UnclaimedDeposit {
+  txid: string;
+  vout: number;
+  amountSats: number;
+  requiredFeeSats: number;
+  claimError?: string;
 }
 
 // Backup types
@@ -72,8 +60,6 @@ export type BackupType = 'cloud' | 'local' | 'manual';
 export interface BackupState {
   lastBackup?: Date;
   backupType?: BackupType;
-  // TODO(starr): remove channelStateHash — Spark has no channel state concept.
-  channelStateHash?: string;
   isAutoBackupEnabled: boolean;
 }
 
@@ -160,6 +146,25 @@ export type Currency =
   | 'BRL'
   | 'KRW';
 
+// Max deposit claim fee for automatic on-chain claim (Breez SDK config.maxDepositClaimFee)
+// See: https://sdk-doc-spark.breez.technology/guide/onchain_claims.html#setting-a-max-fee-for-automatic-claims
+export type MaxDepositClaimFeeType =
+  | 'conservative'       // 1 sats/vbyte (SDK default)
+  | 'network_recommended' // fastest fee + leeway
+  | 'rate'               // custom sats/vbyte
+  | 'fixed'              // custom max sats
+  | 'disabled';          // no automatic claiming
+
+export interface MaxDepositClaimFeeSetting {
+  type: MaxDepositClaimFeeType;
+  /** For network_recommended: leeway in sats/vbyte (default 1). */
+  leewaySatPerVbyte?: number;
+  /** For rate: max fee rate in sats/vbyte. */
+  satPerVbyte?: number;
+  /** For fixed: max fee in sats. */
+  amountSats?: number;
+}
+
 // Settings
 export interface WalletSettings {
   // Display
@@ -170,4 +175,7 @@ export interface WalletSettings {
 
   // Backup
   autoBackupEnabled: boolean;
+
+  // On-chain: max fee for automatic deposit claiming
+  maxDepositClaimFee: MaxDepositClaimFeeSetting;
 }

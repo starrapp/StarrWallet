@@ -4,7 +4,7 @@
  * Create Lightning invoices and claim unclaimed on-chain deposits.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,11 +13,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
@@ -25,6 +27,8 @@ import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { formatSats } from '@/utils/format';
 import type { Invoice, UnclaimedDeposit } from '@/types/wallet';
+
+type ReceiveMode = 'lightning' | 'onchain' | 'spark';
 
 function expiryCopy(expiresAt: Date): string {
   const ms = expiresAt.getTime() - Date.now();
@@ -40,16 +44,85 @@ export default function ReceiveScreen() {
     createInvoice,
     currentInvoice,
     isCreatingInvoice,
+    getOnchainReceiveAddress,
+    getSparkReceiveAddress,
     unclaimedDeposits,
     isLoadingUnclaimed,
     fetchUnclaimedDeposits,
     claimDeposit,
   } = useWalletStore();
+  const [receiveMode, setReceiveMode] = useState<ReceiveMode>('lightning');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [claimingTxid, setClaimingTxid] = useState<string | null>(null);
+  const [onchainAddress, setOnchainAddress] = useState<string | null>(null);
+  const [isLoadingOnchain, setIsLoadingOnchain] = useState(false);
+  const [onchainError, setOnchainError] = useState<string | null>(null);
+  const [sparkAddress, setSparkAddress] = useState<string | null>(null);
+  const [isLoadingSpark, setIsLoadingSpark] = useState(false);
+  const [sparkError, setSparkError] = useState<string | null>(null);
+
+  const fetchOnchainAddress = useCallback(async () => {
+    setIsLoadingOnchain(true);
+    setOnchainError(null);
+    try {
+      const addr = await getOnchainReceiveAddress();
+      setOnchainAddress(addr);
+    } catch (err) {
+      setOnchainError(err instanceof Error ? err.message : 'Failed to get address');
+      setOnchainAddress(null);
+    } finally {
+      setIsLoadingOnchain(false);
+    }
+  }, [getOnchainReceiveAddress]);
+
+  const fetchSparkAddress = useCallback(async () => {
+    setIsLoadingSpark(true);
+    setSparkError(null);
+    try {
+      const addr = await getSparkReceiveAddress();
+      setSparkAddress(addr);
+    } catch (err) {
+      setSparkError(err instanceof Error ? err.message : 'Failed to get Spark address');
+      setSparkAddress(null);
+    } finally {
+      setIsLoadingSpark(false);
+    }
+  }, [getSparkReceiveAddress]);
+
+  useEffect(() => {
+    if (receiveMode === 'onchain') {
+      fetchOnchainAddress();
+    } else {
+      setOnchainAddress(null);
+      setOnchainError(null);
+    }
+  }, [receiveMode, fetchOnchainAddress]);
+
+  useEffect(() => {
+    if (receiveMode === 'spark') {
+      fetchSparkAddress();
+    } else {
+      setSparkAddress(null);
+      setSparkError(null);
+    }
+  }, [receiveMode, fetchSparkAddress]);
+
+  const handleCopyOnchainAddress = useCallback(async () => {
+    if (!onchainAddress) return;
+    await Clipboard.setStringAsync(onchainAddress);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Copied', 'Address copied to clipboard.');
+  }, [onchainAddress]);
+
+  const handleCopySparkAddress = useCallback(async () => {
+    if (!sparkAddress) return;
+    await Clipboard.setStringAsync(sparkAddress);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Copied', 'Spark address copied to clipboard.');
+  }, [sparkAddress]);
 
   useFocusEffect(
     useCallback(() => {
@@ -189,6 +262,47 @@ export default function ReceiveScreen() {
           justifyContent: 'flex-end',
           marginTop: spacing.xs,
         },
+        segmentRow: {
+          flexDirection: 'row',
+          paddingHorizontal: spacing.sm,
+          paddingVertical: spacing.sm,
+          gap: spacing.xs,
+          width: '100%',
+          maxWidth: 320,
+          alignSelf: 'center',
+        },
+        segmentButton: {
+          flex: 1,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.md,
+          borderRadius: layout.radius.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        segmentButtonActive: {
+          backgroundColor: colors.gold.glow,
+          borderWidth: 1.5,
+          borderColor: colors.gold.pure,
+        },
+        segmentButtonInactive: {
+          backgroundColor: colors.background.secondary,
+          borderWidth: 1.5,
+          borderColor: 'transparent',
+        },
+        onchainSection: {
+          width: '100%',
+          alignItems: 'center',
+          gap: spacing.lg,
+          paddingVertical: spacing.lg,
+        },
+        addressText: {
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.md,
+          width: '100%',
+          maxWidth: 320,
+        },
       }),
     [colors]
   );
@@ -220,7 +334,153 @@ export default function ReceiveScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {!invoice ? (
+            {/* Lightning / On-chain switch */}
+            <View style={styles.segmentRow}>
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  receiveMode === 'lightning' ? styles.segmentButtonActive : styles.segmentButtonInactive,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setReceiveMode('lightning');
+                }}
+              >
+                <Ionicons
+                  name="flash"
+                  size={18}
+                  color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
+                />
+                <Text
+                  variant="labelLarge"
+                  color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
+                >
+                  Lightning
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  receiveMode === 'onchain' ? styles.segmentButtonActive : styles.segmentButtonInactive,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setReceiveMode('onchain');
+                }}
+              >
+                <Ionicons
+                  name="link"
+                  size={18}
+                  color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
+                />
+                <Text
+                  variant="labelLarge"
+                  color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
+                >
+                  On-chain
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  receiveMode === 'spark' ? styles.segmentButtonActive : styles.segmentButtonInactive,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setReceiveMode('spark');
+                }}
+              >
+                <Ionicons
+                  name="flash-outline"
+                  size={18}
+                  color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
+                />
+                <Text
+                  variant="labelLarge"
+                  color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
+                >
+                  Spark
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {receiveMode === 'onchain' ? (
+              /* On-chain address */
+              <View style={styles.onchainSection}>
+                <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+                  Receive Bitcoin to your on-chain address. Funds may take time to confirm and will appear after confirmation.
+                </Text>
+                {isLoadingOnchain ? (
+                  <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={colors.gold.pure} />
+                    <Text variant="bodySmall" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
+                      Getting address...
+                    </Text>
+                  </View>
+                ) : onchainError ? (
+                  <View style={{ alignItems: 'center', gap: spacing.sm }}>
+                    <Text variant="bodyMedium" color={colors.status.error}>
+                      {onchainError}
+                    </Text>
+                    <Button title="Retry" variant="secondary" size="sm" onPress={fetchOnchainAddress} />
+                  </View>
+                ) : onchainAddress ? (
+                  <>
+                    <QRDisplay value={onchainAddress} label="Scan to send Bitcoin" />
+                    <View style={styles.addressText}>
+                      <Text variant="bodySmall" color={colors.text.secondary} style={{ fontFamily: 'monospace' }}>
+                        {onchainAddress}
+                      </Text>
+                    </View>
+                    <Button
+                      title="Copy address"
+                      variant="secondary"
+                      size="md"
+                      onPress={handleCopyOnchainAddress}
+                      icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
+                    />
+                  </>
+                ) : null}
+              </View>
+            ) : receiveMode === 'spark' ? (
+              /* Spark address */
+              <View style={styles.onchainSection}>
+                <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+                  Receive from other Spark users. Your Spark address is static and can be shared.
+                </Text>
+                {isLoadingSpark ? (
+                  <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={colors.gold.pure} />
+                    <Text variant="bodySmall" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
+                      Getting Spark address...
+                    </Text>
+                  </View>
+                ) : sparkError ? (
+                  <View style={{ alignItems: 'center', gap: spacing.sm }}>
+                    <Text variant="bodyMedium" color={colors.status.error}>
+                      {sparkError}
+                    </Text>
+                    <Button title="Retry" variant="secondary" size="sm" onPress={fetchSparkAddress} />
+                  </View>
+                ) : sparkAddress ? (
+                  <>
+                    <QRDisplay value={sparkAddress} label="Scan to send via Spark" />
+                    <View style={styles.addressText}>
+                      <Text variant="bodySmall" color={colors.text.secondary} style={{ fontFamily: 'monospace' }}>
+                        {sparkAddress}
+                      </Text>
+                    </View>
+                    <Button
+                      title="Copy Spark address"
+                      variant="secondary"
+                      size="md"
+                      onPress={handleCopySparkAddress}
+                      icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
+                    />
+                  </>
+                ) : null}
+              </View>
+            ) : !invoice ? (
               // Invoice creation form
               <>
                 <View style={styles.iconContainer}>

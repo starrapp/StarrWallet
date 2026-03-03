@@ -1,13 +1,8 @@
-// TODO(starr): rewrite BackupService for Spark — all "channel state" references are outdated.
-// Spark SDK manages its own state; this service should back up wallet metadata only.
 /**
  * Backup Service
  *
- * Backup Strategy:
- * 1. Automatic encrypted backups to cloud (iCloud/Google Drive)
- * 2. Local encrypted backups
- * 3. Manual export option
- * 4. Redundant backup to multiple providers
+ * Tracks backup state and last backup time for UI. Breez SDK manages its own state.
+ * Optional local/cloud backup of metadata is supported when auto-backup is enabled.
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
@@ -24,11 +19,9 @@ const BACKUP_KEYS = {
   LAST_HASH: 'starr_backup_hash',
 } as const;
 
-// TODO(starr): remove channelState field — Spark has no channel state.
 interface BackupData {
   version: number;
   timestamp: string;
-  channelState: string;  // Base64 encoded encrypted data
   checksum: string;
 }
 
@@ -66,11 +59,9 @@ class BackupServiceImpl {
     const stateJson = await AsyncStorage.getItem(BACKUP_KEYS.STATE);
     const state: Partial<BackupState> = stateJson ? JSON.parse(stateJson) : {};
 
-    // TODO: Get backup status from new Lightning implementation
     return {
       lastBackup: state.lastBackup ? new Date(state.lastBackup) : undefined,
       backupType: state.backupType as BackupType | undefined,
-      channelStateHash: state.channelStateHash,
       isAutoBackupEnabled: this.autoBackupEnabled,
     };
   }
@@ -103,17 +94,10 @@ class BackupServiceImpl {
     try {
       console.log('[BackupService] Starting backup, type:', type);
 
-      // TODO: Trigger backup in new Lightning implementation
-      console.log('[BackupService] Backup trigger - to be implemented with new Lightning service');
-
-      // Get current timestamp
       const timestamp = new Date();
-
-      // Create backup data structure
       const backupData: BackupData = {
         version: 1,
         timestamp: timestamp.toISOString(),
-        channelState: '', // TODO: Get from new Lightning implementation
         checksum: '',
       };
 
@@ -143,11 +127,9 @@ class BackupServiceImpl {
       }
 
       if (success) {
-        // Update backup state
         const state: Partial<BackupState> = {
           lastBackup: timestamp,
           backupType: type,
-          channelStateHash: checksum,
           isAutoBackupEnabled: this.autoBackupEnabled,
         };
         await AsyncStorage.setItem(BACKUP_KEYS.STATE, JSON.stringify(state));
@@ -209,68 +191,12 @@ class BackupServiceImpl {
   }
 
   /**
-   * Save backup to cloud storage
-   * Note: Full implementation requires native modules for iCloud/Google Drive
+   * Save backup to cloud storage. Falls back to local for now.
    */
   private async saveCloudBackup(data: BackupData): Promise<boolean> {
     const provider = await AsyncStorage.getItem(BACKUP_KEYS.PROVIDER);
-    
     console.log('[BackupService] Cloud backup to:', provider);
-
-    // TODO: Implement cloud backup
-    // For iCloud: Use react-native-cloud-storage or similar
-    // For Google Drive: Use Google Drive API
-
-    // For now, fall back to local backup
-    console.log('[BackupService] Cloud backup not implemented, using local');
     return this.saveLocalBackup(data);
-  }
-
-  // TODO(starr): remove unused methods (exportBackupData, verifyBackup, listBackups) or add UI.
-  /**
-   * Export backup data for manual backup
-   */
-  async exportBackupData(): Promise<string> {
-    // Require authentication for export
-    const authenticated = await KeychainService.authenticateUser();
-    if (!authenticated) {
-      throw new Error('Authentication required for backup export');
-    }
-
-    const backupData: BackupData = {
-      version: 1,
-      timestamp: new Date().toISOString(),
-      channelState: '', // Breez handles this
-      checksum: '',
-    };
-
-    // Calculate checksum
-    backupData.checksum = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      JSON.stringify(backupData)
-    );
-
-    return JSON.stringify(backupData, null, 2);
-  }
-
-  /**
-   * Verify backup integrity
-   */
-  async verifyBackup(backupJson: string): Promise<boolean> {
-    try {
-      const data: BackupData = JSON.parse(backupJson);
-      
-      // Verify checksum
-      const dataWithoutChecksum = { ...data, checksum: '' };
-      const calculatedChecksum = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        JSON.stringify(dataWithoutChecksum)
-      );
-
-      return calculatedChecksum === data.checksum;
-    } catch {
-      return false;
-    }
   }
 
   /**
@@ -318,44 +244,6 @@ class BackupServiceImpl {
     if (this.backupInterval) {
       clearInterval(this.backupInterval);
       this.backupInterval = null;
-    }
-  }
-
-  /**
-   * List available backups
-   */
-  async listBackups(): Promise<{ filename: string; date: Date; size: number }[]> {
-    try {
-      const backupDir = `${FileSystem.documentDirectory}backups/`;
-      const dirInfo = await FileSystem.getInfoAsync(backupDir);
-      
-      if (!dirInfo.exists) {
-        return [];
-      }
-
-      const files = await FileSystem.readDirectoryAsync(backupDir);
-      const backups = [];
-
-      for (const filename of files) {
-        if (filename.startsWith('starr_backup_')) {
-          const filepath = `${backupDir}${filename}`;
-          const info = await FileSystem.getInfoAsync(filepath);
-          
-          if (info.exists && !info.isDirectory) {
-            // Extract timestamp from filename
-            const timestamp = parseInt(filename.replace('starr_backup_', '').replace('.json', ''));
-            backups.push({
-              filename,
-              date: new Date(timestamp),
-              size: info.size || 0,
-            });
-          }
-        }
-      }
-
-      return backups.sort((a, b) => b.date.getTime() - a.date.getTime());
-    } catch {
-      return [];
     }
   }
 }

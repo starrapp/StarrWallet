@@ -26,8 +26,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
 }) => {
   const colors = useColors();
   const lightning = balance?.lightning ?? 0n;
-  const onchain = balance?.onchain ?? 0n;
-  const totalBalance = lightning + onchain;
+  const totalBalance = lightning;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
@@ -65,23 +64,6 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
             </Text>
             <Text variant="titleSmall" color={colors.text.primary}>
               {formatSats(lightning)} sats
-            </Text>
-          </View>
-        </View>
-
-        {/* TODO(starr): remove On-chain section. Spark SDK does not expose on-chain balance (always 0). */}
-        <View style={[styles.divider, { backgroundColor: colors.border.subtle }]} />
-
-        <View style={styles.breakdownItem}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.background.tertiary }]}>
-            <Ionicons name="link" size={16} color={colors.text.secondary} />
-          </View>
-          <View>
-            <Text variant="labelSmall" color={colors.text.muted}>
-              On-chain
-            </Text>
-            <Text variant="titleSmall" color={colors.text.primary}>
-              {formatSats(onchain)} sats
             </Text>
           </View>
         </View>

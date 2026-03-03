@@ -71,7 +71,10 @@ export default function ImportWalletScreen() {
     setIsLoading(true);
     try {
       await KeychainService.storeSeedPhrase(mnemonic);
-      router.push('/onboarding/security');
+      router.push({
+        pathname: '/onboarding/security',
+        params: { mnemonic: mnemonic.replace(/\s+/g, ',') },
+      });
     } catch (err) {
       setError('Failed to import wallet. Please try again.');
     } finally {

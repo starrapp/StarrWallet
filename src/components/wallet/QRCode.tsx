@@ -201,38 +201,3 @@ export const QRDisplay: React.FC<QRDisplayProps> = ({
   );
 };
 
-// TODO(starr): remove QRCompact — exported but unused by any screen.
-// Compact QR for transaction details
-interface QRCompactProps {
-  value: string;
-  size?: number;
-}
-
-export const QRCompact: React.FC<QRCompactProps> = ({
-  value,
-  size = 80,
-}) => {
-  const colors = useColors();
-  const compactStyle = useMemo(
-    () =>
-      StyleSheet.create({
-        compactContainer: {
-          padding: spacing.xs,
-          backgroundColor: colors.text.primary,
-          borderRadius: layout.radius.sm,
-        },
-      }),
-    [colors]
-  );
-  return (
-    <View style={compactStyle.compactContainer}>
-      <QRCodeSVG
-        value={value}
-        size={size}
-        color={colors.background.primary}
-        backgroundColor={colors.text.primary}
-      />
-    </View>
-  );
-};
-

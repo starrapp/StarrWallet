@@ -4,12 +4,11 @@ import type {
   Balance,
   LightningPayment,
   Invoice,
-  LSPInfo,
-  NodeInfo,
   TransactionStatus,
   ParsedInput,
   PrepareSendResult,
   ListPaymentsFilter,
+  MaxDepositClaimFeeSetting,
 } from '@/types/wallet';
 
 // Unsupported SDK input types (parsed but not actionable):
@@ -66,6 +65,8 @@ export interface BreezServiceConfig {
   workingDir?: string;
   network: 'mainnet' | 'regtest';
   syncIntervalSecs?: number;
+  /** Max fee for automatic on-chain deposit claiming. Applied at init. */
+  maxDepositClaimFee?: MaxDepositClaimFeeSetting;
 }
 
 const DEFAULT_STORAGE_DIR_NAME = 'breez-sdk-spark';
@@ -135,16 +136,6 @@ class BreezServiceImpl {
     };
   }
 
-  async getNodeInfo(): Promise<NodeInfo> {
-    const sdk = this.requireSdk();
-    const info = await sdk.getInfo({ ensureSynced: false });
-
-    return {
-      id: info.identityPubkey,
-      pubkey: info.identityPubkey,
-    };
-  }
-
   async createInvoice(
     amountSats: bigint,
     description?: string,
@@ -174,11 +165,18 @@ class BreezServiceImpl {
     };
   }
 
-  // TODO(starr): should we expose an on-chain receive address to the user?
   async getOnchainReceiveAddress(): Promise<string> {
     const sdk = this.requireSdk();
     const response = await sdk.receivePayment({
       paymentMethod: ReceivePaymentMethod.BitcoinAddress.new(),
+    });
+    return response.paymentRequest;
+  }
+
+  async getSparkReceiveAddress(): Promise<string> {
+    const sdk = this.requireSdk();
+    const response = await sdk.receivePayment({
+      paymentMethod: ReceivePaymentMethod.SparkAddress.new(),
     });
     return response.paymentRequest;
   }
@@ -370,9 +368,6 @@ class BreezServiceImpl {
     return response.deposits;
   }
 
-  // TODO(starr): add UI for claiming unclaimed deposits:
-  // 1) list via listUnclaimedDeposits() and show claimError details
-  // 2) for MaxDepositClaimFeeExceeded, show requiredFeeSats and ask user confirmation
   async claimDeposit(txid: string, vout: number, maxFeeSats: bigint): Promise<void> {
     const sdk = this.requireSdk();
 
@@ -384,21 +379,6 @@ class BreezServiceImpl {
           ? MaxFee.Fixed.new({ amount: maxFeeSats })
           : undefined,
     });
-  }
-
-  // TODO(starr): remove LSP stubs after deleting channels UI.
-  async getCurrentLSP(): Promise<LSPInfo | null> {
-    return null;
-  }
-
-  // TODO(starr): remove LSP stubs after deleting channels UI.
-  async getAvailableLSPs(): Promise<LSPInfo[]> {
-    return [];
-  }
-
-  // TODO(starr): remove LSP stubs after deleting channels UI.
-  async selectLSP(_lspId: string): Promise<void> {
-    // Spark SDK does not expose LSP management APIs.
   }
 
   on(event: 'payment', handler: PaymentEventHandler): void;
@@ -419,11 +399,35 @@ class BreezServiceImpl {
     this.eventListeners.get(event)?.forEach((handler) => handler(...args));
   }
 
+  private buildMaxDepositClaimFee(setting?: MaxDepositClaimFeeSetting) {
+    if (!setting) return undefined;
+    switch (setting.type) {
+      case 'disabled':
+        return undefined;
+      case 'conservative':
+        return MaxFee.Rate.new({ satPerVbyte: 1n });
+      case 'network_recommended': {
+        const leeway = Math.max(0, Math.min(255, setting.leewaySatPerVbyte ?? 1));
+        return MaxFee.NetworkRecommended.new({ leewaySatPerVbyte: BigInt(leeway) });
+      }
+      case 'rate': {
+        const sat = Math.max(1, Math.min(1000, setting.satPerVbyte ?? 1));
+        return MaxFee.Rate.new({ satPerVbyte: BigInt(sat) });
+      }
+      case 'fixed': {
+        const amount = Math.max(1, Math.min(1_000_000, setting.amountSats ?? 1000));
+        return MaxFee.Fixed.new({ amount: BigInt(amount) });
+      }
+      default:
+        return undefined;
+    }
+  }
+
   private async initializeInternal(
     mnemonic: string,
     config: BreezServiceConfig
   ): Promise<void> {
-    const { apiKey, network, workingDir, syncIntervalSecs } = config;
+    const { apiKey, network, workingDir, syncIntervalSecs, maxDepositClaimFee } = config;
 
     if (!apiKey) {
       throw new Error('Breez API key is missing. Set EXPO_PUBLIC_BREEZ_API_KEY.');
@@ -446,6 +450,8 @@ class BreezServiceImpl {
     if (syncIntervalSecs != null) {
       sdkConfig.syncIntervalSecs = syncIntervalSecs;
     }
+
+    sdkConfig.maxDepositClaimFee = this.buildMaxDepositClaimFee(maxDepositClaimFee) ?? undefined;
 
     const seed = Seed.Mnemonic.new({ mnemonic, passphrase: undefined });
     const sdk = await connect({

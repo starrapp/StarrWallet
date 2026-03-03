@@ -189,10 +189,9 @@ starr/
 │   │   ├── ui/           # Base UI components
 │   │   └── wallet/       # Wallet-specific components
 │   ├── services/          # Core services
-│   │   ├── lnd/          # LND integration
+│   │   ├── breez/        # Breez SDK integration
 │   │   ├── keychain/     # Secure key storage
-│   │   ├── backup/       # Backup management
-│   │   └── lsp/          # LSP management
+│   │   └── backup/       # Backup management
 │   ├── stores/            # Zustand state stores
 │   ├── theme/             # Design system
 │   ├── types/             # TypeScript types

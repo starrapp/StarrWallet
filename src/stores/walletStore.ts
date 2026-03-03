@@ -14,8 +14,6 @@ import type {
   Balance,
   LightningPayment,
   Invoice,
-  NodeInfo,
-  LSPInfo,
   WalletSettings,
   BackupState,
   ListPaymentsFilter,
@@ -58,13 +56,6 @@ interface WalletState {
   unclaimedDeposits: UnclaimedDeposit[];
   isLoadingUnclaimed: boolean;
 
-  // TODO(starr): remove nodeInfo after UI review — currently fetched but never read by any screen.
-  nodeInfo: NodeInfo | null;
-
-  // TODO(starr): remove LSP state after deleting channels UI.
-  currentLSP: LSPInfo | null;
-  availableLSPs: LSPInfo[];
-
   // Backup
   backupState: BackupState | null;
 
@@ -84,6 +75,8 @@ interface WalletState {
   claimDeposit: (txid: string, vout: number, maxFeeSats: number) => Promise<void>;
 
   createInvoice: (amountSats: bigint, description?: string) => Promise<Invoice>;
+  getOnchainReceiveAddress: () => Promise<string>;
+  getSparkReceiveAddress: () => Promise<string>;
   sendPayment: (input: string, amountSats?: bigint, comment?: string) => Promise<LightningPayment>;
 
   updateSettings: (settings: Partial<WalletSettings>) => void;
@@ -97,6 +90,9 @@ const defaultSettings: WalletSettings = {
   currency: 'SATS',
   biometricEnabled: false,
   autoBackupEnabled: true,
+  maxDepositClaimFee: {
+    type: 'conservative',
+  },
 };
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -122,11 +118,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   unclaimedDeposits: [],
   isLoadingUnclaimed: false,
-
-  nodeInfo: null,
-
-  currentLSP: null,
-  availableLSPs: [],
 
   backupState: null,
 
@@ -159,14 +150,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         workingDir: BREEZ_CONFIG.WORKING_DIR,
         network: BREEZ_CONFIG.NETWORK,
         syncIntervalSecs: BREEZ_CONFIG.SYNC_INTERVAL_SECS,
+        maxDepositClaimFee: get().settings.maxDepositClaimFee,
       });
 
       await BackupService.initialize();
 
-      const [balance, nodeInfo, currentLSP, backupState, recentPayments] = await Promise.all([
+      const [balance, backupState, recentPayments] = await Promise.all([
         BreezService.getBalance(),
-        BreezService.getNodeInfo(),
-        BreezService.getCurrentLSP(),
         BackupService.getBackupState(),
         BreezService.listPayments({
           limit: 5,
@@ -201,8 +191,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         isInitialized: true,
         isUnlocked: true,
         balance,
-        nodeInfo,
-        currentLSP,
         backupState,
         recentPayments: recentPayments.slice(0, 5),
       });
@@ -351,6 +339,14 @@ fetchUnclaimedDeposits: async () => {
     } catch (error) {
       throw error;
     }
+  },
+
+  getOnchainReceiveAddress: async () => {
+    return BreezService.getOnchainReceiveAddress();
+  },
+
+  getSparkReceiveAddress: async () => {
+    return BreezService.getSparkReceiveAddress();
   },
 
   createInvoice: async (amountSats: bigint, description?: string) => {
