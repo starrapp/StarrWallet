@@ -8,16 +8,12 @@
 import { create } from 'zustand';
 import { BreezService } from '@/services/breez';
 import { KeychainService } from '@/services/keychain';
-import { BackupService } from '@/services/backup';
 import { BREEZ_CONFIG } from '@/config';
 import type {
   Balance,
   LightningPayment,
   Invoice,
-  NodeInfo,
-  LSPInfo,
   WalletSettings,
-  BackupState,
   ListPaymentsFilter,
 } from '@/types/wallet';
 
@@ -33,7 +29,6 @@ interface WalletState {
   // Initialization
   isInitializing: boolean;
   isInitialized: boolean;
-  isUnlocked: boolean;
   initError: string | null;
 
   // Balance
@@ -53,23 +48,11 @@ interface WalletState {
   currentInvoice: Invoice | null;
   isCreatingInvoice: boolean;
 
-  // TODO(starr): remove nodeInfo after UI review — currently fetched but never read by any screen.
-  nodeInfo: NodeInfo | null;
-
-  // TODO(starr): remove LSP state after deleting channels UI.
-  currentLSP: LSPInfo | null;
-  availableLSPs: LSPInfo[];
-
-  // Backup
-  backupState: BackupState | null;
-
   // Settings
   settings: WalletSettings;
 
   // Actions
   initializeWallet: (mnemonic?: string) => Promise<void>;
-  unlockWallet: () => Promise<boolean>;
-  lockWallet: () => void;
 
   refreshBalance: () => Promise<void>;
   refreshRecentPayments: () => Promise<void>;
@@ -82,21 +65,17 @@ interface WalletState {
   updateSettings: (settings: Partial<WalletSettings>) => void;
 
   syncNode: () => Promise<void>;
-  performBackup: () => Promise<void>;
 }
 
 // Default settings
 const defaultSettings: WalletSettings = {
   currency: 'SATS',
-  biometricEnabled: false,
-  autoBackupEnabled: true,
 };
 
 export const useWalletStore = create<WalletState>((set, get) => ({
   // Initial state
   isInitializing: false,
   isInitialized: false,
-  isUnlocked: false,
   initError: null,
 
   balance: null,
@@ -112,13 +91,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   currentInvoice: null,
   isCreatingInvoice: false,
-
-  nodeInfo: null,
-
-  currentLSP: null,
-  availableLSPs: [],
-
-  backupState: null,
 
   settings: defaultSettings,
 
@@ -139,7 +111,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Existing wallet - get mnemonic from keychain
         // Skip auth on auto-init - device unlock provides security
         // Sensitive operations (backup view, large sends) require separate auth
-        mnemonicPhrase = await KeychainService.getMnemonicForBackup(false);
+        mnemonicPhrase = await KeychainService.getMnemonic();
       } else {
         throw new Error('No wallet found. Please create or import a wallet.');
       }
@@ -151,13 +123,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         syncIntervalSecs: BREEZ_CONFIG.SYNC_INTERVAL_SECS,
       });
 
-      await BackupService.initialize();
-
-      const [balance, nodeInfo, currentLSP, backupState, recentPayments] = await Promise.all([
+      const [balance, recentPayments] = await Promise.all([
         BreezService.getBalance(),
-        BreezService.getNodeInfo(),
-        BreezService.getCurrentLSP(),
-        BackupService.getBackupState(),
         BreezService.listPayments({
           limit: 5,
           offset: 0,
@@ -189,11 +156,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       set({
         isInitializing: false,
         isInitialized: true,
-        isUnlocked: true,
         balance,
-        nodeInfo,
-        currentLSP,
-        backupState,
         recentPayments: recentPayments.slice(0, 5),
       });
 
@@ -205,25 +168,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       });
       throw error;
     }
-  },
-
-  // Unlock wallet with authentication
-  unlockWallet: async () => {
-    try {
-      const authenticated = await KeychainService.authenticateUser();
-      if (authenticated) {
-        set({ isUnlocked: true });
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  },
-
-  // Lock wallet
-  lockWallet: () => {
-    set({ isUnlocked: false });
   },
 
   // Refresh balance
@@ -355,18 +299,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       set({ balance });
     } catch (error) {
       console.error('[WalletStore] Sync failed:', error);
-    }
-  },
-
-  // Perform backup
-  performBackup: async () => {
-    try {
-      await BackupService.performBackup('local');
-      const backupState = await BackupService.getBackupState();
-      set({ backupState });
-    } catch (error) {
-      console.error('[WalletStore] Backup failed:', error);
-      throw error;
     }
   },
 }));

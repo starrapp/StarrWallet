@@ -1,10 +1,5 @@
 // TODO(starr): Delete this screen. Spark SDK has no channel/LSP management API.
-// Remove the corresponding tab in _layout.tsx and clean up LSP types/stubs.
-/**
- * Channels Screen
- *
- * View and manage Lightning channels.
- */
+// Remove the corresponding tab in _layout.tsx.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -13,18 +8,23 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
-import { BreezService } from '@/services/breez';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import type { LSPInfo } from '@/types/wallet';
+// TODO(starr): Delete this screen — Spark SDK has no LSP/channel management API.
+// Local mock type until this screen is removed.
+interface LSPInfo {
+  id: string;
+  name: string;
+  baseFeeSats: number;
+  feeRate: number;
+  maxChannelSize: number;
+}
 
 export default function ChannelsScreen() {
   const colors = useColors();
@@ -179,6 +179,8 @@ export default function ChannelsScreen() {
     [colors]
   );
 
+  // TODO(starr): Delete this screen — Spark SDK has no LSP/channel management API.
+  // Using empty local data until this screen is removed.
   const loadData = async () => {
     if (!isInitialized) {
       setLoadError('Wallet not initialized');
@@ -186,22 +188,9 @@ export default function ChannelsScreen() {
       return;
     }
 
-    setIsLoading(true);
-    setLoadError(null);
-    
-    try {
-      const [current, available] = await Promise.all([
-        BreezService.getCurrentLSP(),
-        BreezService.getAvailableLSPs(),
-      ]);
-      setCurrentLSP(current);
-      setAvailableLSPs(available);
-    } catch (error) {
-      console.error('Failed to load LSP data:', error);
-      setLoadError(error instanceof Error ? error.message : 'Failed to load LSP data');
-    } finally {
-      setIsLoading(false);
-    }
+    setCurrentLSP(null);
+    setAvailableLSPs([]);
+    setIsLoading(false);
   };
 
   const handleRefresh = async () => {
@@ -210,47 +199,8 @@ export default function ChannelsScreen() {
     setIsRefreshing(false);
   };
 
-  const handleSelectLSP = async (lsp: LSPInfo) => {
-    // If already the current LSP, do nothing
-    if (currentLSP?.id === lsp.id) {
-      Alert.alert('Already Connected', `You are already connected to ${lsp.name}.`);
-      return;
-    }
-
-    Alert.alert(
-      'Switch Provider',
-      `Switch to ${lsp.name}?\n\nBase Fee: ${lsp.baseFeeSats} sats\nFee Rate: ${(lsp.feeRate / 10000).toFixed(2)}%`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Switch',
-          onPress: async () => {
-            try {
-              setIsConnecting(lsp.id);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              
-              await BreezService.selectLSP(lsp.id);
-              const success = true;
-              
-              if (success) {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                await loadData();
-                Alert.alert('Connected', `Successfully connected to ${lsp.name}.`);
-              } else {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                Alert.alert('Connection Failed', `Failed to connect to ${lsp.name}. Please try again.`);
-              }
-            } catch (error) {
-              console.error('Failed to connect to LSP:', error);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert('Error', 'An error occurred while switching providers.');
-            } finally {
-              setIsConnecting(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleSelectLSP = async (_lsp: LSPInfo) => {
+    // No-op: Spark SDK does not support LSP selection.
   };
 
   // Show loading state while wallet is initializing

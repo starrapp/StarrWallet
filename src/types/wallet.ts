@@ -45,38 +45,6 @@ export interface Invoice {
   createdAt: Date;
 }
 
-// LSP (Liquidity Service Provider) information
-// TODO(starr): Spark SDK has no LSP management API. Remove this type after Channels UI removal.
-export interface LSPInfo {
-  id: string;
-  name: string;
-  host: string;
-  pubkey: string;
-  baseFeeSats: number;
-  feeRate: number; // PPM (parts per million)
-  minChannelSize: number;
-  maxChannelSize: number;
-  isActive: boolean;
-  isDefault: boolean;
-}
-
-// TODO(starr): remove NodeInfo after UI review — fetched at init but never read by any screen.
-export interface NodeInfo {
-  id: string;
-  pubkey: string;
-}
-
-// Backup types
-export type BackupType = 'cloud' | 'local' | 'manual';
-
-export interface BackupState {
-  lastBackup?: Date;
-  backupType?: BackupType;
-  // TODO(starr): remove channelStateHash — Spark has no channel state concept.
-  channelStateHash?: string;
-  isAutoBackupEnabled: boolean;
-}
-
 // --- Parsed input (Breez SDK parse)
 export interface ParsedBolt11 {
   type: 'bolt11_invoice';
@@ -164,10 +132,4 @@ export type Currency =
 export interface WalletSettings {
   // Display
   currency: Currency;
-
-  // Security
-  biometricEnabled: boolean;
-
-  // Backup
-  autoBackupEnabled: boolean;
 }

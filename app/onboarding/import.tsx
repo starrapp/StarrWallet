@@ -63,15 +63,15 @@ export default function ImportWalletScreen() {
       return;
     }
 
-    if (!KeychainService.validateSeedPhrase(mnemonic)) {
+    if (!KeychainService.validateMnemonic(mnemonic)) {
       setError('Invalid recovery phrase. Please check your words and try again.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await KeychainService.storeSeedPhrase(mnemonic);
-      router.push('/onboarding/security');
+      await KeychainService.storeMnemonic(mnemonic);
+      router.replace('/(tabs)');
     } catch (err) {
       setError('Failed to import wallet. Please try again.');
     } finally {

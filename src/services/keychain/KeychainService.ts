@@ -5,269 +5,99 @@
  * - iOS: Keychain Services with Secure Enclave
  * - Android: Keystore with hardware-backed security
  *
+ * The mnemonic is stored with `requireAuthentication: true` — every read
+ * triggers a native OS biometric / device-passcode prompt.
+ *
  * CRITICAL SECURITY NOTES:
- * - Seed phrases are the ONLY way to recover funds
- * - Never log, transmit, or store seeds in plain text
- * - All seed access should require biometric authentication
+ * - The mnemonic is the ONLY way to recover funds
+ * - Never log, transmit, or store mnemonics in plain text
  */
 
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
 import * as bip39 from 'bip39';
-import { Buffer } from 'buffer';
 
 // Storage keys
 const KEYS = {
-  SEED_ENCRYPTED: 'starr_seed_encrypted',
-  MNEMONIC_ENCRYPTED: 'starr_mnemonic_encrypted',
-  SEED_HASH: 'starr_seed_hash',
-  PIN_HASH: 'starr_pin_hash',
+  MNEMONIC: 'starr_mnemonic',
   WALLET_INITIALIZED: 'starr_wallet_initialized',
-  BIOMETRIC_ENABLED: 'starr_biometric_enabled',
-  LAST_BACKUP_DATE: 'starr_last_backup',
 } as const;
 
-// Security options for secure store
-const SECURE_OPTIONS: SecureStore.SecureStoreOptions = {
+// Base options for non-sensitive flags.
+const BASE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
-interface KeychainState {
-  isInitialized: boolean;
-  hasBiometric: boolean;
-  hasPin: boolean;
-}
+// Auth-guarded options — native biometric / device-passcode on every read.
+const AUTH_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  requireAuthentication: true,
+  authenticationPrompt: 'Authenticate to access your wallet',
+};
 
 class KeychainServiceImpl {
   /**
-   * Check if wallet has been initialized
+   * Check if wallet has been initialized.
    */
   async isWalletInitialized(): Promise<boolean> {
-    const value = await SecureStore.getItemAsync(KEYS.WALLET_INITIALIZED, SECURE_OPTIONS);
-    if (value !== 'true') {
-      return false;
-    }
-
-    // Verify that mnemonic actually exists (data consistency check)
-    try {
-      const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC_ENCRYPTED, SECURE_OPTIONS);
-      if (!mnemonic) {
-        // Flag is set but mnemonic is missing - clear the flag
-        console.warn('[KeychainService] Wallet flag set but mnemonic missing, clearing inconsistent state');
-        await SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED, SECURE_OPTIONS);
-        return false;
-      }
-      return true;
-    } catch {
-      return false;
-    }
+    const value = await SecureStore.getItemAsync(KEYS.WALLET_INITIALIZED, BASE_OPTIONS);
+    return value === 'true';
   }
 
   /**
-   * Get current keychain state
+   * Generate a new BIP39 mnemonic.
+   * Uses 256 bits of entropy for 24 words.
    */
-  async getState(): Promise<KeychainState> {
-    const [initialized, biometric, pin] = await Promise.all([
-      SecureStore.getItemAsync(KEYS.WALLET_INITIALIZED, SECURE_OPTIONS),
-      SecureStore.getItemAsync(KEYS.BIOMETRIC_ENABLED, SECURE_OPTIONS),
-      SecureStore.getItemAsync(KEYS.PIN_HASH, SECURE_OPTIONS),
-    ]);
-
-    return {
-      isInitialized: initialized === 'true',
-      hasBiometric: biometric === 'true',
-      hasPin: !!pin,
-    };
-  }
-
-  /**
-   * Generate a new BIP39 mnemonic seed phrase
-   * Uses 256 bits of entropy for 24 words
-   */
-  async generateSeedPhrase(): Promise<string> {
-    // Generate 256 bits of entropy for 24-word mnemonic
+  async generateMnemonic(): Promise<string> {
     const entropy = await Crypto.getRandomBytesAsync(32);
-    const entropyHex = Array.from(entropy)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    const mnemonic = bip39.entropyToMnemonic(entropyHex);
-    return mnemonic;
+    return bip39.entropyToMnemonic(Buffer.from(entropy));
   }
 
   /**
-   * Validate a mnemonic seed phrase
+   * Validate a BIP39 mnemonic.
    */
-  validateSeedPhrase(mnemonic: string): boolean {
+  validateMnemonic(mnemonic: string): boolean {
     return bip39.validateMnemonic(mnemonic);
   }
 
   /**
-   * Store the seed phrase securely
-   * CRITICAL: This is the most sensitive operation in the wallet
+   * Store the mnemonic securely.
+   * The key is stored with `requireAuthentication` — on iOS auth is only
+   * required on read; on Android it is required on both read and write.
+   *
+   * CRITICAL: This is the most sensitive operation in the wallet.
    */
-  async storeSeedPhrase(mnemonic: string): Promise<void> {
-    if (!this.validateSeedPhrase(mnemonic)) {
-      throw new Error('Invalid seed phrase');
+  async storeMnemonic(mnemonic: string): Promise<void> {
+    if (!this.validateMnemonic(mnemonic)) {
+      throw new Error('Invalid mnemonic');
     }
 
-    // Convert mnemonic to seed bytes
-    const seedBuffer = await bip39.mnemonicToSeed(mnemonic);
-    const seedHex = Buffer.from(seedBuffer).toString('hex');
+    await SecureStore.setItemAsync(KEYS.MNEMONIC, mnemonic, AUTH_OPTIONS);
+    await SecureStore.setItemAsync(KEYS.WALLET_INITIALIZED, 'true', BASE_OPTIONS);
 
-    // Create a hash for verification (not the actual seed)
-    const hash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      mnemonic
-    );
-
-    // Store encrypted seed, mnemonic, and hash
-    // Note: Mnemonic is stored separately for Lightning Network initialization
-    await SecureStore.setItemAsync(KEYS.SEED_ENCRYPTED, seedHex, SECURE_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.MNEMONIC_ENCRYPTED, mnemonic, SECURE_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.SEED_HASH, hash, SECURE_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.WALLET_INITIALIZED, 'true', SECURE_OPTIONS);
-
-    console.log('[KeychainService] Seed phrase stored securely');
+    console.log('[KeychainService] Mnemonic stored securely');
   }
 
   /**
-   * Retrieve seed bytes for Lightning Network initialization
-   * Requires authentication
+   * Retrieve the mnemonic. Triggers native biometric / device-passcode prompt.
    */
-  async getSeedBytes(requireAuth: boolean = true): Promise<Uint8Array> {
-    if (requireAuth) {
-      const authenticated = await this.authenticateUser();
-      if (!authenticated) {
-        throw new Error('Authentication failed');
-      }
-    }
+  async getMnemonic(promptMessage?: string): Promise<string> {
+    const options: SecureStore.SecureStoreOptions = promptMessage
+      ? { ...AUTH_OPTIONS, authenticationPrompt: promptMessage }
+      : AUTH_OPTIONS;
 
-    const seedHex = await SecureStore.getItemAsync(KEYS.SEED_ENCRYPTED, SECURE_OPTIONS);
-    if (!seedHex) {
-      throw new Error('No seed found');
-    }
-
-    // Convert hex string to Uint8Array
-    const bytes = new Uint8Array(seedHex.length / 2);
-    for (let i = 0; i < bytes.length; i++) {
-      bytes[i] = parseInt(seedHex.substr(i * 2, 2), 16);
-    }
-
-    return bytes;
-  }
-
-  /**
-   * Retrieve the mnemonic for Lightning Network initialization
-   * Requires authentication
-   */
-  async getMnemonicForBackup(requireAuth: boolean = true): Promise<string> {
-    if (requireAuth) {
-      // Require fresh biometric auth for seed exposure
-      const authenticated = await this.authenticateBiometric(
-        'Authenticate to access wallet'
-      );
-      if (!authenticated) {
-        throw new Error('Biometric authentication required');
-      }
-    }
-
-    const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC_ENCRYPTED, SECURE_OPTIONS);
+    const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC, options);
     if (!mnemonic) {
       throw new Error('No mnemonic found');
     }
-
     return mnemonic;
   }
 
   /**
-   * Set up PIN authentication
+   * Authenticate user via biometric or device passcode.
    */
-  async setupPin(pin: string): Promise<void> {
-    if (pin.length < 4) {
-      throw new Error('PIN must be at least 4 digits');
-    }
-
-    const hash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      pin
-    );
-
-    await SecureStore.setItemAsync(KEYS.PIN_HASH, hash, SECURE_OPTIONS);
-    console.log('[KeychainService] PIN set up');
-  }
-
-  /**
-   * Verify PIN
-   */
-  async verifyPin(pin: string): Promise<boolean> {
-    const storedHash = await SecureStore.getItemAsync(KEYS.PIN_HASH, SECURE_OPTIONS);
-    if (!storedHash) {
-      return false;
-    }
-
-    const inputHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      pin
-    );
-
-    return storedHash === inputHash;
-  }
-
-  /**
-   * Enable biometric authentication
-   */
-  async enableBiometric(): Promise<boolean> {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
-    if (!hasHardware || !isEnrolled) {
-      console.log('[KeychainService] Biometric not available');
-      return false;
-    }
-
-    // Test biometric authentication
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Enable biometric authentication for Starr',
-      cancelLabel: 'Cancel',
-      disableDeviceFallback: false,
-    });
-
-    if (result.success) {
-      await SecureStore.setItemAsync(KEYS.BIOMETRIC_ENABLED, 'true', SECURE_OPTIONS);
-      console.log('[KeychainService] Biometric enabled');
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Check if biometric is available
-   */
-  async isBiometricAvailable(): Promise<{ available: boolean; type: string }> {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-    const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-
-    let type = 'none';
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-      type = 'face';
-    } else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-      type = 'fingerprint';
-    }
-
-    return {
-      available: hasHardware && isEnrolled,
-      type,
-    };
-  }
-
-  /**
-   * Authenticate user with biometric
-   */
-  async authenticateBiometric(promptMessage?: string): Promise<boolean> {
+  async authenticateUser(promptMessage?: string): Promise<boolean> {
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage: promptMessage || 'Authenticate to continue',
       cancelLabel: 'Cancel',
@@ -278,60 +108,18 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Generic user authentication (biometric or PIN)
-   */
-  async authenticateUser(): Promise<boolean> {
-    const state = await this.getState();
-
-    if (state.hasBiometric) {
-      const biometricResult = await this.authenticateBiometric();
-      if (biometricResult) return true;
-    }
-
-    // Fall back to PIN if biometric fails or isn't set up
-    // In production, you'd show a PIN entry UI here
-    return false;
-  }
-
-  /**
-   * Clear all wallet data
-   * DANGER: This will delete the seed and all wallet data
+   * Clear all wallet data.
+   * DANGER: This will delete the mnemonic and all wallet data.
    */
   async clearAllData(): Promise<void> {
     await Promise.all([
-      SecureStore.deleteItemAsync(KEYS.SEED_ENCRYPTED),
-      SecureStore.deleteItemAsync(KEYS.MNEMONIC_ENCRYPTED),
-      SecureStore.deleteItemAsync(KEYS.SEED_HASH),
-      SecureStore.deleteItemAsync(KEYS.PIN_HASH),
-      SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED),
-      SecureStore.deleteItemAsync(KEYS.BIOMETRIC_ENABLED),
-      SecureStore.deleteItemAsync(KEYS.LAST_BACKUP_DATE),
+      SecureStore.deleteItemAsync(KEYS.MNEMONIC, AUTH_OPTIONS),
+      SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED, BASE_OPTIONS),
     ]);
 
     console.log('[KeychainService] All wallet data cleared');
-  }
-
-  /**
-   * Record last backup date
-   */
-  async recordBackup(): Promise<void> {
-    await SecureStore.setItemAsync(
-      KEYS.LAST_BACKUP_DATE,
-      new Date().toISOString(),
-      SECURE_OPTIONS
-    );
-  }
-
-  // TODO(starr): remove getLastBackupDate — unused, backup date tracked via BackupService.
-  /**
-   * Get last backup date
-   */
-  async getLastBackupDate(): Promise<Date | null> {
-    const date = await SecureStore.getItemAsync(KEYS.LAST_BACKUP_DATE, SECURE_OPTIONS);
-    return date ? new Date(date) : null;
   }
 }
 
 // Singleton instance
 export const KeychainService = new KeychainServiceImpl();
-

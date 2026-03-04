@@ -80,14 +80,7 @@ function RootLayoutInner() {
             presentation: 'modal',
           }} 
         />
-        <Stack.Screen 
-          name="change-pin" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
+        <Stack.Screen
           name="payment/[id]" 
           options={{ 
             animation: 'slide_from_right',

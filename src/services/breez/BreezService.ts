@@ -4,8 +4,6 @@ import type {
   Balance,
   LightningPayment,
   Invoice,
-  LSPInfo,
-  NodeInfo,
   TransactionStatus,
   ParsedInput,
   PrepareSendResult,
@@ -59,7 +57,6 @@ export function formatSdkError(err: unknown): string {
 
 export type PaymentEventHandler = (payment: LightningPayment) => void;
 export type SyncEventHandler = () => void;
-export type ConnectionEventHandler = (connected: boolean) => void;
 
 export interface BreezServiceConfig {
   apiKey: string;
@@ -74,20 +71,56 @@ class BreezServiceImpl {
   private sdk: BreezSdkInterface | null = null;
   private sdkEventListenerId: string | null = null;
   private isInitialized = false;
-  private initializingPromise: Promise<void> | null = null;
 
   private eventListeners: Map<string, Set<(...args: any[]) => void>> = new Map();
 
   async initialize(mnemonic: string, config: BreezServiceConfig): Promise<void> {
     if (this.isInitialized) return;
-    if (this.initializingPromise) return this.initializingPromise;
 
-    this.initializingPromise = this.initializeInternal(mnemonic, config)
-      .finally(() => {
-        this.initializingPromise = null;
+    const { apiKey, network, workingDir, syncIntervalSecs } = config;
+
+    if (!apiKey) {
+      throw new Error('Breez API key is missing. Set EXPO_PUBLIC_BREEZ_API_KEY.');
+    }
+
+    const { storageDir, storageUri } = this.resolveStorageDir(workingDir);
+
+    if (storageUri) {
+      new FileSystem.Directory(storageUri).create({
+        idempotent: true,
+        intermediates: true,
       });
+    }
 
-    return this.initializingPromise;
+    const sdkConfig = defaultConfig(
+      network === 'mainnet' ? Network.Mainnet : Network.Regtest
+    );
+    sdkConfig.apiKey = apiKey;
+
+    if (syncIntervalSecs != null) {
+      sdkConfig.syncIntervalSecs = syncIntervalSecs;
+    }
+
+    const seed = Seed.Mnemonic.new({ mnemonic, passphrase: undefined });
+    const sdk = await connect({
+      config: sdkConfig,
+      seed,
+      storageDir,
+    });
+
+    const listenerId = await sdk.addEventListener({
+      onEvent: async (event: SdkEvent) => {
+        try {
+          this.handleSdkEvent(event);
+        } catch (error) {
+          console.warn('[BreezService] Failed to handle SDK event:', error);
+        }
+      },
+    });
+
+    this.sdk = sdk;
+    this.sdkEventListenerId = listenerId;
+    this.isInitialized = true;
   }
 
   async shutdown(): Promise<void> {
@@ -107,11 +140,7 @@ class BreezServiceImpl {
       this.sdkEventListenerId = null;
     }
 
-    try {
-      await sdk.disconnect();
-    } finally {
-      this.emit('connection', false);
-    }
+    await sdk.disconnect();
   }
 
   async syncNode(): Promise<void> {
@@ -132,16 +161,6 @@ class BreezServiceImpl {
       pendingIncoming: 0n,
       pendingOutgoing: 0n,
       lastUpdated: new Date(),
-    };
-  }
-
-  async getNodeInfo(): Promise<NodeInfo> {
-    const sdk = this.requireSdk();
-    const info = await sdk.getInfo({ ensureSynced: false });
-
-    return {
-      id: info.identityPubkey,
-      pubkey: info.identityPubkey,
     };
   }
 
@@ -386,24 +405,8 @@ class BreezServiceImpl {
     });
   }
 
-  // TODO(starr): remove LSP stubs after deleting channels UI.
-  async getCurrentLSP(): Promise<LSPInfo | null> {
-    return null;
-  }
-
-  // TODO(starr): remove LSP stubs after deleting channels UI.
-  async getAvailableLSPs(): Promise<LSPInfo[]> {
-    return [];
-  }
-
-  // TODO(starr): remove LSP stubs after deleting channels UI.
-  async selectLSP(_lspId: string): Promise<void> {
-    // Spark SDK does not expose LSP management APIs.
-  }
-
   on(event: 'payment', handler: PaymentEventHandler): void;
   on(event: 'sync', handler: SyncEventHandler): void;
-  on(event: 'connection', handler: ConnectionEventHandler): void;
   on(event: string, handler: (...args: any[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
@@ -417,58 +420,6 @@ class BreezServiceImpl {
 
   private emit(event: string, ...args: any[]): void {
     this.eventListeners.get(event)?.forEach((handler) => handler(...args));
-  }
-
-  private async initializeInternal(
-    mnemonic: string,
-    config: BreezServiceConfig
-  ): Promise<void> {
-    const { apiKey, network, workingDir, syncIntervalSecs } = config;
-
-    if (!apiKey) {
-      throw new Error('Breez API key is missing. Set EXPO_PUBLIC_BREEZ_API_KEY.');
-    }
-
-    const { storageDir, storageUri } = this.resolveStorageDir(workingDir);
-
-    if (storageUri) {
-      new FileSystem.Directory(storageUri).create({
-        idempotent: true,
-        intermediates: true,
-      });
-    }
-
-    const sdkConfig = defaultConfig(
-      network === 'mainnet' ? Network.Mainnet : Network.Regtest
-    );
-    sdkConfig.apiKey = apiKey;
-
-    if (syncIntervalSecs != null) {
-      sdkConfig.syncIntervalSecs = syncIntervalSecs;
-    }
-
-    const seed = Seed.Mnemonic.new({ mnemonic, passphrase: undefined });
-    const sdk = await connect({
-      config: sdkConfig,
-      seed,
-      storageDir,
-    });
-
-    const listenerId = await sdk.addEventListener({
-      onEvent: async (event: SdkEvent) => {
-        try {
-          this.handleSdkEvent(event);
-        } catch (error) {
-          console.warn('[BreezService] Failed to handle SDK event:', error);
-        }
-      },
-    });
-
-    this.sdk = sdk;
-    this.sdkEventListenerId = listenerId;
-    this.isInitialized = true;
-
-    this.emit('connection', true);
   }
 
   private requireSdk(): BreezSdkInterface {

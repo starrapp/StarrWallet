@@ -2,13 +2,12 @@
  * Settings Screen
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
   Modal,
   Pressable,
@@ -20,8 +19,6 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { Text, Card } from '@/components/ui';
-import { KeychainService } from '@/services/keychain';
-import { BackupService } from '@/services/backup';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
@@ -61,44 +58,12 @@ const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { settings, updateSettings, performBackup, backupState } = useWalletStore();
+  const { settings, updateSettings } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const colors = useColors();
   const styles = useMemo(() => createSettingsStyles(colors), [colors]);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricType, setBiometricType] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
-
-  useEffect(() => {
-    checkBiometric();
-  }, []);
-
-  const checkBiometric = async () => {
-    const { available, type } = await KeychainService.isBiometricAvailable();
-    setBiometricAvailable(available);
-    setBiometricType(type);
-  };
-
-  const handleBiometricToggle = async () => {
-    if (settings.biometricEnabled) {
-      updateSettings({ biometricEnabled: false });
-    } else {
-      const success = await KeychainService.enableBiometric();
-      if (success) {
-        updateSettings({ biometricEnabled: true });
-      }
-    }
-  };
-
-  const handleBackupNow = async () => {
-    try {
-      await performBackup();
-      Alert.alert('Backup Complete', 'Your wallet has been backed up successfully.');
-    } catch (error) {
-      Alert.alert('Backup Failed', 'Failed to create backup. Please try again.');
-    }
-  };
 
   const handleShowRecoveryPhrase = () => {
     Alert.alert(
@@ -115,15 +80,6 @@ export default function SettingsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     updateSettings({ currency: currency as any });
     setShowCurrencyModal(false);
-  };
-
-  const getBiometricIcon = (): keyof typeof Ionicons.glyphMap => {
-    return biometricType === 'face' ? 'scan' : 'finger-print';
-  };
-
-  const formatDate = (date?: Date) => {
-    if (!date) return 'Never';
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
   const getCurrencyDisplayName = () => {
@@ -192,22 +148,6 @@ export default function SettingsScreen() {
               Security
             </Text>
 
-            {biometricAvailable && (
-              <SettingsItem
-                icon={getBiometricIcon()}
-                title={biometricType === 'face' ? 'Face ID' : 'Touch ID'}
-                subtitle="Use biometrics to unlock wallet"
-                trailing={
-                  <Switch
-                    value={settings.biometricEnabled}
-                    onValueChange={handleBiometricToggle}
-                    trackColor={{ false: colors.background.tertiary, true: colors.gold.muted }}
-                    thumbColor={settings.biometricEnabled ? colors.gold.pure : colors.text.muted}
-                  />
-                }
-              />
-            )}
-
             <SettingsItem
               icon="key"
               title="Recovery Phrase"
@@ -215,40 +155,6 @@ export default function SettingsScreen() {
               onPress={handleShowRecoveryPhrase}
             />
 
-            <SettingsItem
-              icon="lock-closed"
-              title="Change PIN"
-              subtitle="Update your wallet PIN"
-              onPress={() => router.push('/change-pin')}
-            />
-          </View>
-
-          {/* Backup Section */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-              Backup
-            </Text>
-
-            <SettingsItem
-              icon="cloud-upload"
-              title="Auto Backup"
-              subtitle="Keep channel state backed up"
-              trailing={
-                <Switch
-                  value={settings.autoBackupEnabled}
-                  onValueChange={(v) => updateSettings({ autoBackupEnabled: v })}
-                  trackColor={{ false: colors.background.tertiary, true: colors.accent.cyan + '80' }}
-                  thumbColor={settings.autoBackupEnabled ? colors.accent.cyan : colors.text.muted}
-                />
-              }
-            />
-
-            <SettingsItem
-              icon="download"
-              title="Backup Now"
-              subtitle={`Last backup: ${formatDate(backupState?.lastBackup)}`}
-              onPress={handleBackupNow}
-            />
           </View>
 
           {/* Display Section */}

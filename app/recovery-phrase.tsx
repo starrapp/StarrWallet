@@ -1,6 +1,6 @@
 /**
  * Recovery Phrase View Screen
- * 
+ *
  * Allows users to view their recovery phrase after authentication.
  * CRITICAL: Requires biometric authentication before revealing.
  */
@@ -130,24 +130,13 @@ export default function RecoveryPhraseScreen() {
     try {
       setIsLoading(true);
       setError(null);
-      
-      // Require biometric authentication
-      const authenticated = await KeychainService.authenticateBiometric(
+
+      // Single call: Tier 2 key triggers native biometric/passcode prompt.
+      const phrase = await KeychainService.getMnemonic(
         'Authenticate to view recovery phrase'
       );
-      
-      if (!authenticated) {
-        setError('Authentication required to view recovery phrase');
-        setIsLoading(false);
-        return;
-      }
-
       setIsAuthenticated(true);
-      
-      // Get the mnemonic (already authenticated above)
-      const phrase = await KeychainService.getMnemonicForBackup(false);
       setMnemonic(phrase.split(' '));
-      
     } catch (err) {
       console.error('Failed to load mnemonic:', err);
       setError(err instanceof Error ? err.message : 'Failed to load recovery phrase');
