@@ -73,7 +73,7 @@ function RootLayoutInner() {
             presentation: 'modal',
           }} 
         />
-        <Stack.Screen 
+        <Stack.Screen
           name="payment/[id]" 
           options={{ 
             animation: 'slide_from_right',

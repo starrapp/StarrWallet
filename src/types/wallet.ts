@@ -54,14 +54,6 @@ export interface UnclaimedDeposit {
   claimError?: string;
 }
 
-// Backup types
-export type BackupType = 'cloud' | 'local' | 'manual';
-
-export interface BackupState {
-  lastBackup?: Date;
-  backupType?: BackupType;
-  isAutoBackupEnabled: boolean;
-}
 
 // --- Parsed input (Breez SDK parse)
 export interface ParsedBolt11 {
@@ -170,11 +162,6 @@ export interface WalletSettings {
   // Display
   currency: Currency;
 
-  // Security
-  biometricEnabled: boolean;
-
-  // Backup
-  autoBackupEnabled: boolean;
 
   // On-chain: max fee for automatic deposit claiming
   maxDepositClaimFee: MaxDepositClaimFeeSetting;

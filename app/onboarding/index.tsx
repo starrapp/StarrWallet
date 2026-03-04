@@ -147,8 +147,8 @@ export default function OnboardingWelcome() {
                 <Ionicons name="shield-checkmark" size={24} color={colors.gold.pure} />
               </View>
               <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary}>Secure Backups</Text>
-                <Text variant="bodySmall" color={colors.text.secondary}>Automatic encrypted cloud backups</Text>
+                <Text variant="titleSmall" color={colors.text.primary}>Biometric Security</Text>
+                <Text variant="bodySmall" color={colors.text.secondary}>Protected by native device authentication</Text>
               </View>
             </View>
           </View>

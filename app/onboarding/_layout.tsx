@@ -19,7 +19,6 @@ export default function OnboardingLayout() {
       <Stack.Screen name="create" />
       <Stack.Screen name="import" />
       <Stack.Screen name="backup" />
-      <Stack.Screen name="security" />
     </Stack>
   );
 }

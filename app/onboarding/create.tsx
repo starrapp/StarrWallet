@@ -103,7 +103,7 @@ export default function CreateWalletScreen() {
 
   const generateMnemonic = async () => {
     try {
-      const phrase = await KeychainService.generateSeedPhrase();
+      const phrase = await KeychainService.generateMnemonic();
       setMnemonic(phrase.split(' '));
     } catch (error) {
       console.error('Failed to generate mnemonic:', error);
@@ -119,8 +119,7 @@ export default function CreateWalletScreen() {
     }
 
     try {
-      // Store the seed phrase
-      await KeychainService.storeSeedPhrase(mnemonic.join(' '));
+      await KeychainService.storeMnemonic(mnemonic.join(' '));
       // Continue to backup verification - pass mnemonic for verification
       router.push({
         pathname: '/onboarding/backup',

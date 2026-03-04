@@ -93,8 +93,8 @@ export default function DeleteWalletScreen() {
   );
 
   const handleProceedToConfirm = async () => {
-    // Require biometric authentication first
-    const authenticated = await KeychainService.authenticateBiometric(
+    // Require authentication (biometric with device passcode fallback)
+    const authenticated = await KeychainService.authenticateUser(
       'Authenticate to delete wallet'
     );
     
