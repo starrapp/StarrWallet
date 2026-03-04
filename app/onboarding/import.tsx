@@ -30,28 +30,23 @@ export default function ImportWalletScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleWordChange = (index: number, value: string) => {
-    const newWords = [...words];
-    newWords[index] = value.toLowerCase().trim();
-    setWords(newWords);
-    setError(null);
-  };
+    const parsed = value.trim().toLowerCase().split(/\s+/);
 
-  const handlePaste = async (index: number, text: string) => {
-    // Check if pasted text contains multiple words
-    const pastedWords = text.trim().toLowerCase().split(/\s+/);
-    
-    if (pastedWords.length > 1) {
-      // Populate multiple fields
+    if (parsed.length > 1) {
+      // Pasted a full phrase — distribute across inputs starting from index
       const newWords = [...words];
-      pastedWords.forEach((word, i) => {
+      parsed.forEach((word, i) => {
         if (index + i < 24) {
           newWords[index + i] = word;
         }
       });
       setWords(newWords);
     } else {
-      handleWordChange(index, text);
+      const newWords = [...words];
+      newWords[index] = parsed[0] ?? '';
+      setWords(newWords);
     }
+    setError(null);
   };
 
   const handleImport = async () => {
