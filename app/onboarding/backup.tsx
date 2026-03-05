@@ -4,92 +4,75 @@
  * Verifies the user has written down their recovery phrase.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
+import { KeychainService } from '@/services/keychain';
+import { useWalletStore } from '@/stores/walletStore';
+import { consumeMnemonic } from '@/stores/onboardingStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 export default function BackupVerificationScreen() {
   const router = useRouter();
   const colors = useColors();
-  const params = useLocalSearchParams<{ mnemonic?: string }>();
-  const [selectedWords, setSelectedWords] = useState<string[]>([]);
-  const [options, setOptions] = useState<string[]>([]);
-  const [correctIndices, setCorrectIndices] = useState<number[]>([]);
-  const [correctWords, setCorrectWords] = useState<string[]>([]);
+  const [mnemonic] = useState<string[]>(() => consumeMnemonic() ?? []);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Get mnemonic from navigation params (passed from create screen)
-  const mnemonicWords: string[] = params.mnemonic 
-    ? params.mnemonic.split(',') 
-    : [];
+  const [puzzle] = useState(() => {
+    if (mnemonic.length !== 24) return null;
+    const shuffled = shuffle(mnemonic.map((_, i) => i));
+    const indices = shuffled.slice(0, 3).sort((a, b) => a - b);
+    const options = shuffle(
+      shuffled.slice(0, 9).map((i) => ({ id: i, word: mnemonic[i] })),
+    );
+    return { indices, options };
+  });
 
-  useEffect(() => {
-    if (mnemonicWords.length !== 24) {
-      console.error('Invalid mnemonic passed to backup screen');
-      router.back();
-      return;
-    }
-
-    // Select 3 random indices to verify
-    const indices: number[] = [];
-    while (indices.length < 3) {
-      const idx = Math.floor(Math.random() * 24);
-      if (!indices.includes(idx)) {
-        indices.push(idx);
-      }
-    }
-    indices.sort((a, b) => a - b);
-    setCorrectIndices(indices);
-    
-    const correct = indices.map((i) => mnemonicWords[i]);
-    setCorrectWords(correct);
-
-    // Generate options: include correct words + random decoys
-    const allOptions = new Set<string>(correct);
-    
-    // Add more words from the mnemonic as decoys (more realistic)
-    const otherWords = mnemonicWords.filter((_, i) => !indices.includes(i));
-    while (allOptions.size < 9 && otherWords.length > 0) {
-      const randomIdx = Math.floor(Math.random() * otherWords.length);
-      allOptions.add(otherWords[randomIdx]);
-      otherWords.splice(randomIdx, 1);
-    }
-    
-    // Shuffle the options
-    const shuffled = [...allOptions].sort(() => Math.random() - 0.5);
-    setOptions(shuffled);
-  }, [params.mnemonic]);
-
-  const handleWordSelect = (word: string) => {
-    if (selectedWords.includes(word)) {
-      // Deselect the word
-      setSelectedWords(selectedWords.filter((w) => w !== word));
-    } else if (selectedWords.length < 3) {
-      // Select the word
-      setSelectedWords([...selectedWords, word]);
+  const handleOptionSelect = (optionId: number) => {
+    if (selectedOptionIds.includes(optionId)) {
+      setSelectedOptionIds(selectedOptionIds.filter((id) => id !== optionId));
+    } else if (selectedOptionIds.length < 3) {
+      setSelectedOptionIds([...selectedOptionIds, optionId]);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setError(null);
   };
 
-  const handleVerify = () => {
-    // Check if selected words match in order
-    const isCorrect = selectedWords.length === 3 && 
-      selectedWords.every((word, i) => word === correctWords[i]);
-    
+  const selectedWords = selectedOptionIds.map((id) => puzzle!.options.find((o) => o.id === id)?.word ?? '');
+
+  const handleVerify = async () => {
+    const isCorrect = selectedWords.length === 3 &&
+      selectedWords.every((word, i) => word === mnemonic[puzzle!.indices[i]]);
+
     if (isCorrect) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(tabs)');
+      try {
+        const phrase = mnemonic.join(' ');
+        await KeychainService.storeMnemonic(phrase);
+        await useWalletStore.getState().initializeWallet(phrase);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/(tabs)');
+      } catch {
+        setError('Failed to save wallet. Please try again.');
+      }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError('Incorrect words or wrong order. Please check your recovery phrase and try again.');
-      setSelectedWords([]);
+      setSelectedOptionIds([]);
     }
   };
 
@@ -202,6 +185,11 @@ export default function BackupVerificationScreen() {
     [colors]
   );
 
+  if (!puzzle) {
+    router.back();
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -227,7 +215,7 @@ export default function BackupVerificationScreen() {
           <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
             Select these words in order:
           </Text>
-          {correctIndices.map((index, i) => (
+          {puzzle.indices.map((index, i) => (
             <View key={index} style={styles.promptItem}>
               <View style={styles.promptRow}>
                 <View style={styles.promptNumber}>
@@ -260,24 +248,24 @@ export default function BackupVerificationScreen() {
             Choose from these words:
           </Text>
           <View style={styles.optionsContainer}>
-            {options.map((word) => {
-              const isSelected = selectedWords.includes(word);
-              const selectionOrder = selectedWords.indexOf(word) + 1;
+            {puzzle.options.map((option) => {
+              const isSelected = selectedOptionIds.includes(option.id);
+              const selectionOrder = selectedOptionIds.indexOf(option.id) + 1;
               return (
                 <TouchableOpacity
-                  key={word}
+                  key={option.id}
                   style={[
                     styles.optionButton,
                     isSelected && styles.optionButtonSelected,
                   ]}
-                  onPress={() => handleWordSelect(word)}
+                  onPress={() => handleOptionSelect(option.id)}
                   activeOpacity={0.7}
                 >
                   <Text
                     variant="titleSmall"
                     color={isSelected ? colors.gold.pure : colors.text.primary}
                   >
-                    {word}
+                    {option.word}
                   </Text>
                   {isSelected && (
                     <View style={styles.selectedBadge}>
@@ -320,7 +308,7 @@ export default function BackupVerificationScreen() {
           onPress={handleVerify}
           variant="primary"
           size="lg"
-          disabled={selectedWords.length < 3}
+          disabled={selectedOptionIds.length < 3}
         />
         <Button
           title="Go Back"

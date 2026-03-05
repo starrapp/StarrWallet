@@ -7,7 +7,6 @@
 
 import { create } from 'zustand';
 import { BreezService } from '@/services/breez';
-import { KeychainService } from '@/services/keychain';
 import { BREEZ_CONFIG } from '@/config';
 import type {
   Balance,
@@ -58,7 +57,7 @@ interface WalletState {
   settings: WalletSettings;
 
   // Actions
-  initializeWallet: (mnemonic?: string) => Promise<void>;
+  initializeWallet: (mnemonic: string) => Promise<void>;
 
   refreshBalance: () => Promise<void>;
   refreshRecentPayments: () => Promise<void>;
@@ -112,28 +111,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   settings: defaultSettings,
 
   // Initialize wallet with Breez SDK
-  initializeWallet: async (mnemonic?: string) => {
+  initializeWallet: async (mnemonic: string) => {
     set({ isInitializing: true, initError: null });
 
     try {
-      // Check if wallet exists
-      const isExisting = await KeychainService.isWalletInitialized();
-
-      let mnemonicPhrase: string;
-
-      if (mnemonic) {
-        // New wallet with provided mnemonic
-        mnemonicPhrase = mnemonic;
-      } else if (isExisting) {
-        // Existing wallet - get mnemonic from keychain
-        // Skip auth on auto-init - device unlock provides security
-        // Sensitive operations (backup view, large sends) require separate auth
-        mnemonicPhrase = await KeychainService.getMnemonic();
-      } else {
-        throw new Error('No wallet found. Please create or import a wallet.');
-      }
-
-      await BreezService.initialize(mnemonicPhrase, {
+      await BreezService.initialize(mnemonic, {
         apiKey: BREEZ_CONFIG.API_KEY,
         workingDir: BREEZ_CONFIG.WORKING_DIR,
         network: BREEZ_CONFIG.NETWORK,

@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { formatDistanceToNow } from 'date-fns';
 import { Text } from '@/components/ui';
+import { KeychainService } from '@/services/keychain';
 import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
@@ -157,12 +158,12 @@ export default function HomeScreen() {
     isInitialized,
   } = useWalletStore();
 
+  const tryInitialize = () =>
+    KeychainService.getMnemonic().then(initializeWallet);
+
   useEffect(() => {
     if (!isInitialized && !isInitializing && !initError) {
-      // Initialize wallet on mount
-      initializeWallet().catch((error) => {
-        console.error('[HomeScreen] Wallet initialization failed:', error);
-      });
+      tryInitialize();
     }
   }, [isInitialized, isInitializing, initError]);
 
@@ -197,15 +198,7 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={[styles.retryButton, { backgroundColor: colors.gold.glow, borderColor: colors.gold.pure }]}
-              onPress={() => {
-                initializeWallet().catch((error) => {
-                  console.error('[HomeScreen] Wallet retry failed:', error);
-                  // If wallet data is corrupted, redirect to onboarding
-                  if (error instanceof Error && error.message.includes('corrupted')) {
-                    router.replace('/onboarding');
-                  }
-                });
-              }}
+              onPress={tryInitialize}
             >
               <Text variant="titleSmall" color={colors.gold.pure}>
                 Retry
