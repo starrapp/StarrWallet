@@ -4,7 +4,7 @@
  * Main wallet view with balance and quick actions.
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -149,7 +149,6 @@ export default function HomeScreen() {
     balance,
     recentPayments,
     isLoadingBalance,
-    isLoadingRecentPayments,
     isInitializing,
     initError,
     refreshBalance,
@@ -168,8 +167,12 @@ export default function HomeScreen() {
     }
   }, [isInitialized, isInitializing, initError, tryInitialize]);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const handleRefresh = async () => {
+    setIsRefreshing(true);
     await Promise.all([refreshBalance(), refreshRecentPayments()]);
+    setIsRefreshing(false);
   };
 
   const handleSend = () => {
@@ -262,7 +265,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isLoadingBalance || isLoadingRecentPayments}
+              refreshing={isRefreshing}
               onRefresh={handleRefresh}
               tintColor={colors.gold.pure}
             />

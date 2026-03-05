@@ -4,7 +4,7 @@
  * Displays payment history with clean, modern styling.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   FlatList,
@@ -41,6 +41,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   hasMore = false,
 }) => {
   const colors = useColors();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await onRefresh?.();
+    setIsRefreshing(false);
+  };
 
   const renderFooter = () => {
     if (!hasMore || !onEndReached) return null;
@@ -85,8 +92,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       refreshControl={
         onRefresh ? (
           <RefreshControl
-            refreshing={isLoading}
-            onRefresh={onRefresh}
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
             tintColor={colors.gold.pure}
             colors={[colors.gold.pure]}
           />
