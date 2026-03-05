@@ -14,8 +14,7 @@ import { TransactionList } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import type { LightningPayment } from '@/types/wallet';
-import type { ListPaymentsFilter } from '@/types/wallet';
+import type { LightningPayment, ListPaymentsFilter } from '@/types/wallet';
 
 const TYPE_OPTIONS: { value: 'all' | 'send' | 'receive'; label: string }[] = [
   { value: 'all', label: 'All' },

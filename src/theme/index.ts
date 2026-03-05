@@ -1,15 +1,16 @@
-export { colors } from './colors';
-export { fonts, typography } from './typography';
-export { spacing, layout, shadows } from './spacing';
+import { colors } from './colors';
+import { fonts, typography } from './typography';
+import { spacing, layout, shadows } from './spacing';
 
-// Convenience re-export of the full theme
+export { colors, fonts, typography, spacing, layout, shadows };
+
 export const theme = {
-  colors: require('./colors').colors,
-  fonts: require('./typography').fonts,
-  typography: require('./typography').typography,
-  spacing: require('./spacing').spacing,
-  layout: require('./spacing').layout,
-  shadows: require('./spacing').shadows,
+  colors,
+  fonts,
+  typography,
+  spacing,
+  layout,
+  shadows,
 } as const;
 
 export type Theme = typeof theme;

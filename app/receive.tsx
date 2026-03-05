@@ -24,7 +24,7 @@ import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
-import { spacing, layout } from '@/theme';
+import { spacing } from '@/theme';
 import { formatSats } from '@/utils/format';
 import type { Invoice, UnclaimedDeposit } from '@/types/wallet';
 

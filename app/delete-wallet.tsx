@@ -188,7 +188,7 @@ export default function DeleteWalletScreen() {
                     You Will Lose Access Forever
                   </Text>
                   <Text variant="bodySmall" color={colors.text.secondary}>
-                    If you haven't backed up your recovery phrase, all your Bitcoin will be permanently lost.
+                    If you haven&apos;t backed up your recovery phrase, all your Bitcoin will be permanently lost.
                   </Text>
                 </View>
               </View>
@@ -243,7 +243,7 @@ export default function DeleteWalletScreen() {
                     Final Warning
                   </Text>
                   <Text variant="bodySmall" color={colors.text.secondary}>
-                    Type "{CONFIRMATION_TEXT}" below to confirm you want to permanently delete your wallet.
+                    Type &quot;{CONFIRMATION_TEXT}&quot; below to confirm you want to permanently delete your wallet.
                   </Text>
                 </View>
               </View>
@@ -251,7 +251,7 @@ export default function DeleteWalletScreen() {
 
             <View style={styles.inputContainer}>
               <Text variant="labelMedium" color={colors.text.muted} style={styles.inputLabel}>
-                Type "{CONFIRMATION_TEXT}" to confirm:
+                Type &quot;{CONFIRMATION_TEXT}&quot; to confirm:
               </Text>
               <TextInput
                 style={styles.input}

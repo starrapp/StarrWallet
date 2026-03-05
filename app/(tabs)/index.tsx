@@ -4,7 +4,7 @@
  * Main wallet view with balance and quick actions.
  */
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -158,14 +158,15 @@ export default function HomeScreen() {
     isInitialized,
   } = useWalletStore();
 
-  const tryInitialize = () =>
-    KeychainService.getMnemonic().then(initializeWallet);
+  const tryInitialize = useCallback(() =>
+    KeychainService.getMnemonic().then(initializeWallet),
+  [initializeWallet]);
 
   useEffect(() => {
     if (!isInitialized && !isInitializing && !initError) {
       tryInitialize();
     }
-  }, [isInitialized, isInitializing, initError]);
+  }, [isInitialized, isInitializing, initError, tryInitialize]);
 
   const handleRefresh = async () => {
     await Promise.all([refreshBalance(), refreshRecentPayments()]);

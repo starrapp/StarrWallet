@@ -24,7 +24,7 @@ import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { BreezService, formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
-import { spacing, layout } from '@/theme';
+import { spacing } from '@/theme';
 import { formatSats, msatToSatCeil } from '@/utils/format';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
 

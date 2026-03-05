@@ -2,7 +2,7 @@
  * QR Scanner Screen
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -199,7 +199,7 @@ export default function ScanScreen() {
       } else {
         Alert.alert('Clipboard Empty', 'No text found in clipboard');
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to read from clipboard');
     }
   };

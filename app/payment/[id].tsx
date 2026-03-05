@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,7 +18,7 @@ import { format } from 'date-fns';
 import { Button, Text, Card } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
-import { spacing, layout } from '@/theme';
+import { spacing } from '@/theme';
 import { formatSats, formatSignedSats } from '@/utils/format';
 import type { LightningPayment } from '@/types/wallet';
 

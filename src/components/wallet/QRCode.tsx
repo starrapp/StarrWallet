@@ -10,13 +10,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Share,
-  Platform,
 } from 'react-native';
 import QRCodeSVG from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Card } from '@/components/ui';
+import { Text } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 

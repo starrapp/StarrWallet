@@ -69,7 +69,7 @@ export default function ImportWalletScreen() {
       await KeychainService.storeMnemonic(mnemonic);
       await useWalletStore.getState().initializeWallet(mnemonic);
       router.replace('/(tabs)');
-    } catch (err) {
+    } catch {
       setError('Failed to import wallet. Please try again.');
     } finally {
       setIsLoading(false);
