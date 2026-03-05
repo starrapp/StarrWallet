@@ -6,22 +6,19 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Switch } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { BackupService } from '@/services/backup';
-import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 
 export default function SecuritySetupScreen() {
   const router = useRouter();
   const colors = useColors();
-  const params = useLocalSearchParams<{ mnemonic?: string }>();
-  const initializeWallet = useWalletStore((s) => s.initializeWallet);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState<string>('');
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -58,12 +55,7 @@ export default function SecuritySetupScreen() {
         await BackupService.enableAutoBackup('local');
       }
 
-      // Initialize wallet with mnemonic from onboarding (we do not persist the mnemonic)
-      const mnemonicStr = params.mnemonic ? params.mnemonic.replace(/,/g, ' ').trim() : undefined;
-      if (mnemonicStr) {
-        await initializeWallet(mnemonicStr);
-      }
-
+      // Mnemonic was stored in keychain during create/import. Home will call initializeWallet() on mount.
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Setup failed:', error);

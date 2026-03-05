@@ -100,15 +100,28 @@ class KeychainServiceImpl {
   }
 
   /**
-   * Validate the seed phrase. We do not persist the mnemonic; the user is
-   * responsible for backing it up. The wallet is initialized in-session only.
+   * Store the seed phrase securely so the wallet can be restored on app restart.
+   * CRITICAL: This is the most sensitive operation in the wallet.
    */
   async storeSeedPhrase(mnemonic: string): Promise<void> {
     if (!this.validateSeedPhrase(mnemonic)) {
       throw new Error('Invalid seed phrase');
     }
-    // No persistence: mnemonic is passed through onboarding and used to
-    // initialize the wallet in-session. App will show onboarding on next launch.
+
+    const seedBuffer = await bip39.mnemonicToSeed(mnemonic);
+    const seedHex = Buffer.from(seedBuffer).toString('hex');
+
+    const hash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      mnemonic
+    );
+
+    await SecureStore.setItemAsync(KEYS.SEED_ENCRYPTED, seedHex, SECURE_OPTIONS);
+    await SecureStore.setItemAsync(KEYS.MNEMONIC_ENCRYPTED, mnemonic, SECURE_OPTIONS);
+    await SecureStore.setItemAsync(KEYS.SEED_HASH, hash, SECURE_OPTIONS);
+    await SecureStore.setItemAsync(KEYS.WALLET_INITIALIZED, 'true', SECURE_OPTIONS);
+
+    console.log('[KeychainService] Seed phrase stored securely');
   }
 
   /**
