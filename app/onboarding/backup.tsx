@@ -206,7 +206,7 @@ export default function BackupVerificationScreen() {
             Verify Your Backup
           </Text>
           <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-            Select the correct words in the order shown to verify you've saved your recovery phrase
+            Select the correct words in the order shown to verify you&apos;ve saved your recovery phrase
           </Text>
         </View>
 

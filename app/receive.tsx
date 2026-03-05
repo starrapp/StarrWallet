@@ -9,7 +9,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,7 +18,7 @@ import { Button, Text, Input, AmountInput } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
-import { spacing, layout } from '@/theme';
+import { spacing } from '@/theme';
 import { formatSats } from '@/utils/format';
 import type { Invoice } from '@/types/wallet';
 
@@ -33,7 +32,7 @@ function expiryCopy(expiresAt: Date): string {
 export default function ReceiveScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { createInvoice, currentInvoice, isCreatingInvoice } = useWalletStore();
+  const { createInvoice, isCreatingInvoice } = useWalletStore();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [invoice, setInvoice] = useState<Invoice | null>(null);

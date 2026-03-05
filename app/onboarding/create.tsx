@@ -174,7 +174,7 @@ export default function CreateWalletScreen() {
             <View style={styles.blurOverlay}>
               <Ionicons name="eye-off" size={48} color={colors.text.muted} />
               <Text variant="titleMedium" color={colors.text.secondary} align="center">
-                Tap "Reveal" to show your recovery phrase
+                Tap &quot;Reveal&quot; to show your recovery phrase
               </Text>
               <Text variant="bodySmall" color={colors.text.muted} align="center">
                 Make sure no one is watching your screen

@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
-  View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { layout, spacing, typography } from '@/theme';

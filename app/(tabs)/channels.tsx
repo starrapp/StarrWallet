@@ -1,7 +1,7 @@
 // TODO(starr): Delete this screen. Spark SDK has no channel/LSP management API.
 // Remove the corresponding tab in _layout.tsx.
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -32,9 +32,22 @@ export default function ChannelsScreen() {
   const [currentLSP, setCurrentLSP] = useState<LSPInfo | null>(null);
   const [availableLSPs, setAvailableLSPs] = useState<LSPInfo[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isConnecting, setIsConnecting] = useState<string | null>(null);
+  const [isConnecting] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // TODO(starr): Delete this screen — Spark SDK has no LSP/channel management API.
+  // Using empty local data until this screen is removed.
+  const loadData = useCallback(async () => {
+    if (!isInitialized) {
+      setLoadError('Wallet not initialized');
+      setIsLoading(false);
+      return;
+    }
+    setCurrentLSP(null);
+    setAvailableLSPs([]);
+    setIsLoading(false);
+  }, [isInitialized]);
 
   useEffect(() => {
     // Only load data if wallet is initialized
@@ -45,7 +58,7 @@ export default function ChannelsScreen() {
       setIsLoading(false);
       setLoadError('Wallet not initialized');
     }
-  }, [isInitialized, isInitializing]);
+  }, [isInitialized, isInitializing, loadData]);
 
   const styles = useMemo(
     () =>
@@ -178,20 +191,6 @@ export default function ChannelsScreen() {
       }),
     [colors]
   );
-
-  // TODO(starr): Delete this screen — Spark SDK has no LSP/channel management API.
-  // Using empty local data until this screen is removed.
-  const loadData = async () => {
-    if (!isInitialized) {
-      setLoadError('Wallet not initialized');
-      setIsLoading(false);
-      return;
-    }
-
-    setCurrentLSP(null);
-    setAvailableLSPs([]);
-    setIsLoading(false);
-  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
