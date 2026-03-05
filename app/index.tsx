@@ -4,8 +4,8 @@
  * Handles initial routing based on wallet state.
  */
 
-import { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, ActivityIndicator, InteractionManager } from 'react-native';
+import { useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { KeychainService } from '@/services/keychain';
@@ -16,50 +16,13 @@ import { useColors } from '@/contexts';
 export default function EntryScreen() {
   const router = useRouter();
   const colors = useColors();
-  const [isLoading, setIsLoading] = useState(true);
-  const hasNavigated = useRef(false);
 
   useEffect(() => {
-    // Wait for all interactions to complete and router to be ready
-    const task = InteractionManager.runAfterInteractions(() => {
-      // Additional small delay to ensure router is ready
-      setTimeout(() => {
-        checkWalletState();
-      }, 100);
-    });
-
-    return () => task.cancel();
-  }, []);
-
-  const checkWalletState = async () => {
-    if (hasNavigated.current) return;
-    
-    try {
-      const isInitialized = await KeychainService.isWalletInitialized();
-
-      // Add a small delay for a smooth transition
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      if (hasNavigated.current) return;
-      hasNavigated.current = true;
-
-      if (isInitialized) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/onboarding');
-      }
-    } catch (error) {
-      console.error('Failed to check wallet state:', error);
-      if (!hasNavigated.current) {
-        hasNavigated.current = true;
-        setTimeout(() => {
-          router.replace('/onboarding');
-        }, 100);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    KeychainService.isWalletCreated().then(
+      (isCreated) => router.replace(isCreated ? '/(tabs)' : '/onboarding'),
+      () => router.replace('/onboarding'),
+    );
+  }, [router]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
@@ -78,14 +41,12 @@ export default function EntryScreen() {
         </View>
 
         {/* Loading indicator */}
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.gold.pure} />
-            <Text variant="bodySmall" color={colors.text.muted}>
-              Loading wallet...
-            </Text>
-          </View>
-        )}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.gold.pure} />
+          <Text variant="bodySmall" color={colors.text.muted}>
+            Loading wallet...
+          </Text>
+        </View>
       </View>
     </View>
   );

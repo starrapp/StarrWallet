@@ -144,16 +144,16 @@ export default function SendScreen() {
 
   const handleSend = async () => {
     if (!prepareResult || !invoice.trim()) return;
-    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
-    const requestedAmountSats = isFixedBolt11 ? undefined : getAmountSats();
-    const amountSats = requestedAmountSats ?? prepareResult.amountSats;
+    const amountSats = prepareResult.amountSats;
     if (amountSats <= 0n) {
       setError('Please enter an amount');
       return;
     }
     setIsLoading(true);
     try {
-      await sendPayment(invoice.trim(), requestedAmountSats, comment || undefined);
+      const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
+      const sendAmountSats = isFixedBolt11 ? undefined : amountSats;
+      await sendPayment(invoice.trim(), sendAmountSats, comment || undefined);
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -357,6 +357,7 @@ export default function SendScreen() {
                 onChangeValue={setAmount}
                 label="Amount to send"
                 maxAmount={balance?.lightning}
+                editable={!showConfirm}
               />
             )}
 
@@ -368,6 +369,7 @@ export default function SendScreen() {
                 value={comment}
                 onChangeText={setComment}
                 maxLength={(parsed as ParsedLnurlPay).commentAllowed}
+                editable={!showConfirm}
               />
             )}
 

@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Text } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
+import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout, typography } from '@/theme';
 
@@ -66,6 +67,7 @@ export default function ImportWalletScreen() {
     setIsLoading(true);
     try {
       await KeychainService.storeMnemonic(mnemonic);
+      await useWalletStore.getState().initializeWallet(mnemonic);
       router.replace('/(tabs)');
     } catch (err) {
       setError('Failed to import wallet. Please try again.');

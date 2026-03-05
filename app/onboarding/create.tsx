@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
+import { setMnemonic as setOnboardingMnemonic } from '@/stores/onboardingStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 
@@ -112,22 +113,14 @@ export default function CreateWalletScreen() {
     }
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!revealed) {
       setRevealed(true);
       return;
     }
 
-    try {
-      await KeychainService.storeMnemonic(mnemonic.join(' '));
-      // Continue to backup verification - pass mnemonic for verification
-      router.push({
-        pathname: '/onboarding/backup',
-        params: { mnemonic: mnemonic.join(',') }
-      });
-    } catch (error) {
-      console.error('Failed to store seed:', error);
-    }
+    setOnboardingMnemonic(mnemonic);
+    router.push('/onboarding/backup');
   };
 
   if (isLoading) {

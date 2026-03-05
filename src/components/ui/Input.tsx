@@ -108,6 +108,7 @@ interface AmountInputProps {
   label?: string;
   error?: string;
   maxAmount?: bigint;
+  editable?: boolean;
 }
 
 export const AmountInput: React.FC<AmountInputProps> = ({
@@ -116,6 +117,7 @@ export const AmountInput: React.FC<AmountInputProps> = ({
   label = 'Amount',
   error,
   maxAmount,
+  editable = true,
 }) => {
   const colors = useColors();
 
@@ -136,9 +138,9 @@ export const AmountInput: React.FC<AmountInputProps> = ({
       <View style={styles.amountContainer}>
         <TextInput
           style={[
-            styles.amountInput, 
-            typography.amountMedium, 
-            { color: colors.text.primary }
+            styles.amountInput,
+            typography.amountMedium,
+            { color: editable ? colors.text.primary : colors.text.muted }
           ]}
           value={value}
           onChangeText={handleChange}
@@ -146,6 +148,7 @@ export const AmountInput: React.FC<AmountInputProps> = ({
           placeholder="0"
           placeholderTextColor={colors.text.muted}
           selectionColor={colors.gold.pure}
+          editable={editable}
         />
         <Text variant="titleLarge" color={colors.text.secondary}>
           sats

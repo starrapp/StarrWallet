@@ -21,7 +21,7 @@ import * as bip39 from 'bip39';
 // Storage keys
 const KEYS = {
   MNEMONIC: 'starr_mnemonic',
-  WALLET_INITIALIZED: 'starr_wallet_initialized',
+  WALLET_CREATED: 'starr_wallet_created',
 } as const;
 
 // Base options for non-sensitive flags.
@@ -40,8 +40,8 @@ class KeychainServiceImpl {
   /**
    * Check if wallet has been initialized.
    */
-  async isWalletInitialized(): Promise<boolean> {
-    const value = await SecureStore.getItemAsync(KEYS.WALLET_INITIALIZED, BASE_OPTIONS);
+  async isWalletCreated(): Promise<boolean> {
+    const value = await SecureStore.getItemAsync(KEYS.WALLET_CREATED, BASE_OPTIONS);
     return value === 'true';
   }
 
@@ -74,7 +74,7 @@ class KeychainServiceImpl {
     }
 
     await SecureStore.setItemAsync(KEYS.MNEMONIC, mnemonic, AUTH_OPTIONS);
-    await SecureStore.setItemAsync(KEYS.WALLET_INITIALIZED, 'true', BASE_OPTIONS);
+    await SecureStore.setItemAsync(KEYS.WALLET_CREATED, 'true', BASE_OPTIONS);
 
     console.log('[KeychainService] Mnemonic stored securely');
   }
@@ -114,7 +114,7 @@ class KeychainServiceImpl {
   async clearAllData(): Promise<void> {
     await Promise.all([
       SecureStore.deleteItemAsync(KEYS.MNEMONIC, AUTH_OPTIONS),
-      SecureStore.deleteItemAsync(KEYS.WALLET_INITIALIZED, BASE_OPTIONS),
+      SecureStore.deleteItemAsync(KEYS.WALLET_CREATED, BASE_OPTIONS),
     ]);
 
     console.log('[KeychainService] All wallet data cleared');
