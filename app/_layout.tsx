@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
 import { ThemeProvider, useTheme } from '@/contexts';
+import { AuthGate } from '@/components';
 
 // Keep splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
@@ -30,6 +31,7 @@ function RootLayoutInner() {
   }, []);
 
   return (
+    <AuthGate>
     <View style={[styles.container, { backgroundColor: themeColors.background.primary }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
@@ -81,6 +83,7 @@ function RootLayoutInner() {
         />
       </Stack>
     </View>
+    </AuthGate>
   );
 }
 
