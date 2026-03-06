@@ -17,6 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { Button, Text } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { useWalletStore } from '@/stores/walletStore';
@@ -47,6 +48,8 @@ export default function ImportWalletScreen() {
       newWords[index] = parsed[0] ?? '';
       setWords(newWords);
     }
+    // Clear clipboard so mnemonic words don't linger for other apps to read
+    Clipboard.setStringAsync('');
     setError(null);
   };
 
@@ -68,6 +71,8 @@ export default function ImportWalletScreen() {
     try {
       await KeychainService.storeMnemonic(mnemonic);
       await useWalletStore.getState().initializeWallet(mnemonic);
+      // Clear clipboard in case the mnemonic was pasted earlier
+      await Clipboard.setStringAsync('');
       router.replace('/(tabs)');
     } catch {
       setError('Failed to import wallet. Please try again.');
