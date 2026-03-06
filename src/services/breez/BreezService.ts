@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
 
 import type {
@@ -681,7 +682,7 @@ class BreezServiceImpl {
   }
 
   private generateIdempotencyKey(): string {
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return Crypto.randomUUID();
   }
 }
 
