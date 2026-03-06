@@ -76,7 +76,8 @@
         {
           "faceIDPermission": "Allow Starr to use Face ID for secure authentication"
         }
-      ]
+      ],
+      "./plugins/async-storage-repo"
     ],
     "experiments": {
       "typedRoutes": true
