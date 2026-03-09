@@ -131,10 +131,13 @@ export default function ReceiveScreen() {
 
   const handleClaimDeposit = useCallback(
     (d: UnclaimedDeposit) => {
-      const netSats = d.amountSats - d.requiredFeeSats;
+      const fee = d.requiredFeeSats;
+      const message = fee != null
+        ? `Amount: ${formatSats(d.amountSats)}\nFee: ${formatSats(fee)}`
+        : `Amount: ${formatSats(d.amountSats)}`;
       Alert.alert(
         'Claim deposit',
-        `Amount: ${d.amountSats.toLocaleString()} sats\nFee: ${d.requiredFeeSats.toLocaleString()} sats\nYou will receive: ${netSats.toLocaleString()} sats`,
+        message,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -142,7 +145,7 @@ export default function ReceiveScreen() {
             onPress: async () => {
               setClaimingTxid(d.txid);
               try {
-                await claimDeposit(d.txid, d.vout, BigInt(d.requiredFeeSats));
+                await claimDeposit(d.txid, d.vout, fee);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 Alert.alert('Deposit claimed', 'The funds have been added to your balance.');
               } catch (err) {
@@ -580,17 +583,19 @@ export default function ReceiveScreen() {
                         Amount
                       </Text>
                       <Text variant="titleSmall" color={colors.text.primary}>
-                        {d.amountSats.toLocaleString()} sats
+                        {formatSats(d.amountSats)}
                       </Text>
                     </View>
-                    <View style={styles.unclaimedRow}>
-                      <Text variant="labelMedium" color={colors.text.muted}>
-                        Claim fee
-                      </Text>
-                      <Text variant="bodyMedium" color={colors.text.secondary}>
-                        {d.requiredFeeSats.toLocaleString()} sats
-                      </Text>
-                    </View>
+                    {d.requiredFeeSats != null && (
+                      <View style={styles.unclaimedRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>
+                          Claim fee
+                        </Text>
+                        <Text variant="bodyMedium" color={colors.text.secondary}>
+                          {formatSats(d.requiredFeeSats)}
+                        </Text>
+                      </View>
+                    )}
                     {d.claimError && (
                       <Text variant="bodySmall" color={colors.status.error}>
                         {d.claimError}

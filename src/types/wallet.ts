@@ -49,9 +49,10 @@ export interface Invoice {
 export interface UnclaimedDeposit {
   txid: string;
   vout: number;
-  amountSats: number;
-  requiredFeeSats: number;
+  amountSats: bigint;
   claimError?: string;
+  /** Fee required to claim, populated when auto-claim failed due to fee exceeding max. */
+  requiredFeeSats?: bigint;
 }
 
 

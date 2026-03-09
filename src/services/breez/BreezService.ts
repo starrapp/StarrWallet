@@ -10,6 +10,7 @@ import type {
   PrepareSendResult,
   ListPaymentsFilter,
   MaxDepositClaimFeeSetting,
+  UnclaimedDeposit,
 } from '@/types/wallet';
 
 // Unsupported SDK input types (parsed but not actionable):
@@ -21,6 +22,7 @@ import type {
 import {
   connect,
   defaultConfig,
+  DepositClaimError_Tags,
   InputType_Tags,
   ListPaymentsRequest as SdkListPaymentsRequest,
   LnurlPayRequest,
@@ -35,10 +37,11 @@ import {
   SendPaymentMethod_Tags,
   SdkEvent_Tags,
   type BreezSdkInterface,
-  type DepositInfo,
+  type DepositClaimError,
   type InputType,
   type ListPaymentsRequest,
   type LnurlPayRequestDetails,
+  type MaxFee as MaxFeeType,
   type Payment,
   type PrepareSendPaymentResponse,
   type SdkEvent,
@@ -81,7 +84,7 @@ class BreezServiceImpl {
   async initialize(mnemonic: string, config: BreezServiceConfig): Promise<void> {
     if (this.isInitialized) return;
 
-    const { apiKey, network, workingDir, syncIntervalSecs } = config;
+    const { apiKey, network, workingDir, syncIntervalSecs, maxDepositClaimFee } = config;
 
     if (!apiKey) {
       throw new Error('Breez API key is missing. Set EXPO_PUBLIC_BREEZ_API_KEY.');
@@ -104,6 +107,8 @@ class BreezServiceImpl {
     if (syncIntervalSecs != null) {
       sdkConfig.syncIntervalSecs = syncIntervalSecs;
     }
+
+    sdkConfig.maxDepositClaimFee = this.buildMaxDepositClaimFee(maxDepositClaimFee);
 
     const seed = Seed.Mnemonic.new({ mnemonic, passphrase: undefined });
     const sdk = await connect({
@@ -394,22 +399,27 @@ class BreezServiceImpl {
     }
   }
 
-  async listUnclaimedDeposits(): Promise<DepositInfo[]> {
+  async listUnclaimedDeposits(): Promise<UnclaimedDeposit[]> {
     const sdk = this.requireSdk();
     const response = await sdk.listUnclaimedDeposits({});
-    return response.deposits;
+    return response.deposits.map((d) => ({
+      txid: d.txid,
+      vout: d.vout,
+      amountSats: d.amountSats,
+      claimError: d.claimError ? this.formatClaimError(d.claimError) : undefined,
+      requiredFeeSats: d.claimError?.tag === DepositClaimError_Tags.MaxDepositClaimFeeExceeded
+        ? d.claimError.inner.requiredFeeSats
+        : undefined,
+    }));
   }
 
-  async claimDeposit(txid: string, vout: number, maxFeeSats: bigint): Promise<void> {
+  async claimDeposit(txid: string, vout: number, maxFeeSats?: bigint): Promise<void> {
     const sdk = this.requireSdk();
 
     await sdk.claimDeposit({
       txid,
       vout,
-      maxFee:
-        maxFeeSats > 0n
-          ? MaxFee.Fixed.new({ amount: maxFeeSats })
-          : undefined,
+      maxFee: maxFeeSats != null ? MaxFee.Fixed.new({ amount: maxFeeSats }) : undefined,
     });
   }
 
@@ -430,7 +440,38 @@ class BreezServiceImpl {
     this.eventListeners.get(event)?.forEach((handler) => handler(...args));
   }
 
+  private formatClaimError(error: DepositClaimError): string {
+    switch (error.tag) {
+      case DepositClaimError_Tags.MaxDepositClaimFeeExceeded:
+        return `Fee too high (${error.inner.requiredFeeSats} sats required)`;
+      case DepositClaimError_Tags.MissingUtxo:
+        return 'UTXO not found';
+      case DepositClaimError_Tags.Generic:
+        return error.inner.err;
+      default:
+        return 'Unknown claim error';
+    }
+  }
 
+  private buildMaxDepositClaimFee(setting?: MaxDepositClaimFeeSetting): MaxFeeType | undefined {
+    if (!setting) return undefined;
+    // MaxFee.Fixed(0) effectively prevents any auto-claim (fee always exceeds 0).
+    if (setting.type === 'disabled') return MaxFee.Fixed.new({ amount: 0n });
+    switch (setting.type) {
+      case 'conservative':
+        return MaxFee.Rate.new({ satPerVbyte: 1n });
+      case 'network_recommended':
+        return MaxFee.NetworkRecommended.new({
+          leewaySatPerVbyte: BigInt(setting.leewaySatPerVbyte ?? 1),
+        });
+      case 'rate':
+        return MaxFee.Rate.new({ satPerVbyte: BigInt(setting.satPerVbyte ?? 10) });
+      case 'fixed':
+        return MaxFee.Fixed.new({ amount: BigInt(setting.amountSats ?? 1000) });
+      default:
+        return undefined;
+    }
+  }
 
   private requireSdk(): BreezSdkInterface {
     if (!this.sdk || !this.isInitialized) {
