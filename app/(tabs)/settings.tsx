@@ -83,17 +83,6 @@ export default function SettingsScreen() {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showMaxDepositClaimFeeModal, setShowMaxDepositClaimFeeModal] = useState(false);
 
-  const handleShowRecoveryPhrase = () => {
-    Alert.alert(
-      'View Recovery Phrase',
-      'You will need to authenticate to view your recovery phrase. Never share it with anyone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', onPress: () => router.push('/recovery-phrase') },
-      ]
-    );
-  };
-
   const handleCurrencySelect = (currency: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     updateSettings({ currency: currency as any });
@@ -160,21 +149,6 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Security Section */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-              Security
-            </Text>
-
-            <SettingsItem
-              icon="key"
-              title="Recovery Phrase"
-              subtitle="View your 24-word backup"
-              onPress={handleShowRecoveryPhrase}
-            />
-
-          </View>
-
           {/* Display Section */}
           <View style={styles.section}>
             <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
