@@ -496,20 +496,20 @@ class BreezServiceImpl {
   private toSdkListPaymentsRequest(filter?: ListPaymentsFilter): ListPaymentsRequest {
     const statusFilter = filter?.statusFilter?.length
       ? filter.statusFilter
-          .map((status) =>
-            status === 'completed'
-              ? PaymentStatus.Completed
-              : status === 'pending'
-                ? PaymentStatus.Pending
-                : PaymentStatus.Failed
-          )
+        .map((status) =>
+          status === 'completed'
+            ? PaymentStatus.Completed
+            : status === 'pending'
+              ? PaymentStatus.Pending
+              : PaymentStatus.Failed
+        )
       : undefined;
 
     return SdkListPaymentsRequest.new({
       typeFilter: filter?.typeFilter?.length
         ? filter.typeFilter.map((type) =>
-            type === 'send' ? PaymentType.Send : PaymentType.Receive
-          )
+          type === 'send' ? PaymentType.Send : PaymentType.Receive
+        )
         : undefined,
       statusFilter,
       fromTimestamp:

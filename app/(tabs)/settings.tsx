@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
-import { Text, Card, Input } from '@/components/ui';
+import { Text, Input } from '@/components/ui';
 import type { MaxDepositClaimFeeSetting } from '@/types/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';

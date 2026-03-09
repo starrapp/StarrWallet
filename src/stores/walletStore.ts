@@ -45,7 +45,6 @@ interface WalletState {
   paymentFilter: ListPaymentsFilter;
 
   // Invoices
-  currentInvoice: Invoice | null;
   isCreatingInvoice: boolean;
 
   // Unclaimed on-chain deposits
@@ -63,8 +62,8 @@ interface WalletState {
   refreshRecentPayments: () => Promise<void>;
   listPayments: (options?: { filter?: ListPaymentsFilter; append?: boolean }) => Promise<void>;
   getPayment: (paymentId: string) => Promise<LightningPayment | null>;
-  fetchUnclaimedDeposits: () => Promise<void>;
-  claimDeposit: (txid: string, vout: number, maxFeeSats: number) => Promise<void>;
+  listUnclaimedDeposits: () => Promise<void>;
+  claimDeposit: (txid: string, vout: number, maxFeeSats: bigint) => Promise<void>;
 
   createInvoice: (amountSats: bigint, description?: string) => Promise<Invoice>;
   getOnchainReceiveAddress: () => Promise<string>;
@@ -101,7 +100,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   hasMorePayments: false,
   paymentFilter: DEFAULT_PAYMENT_FILTER,
 
-  currentInvoice: null,
   isCreatingInvoice: false,
 
   unclaimedDeposits: [],
@@ -266,10 +264,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-fetchUnclaimedDeposits: async () => {
+  listUnclaimedDeposits: async () => {
     set({ isLoadingUnclaimed: true });
     try {
-      const list = await BreezService.getUnclaimedDeposits();
+      const list = await BreezService.listUnclaimedDeposits();
       set({ unclaimedDeposits: list, isLoadingUnclaimed: false });
     } catch (error) {
       console.error('[WalletStore] Failed to fetch unclaimed deposits:', error);
@@ -277,10 +275,10 @@ fetchUnclaimedDeposits: async () => {
     }
   },
 
-  claimDeposit: async (txid: string, vout: number, maxFeeSats: number) => {
+  claimDeposit: async (txid: string, vout: number, maxFeeSats: bigint) => {
     try {
       await BreezService.claimDeposit(txid, vout, maxFeeSats);
-      get().fetchUnclaimedDeposits();
+      get().listUnclaimedDeposits();
       get().refreshBalance();
     } catch (error) {
       throw error;
@@ -299,7 +297,7 @@ fetchUnclaimedDeposits: async () => {
     set({ isCreatingInvoice: true });
     try {
       const invoice = await BreezService.createInvoice(amountSats, description);
-      set({ currentInvoice: invoice, isCreatingInvoice: false });
+      set({ isCreatingInvoice: false });
       return invoice;
     } catch (error) {
       set({ isCreatingInvoice: false });

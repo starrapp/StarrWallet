@@ -46,7 +46,7 @@ export const Input: React.FC<InputProps> = ({
   };
 
   const getBackgroundColor = (): string => {
-     return colors.background.secondary;
+    return colors.background.secondary;
   };
 
   return (

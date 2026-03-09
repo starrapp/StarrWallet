@@ -32,57 +32,57 @@ function RootLayoutInner() {
 
   return (
     <AuthGate>
-    <View style={[styles.container, { backgroundColor: themeColors.background.primary }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: themeColors.background.primary },
-          animation: 'fade',
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        <Stack.Screen 
-          name="onboarding" 
-          options={{ animation: 'slide_from_bottom' }} 
-        />
-        <Stack.Screen 
-          name="send" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
-          name="receive" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen 
-          name="scan" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'fullScreenModal',
-          }} 
-        />
-        <Stack.Screen 
-          name="delete-wallet" 
-          options={{ 
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
-          }} 
-        />
-        <Stack.Screen
-          name="payment/[id]" 
-          options={{ 
-            animation: 'slide_from_right',
-          }} 
-        />
-      </Stack>
-    </View>
+      <View style={[styles.container, { backgroundColor: themeColors.background.primary }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: themeColors.background.primary },
+            animation: 'fade',
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen 
+            name="onboarding" 
+            options={{ animation: 'slide_from_bottom' }} 
+          />
+          <Stack.Screen 
+            name="send" 
+            options={{ 
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }} 
+          />
+          <Stack.Screen 
+            name="receive" 
+            options={{ 
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }} 
+          />
+          <Stack.Screen 
+            name="scan" 
+            options={{ 
+              animation: 'slide_from_bottom',
+              presentation: 'fullScreenModal',
+            }} 
+          />
+          <Stack.Screen 
+            name="delete-wallet" 
+            options={{ 
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }} 
+          />
+          <Stack.Screen
+            name="payment/[id]" 
+            options={{ 
+              animation: 'slide_from_right',
+            }} 
+          />
+        </Stack>
+      </View>
     </AuthGate>
   );
 }

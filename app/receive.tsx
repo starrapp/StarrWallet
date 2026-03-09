@@ -24,7 +24,7 @@ import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
-import { spacing } from '@/theme';
+import { spacing, layout } from '@/theme';
 import { formatSats } from '@/utils/format';
 import type { Invoice, UnclaimedDeposit } from '@/types/wallet';
 
@@ -42,13 +42,12 @@ export default function ReceiveScreen() {
   const colors = useColors();
   const {
     createInvoice,
-    currentInvoice,
     isCreatingInvoice,
     getOnchainReceiveAddress,
     getSparkReceiveAddress,
     unclaimedDeposits,
     isLoadingUnclaimed,
-    fetchUnclaimedDeposits,
+    listUnclaimedDeposits,
     claimDeposit,
   } = useWalletStore();
   const [receiveMode, setReceiveMode] = useState<ReceiveMode>('lightning');
@@ -126,8 +125,8 @@ export default function ReceiveScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchUnclaimedDeposits();
-    }, [fetchUnclaimedDeposits])
+      listUnclaimedDeposits();
+    }, [listUnclaimedDeposits])
   );
 
   const handleClaimDeposit = useCallback(
@@ -143,7 +142,7 @@ export default function ReceiveScreen() {
             onPress: async () => {
               setClaimingTxid(d.txid);
               try {
-                await claimDeposit(d.txid, d.vout, d.requiredFeeSats);
+                await claimDeposit(d.txid, d.vout, BigInt(d.requiredFeeSats));
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 Alert.alert('Deposit claimed', 'The funds have been added to your balance.');
               } catch (err) {
