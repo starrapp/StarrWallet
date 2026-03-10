@@ -281,10 +281,9 @@ export const useWalletStore = create<WalletState>()(persist(
     claimDeposit: async (txid: string, vout: number, maxFeeSats?: bigint) => {
       try {
         await BreezService.claimDeposit(txid, vout, maxFeeSats);
+      } finally {
         get().listUnclaimedDeposits();
         get().refreshBalance();
-      } catch (error) {
-        throw error;
       }
     },
 

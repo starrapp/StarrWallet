@@ -23,6 +23,7 @@ import {
   connect,
   defaultConfig,
   DepositClaimError_Tags,
+  initLogging,
   InputType_Tags,
   ListPaymentsRequest as SdkListPaymentsRequest,
   LnurlPayRequest,
@@ -44,6 +45,7 @@ import {
   type MaxFee as MaxFeeType,
   type Payment,
   type PrepareSendPaymentResponse,
+  type LogEntry,
   type SdkEvent,
 } from '@breeztech/breez-sdk-spark-react-native';
 
@@ -109,6 +111,16 @@ class BreezServiceImpl {
     }
 
     sdkConfig.maxDepositClaimFee = this.buildMaxDepositClaimFee(maxDepositClaimFee);
+
+    if (__DEV__) {
+      try {
+        initLogging(undefined, {
+          log: (l: LogEntry) => console.log(`[BreezSDK][${l.level}] ${l.line}`),
+        }, undefined);
+      } catch {
+        // initLogging can only be called once
+      }
+    }
 
     const seed = Seed.Mnemonic.new({ mnemonic, passphrase: undefined });
     const sdk = await connect({
@@ -416,11 +428,17 @@ class BreezServiceImpl {
   async claimDeposit(txid: string, vout: number, maxFeeSats?: bigint): Promise<void> {
     const sdk = this.requireSdk();
 
-    await sdk.claimDeposit({
-      txid,
-      vout,
-      maxFee: maxFeeSats != null ? MaxFee.Fixed.new({ amount: maxFeeSats }) : undefined,
-    });
+    try {
+      await sdk.claimDeposit({
+        txid,
+        vout,
+        maxFee: maxFeeSats != null ? MaxFee.Fixed.new({ amount: maxFeeSats }) : undefined,
+      });
+    } catch (error: any) {
+      console.error('[BreezService] claimDeposit failed:', error);
+      const message = error?.inner?.[0] ?? error?.message ?? 'Unknown error';
+      throw new Error(message);
+    }
   }
 
   on(event: 'payment', handler: PaymentEventHandler): void;
