@@ -36,7 +36,40 @@ const AUTH_OPTIONS: SecureStore.SecureStoreOptions = {
   authenticationPrompt: 'Authenticate to access your wallet',
 };
 
+/** Convert SecureStore / auth errors into user-friendly Error. */
+function humanizeSecureStoreError(err: unknown): Error {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('No biometrics are currently enrolled')) {
+    return new Error('Please set up biometrics (fingerprint or face) in your device settings to secure your wallet.');
+  }
+  if (msg.includes('No hardware available')) {
+    return new Error('This device does not support biometric authentication.');
+  }
+  if (msg.includes('permanently invalidated')) {
+    return new Error('Your biometric data has changed. Please remove and re-add biometrics in device settings.');
+  }
+  if (msg.includes('Authenticate') || msg.includes('authentication')) {
+    return new Error('Authentication failed. Please try again.');
+  }
+  return err instanceof Error ? err : new Error(msg);
+}
+
 class KeychainServiceImpl {
+  /**
+   * Check if biometric/device authentication is available and enrolled.
+   * Throws a user-friendly error if not.
+   */
+  async requireAuthentication(): Promise<void> {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    if (!hasHardware) {
+      throw new Error('This device does not support biometric authentication.');
+    }
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+    if (!isEnrolled) {
+      throw new Error('Please set up biometrics (fingerprint or face) in your device settings to secure your wallet.');
+    }
+  }
+
   /**
    * Check if wallet has been initialized.
    */
@@ -73,7 +106,13 @@ class KeychainServiceImpl {
       throw new Error('Invalid mnemonic');
     }
 
-    await SecureStore.setItemAsync(KEYS.MNEMONIC, mnemonic, AUTH_OPTIONS);
+    await this.requireAuthentication();
+
+    try {
+      await SecureStore.setItemAsync(KEYS.MNEMONIC, mnemonic, AUTH_OPTIONS);
+    } catch (err) {
+      throw humanizeSecureStoreError(err);
+    }
     await SecureStore.setItemAsync(KEYS.WALLET_CREATED, 'true', BASE_OPTIONS);
 
     console.log('[KeychainService] Mnemonic stored securely');
@@ -87,7 +126,12 @@ class KeychainServiceImpl {
       ? { ...AUTH_OPTIONS, authenticationPrompt: promptMessage }
       : AUTH_OPTIONS;
 
-    const mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC, options);
+    let mnemonic: string | null;
+    try {
+      mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC, options);
+    } catch (err) {
+      throw humanizeSecureStoreError(err);
+    }
     if (!mnemonic) {
       throw new Error('No mnemonic found');
     }

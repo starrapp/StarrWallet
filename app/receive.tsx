@@ -149,6 +149,7 @@ export default function ReceiveScreen() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 Alert.alert('Deposit claimed', 'The funds have been added to your balance.');
               } catch (err) {
+                console.error('[Receive] Claim deposit failed:', err);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Alert.alert(
                   'Claim failed',

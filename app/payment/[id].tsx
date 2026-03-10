@@ -49,6 +49,7 @@ export default function PaymentDetailScreen() {
         }
       })
       .catch((err) => {
+        console.error('[Payment] Failed to load payment:', err);
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load payment');
         }

@@ -199,8 +199,9 @@ export default function ScanScreen() {
       } else {
         Alert.alert('Clipboard Empty', 'No text found in clipboard');
       }
-    } catch {
-      Alert.alert('Error', 'Failed to read from clipboard');
+    } catch (err) {
+      console.error('[Scan] Failed to read clipboard:', err);
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to read from clipboard');
     }
   };
 

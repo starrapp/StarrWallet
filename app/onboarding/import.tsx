@@ -74,8 +74,9 @@ export default function ImportWalletScreen() {
       // Clear clipboard in case the mnemonic was pasted earlier
       await Clipboard.setStringAsync('');
       router.replace('/(tabs)');
-    } catch {
-      setError('Failed to import wallet. Please try again.');
+    } catch (err) {
+      console.error('[Import] Failed to import wallet:', err);
+      setError(err instanceof Error ? err.message : 'Failed to import wallet. Please try again.');
     } finally {
       setIsLoading(false);
     }

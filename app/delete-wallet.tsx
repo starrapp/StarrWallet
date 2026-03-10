@@ -122,7 +122,7 @@ export default function DeleteWalletScreen() {
         await BreezService.shutdown();
         console.log('[DeleteWallet] Lightning service shutdown');
       } catch (err) {
-        console.log('[DeleteWallet] Lightning service shutdown (may already be stopped):', err);
+        console.warn('[DeleteWallet] Lightning service shutdown (may already be stopped):', err);
       }
 
       // Clear all keychain data
@@ -138,7 +138,7 @@ export default function DeleteWalletScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Deletion Failed',
-        'Failed to delete wallet data. Please try again.',
+        error instanceof Error ? error.message : 'Failed to delete wallet data. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {

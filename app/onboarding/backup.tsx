@@ -66,8 +66,9 @@ export default function BackupVerificationScreen() {
         await useWalletStore.getState().initializeWallet(phrase);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)');
-      } catch {
-        setError('Failed to save wallet. Please try again.');
+      } catch (err) {
+        console.error('[Backup] Failed to save wallet:', err);
+        setError(err instanceof Error ? err.message : 'Failed to save wallet. Please try again.');
       }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
