@@ -77,7 +77,9 @@
           "faceIDPermission": "Allow Starr to use Face ID for secure authentication"
         }
       ],
-      "./plugins/async-storage-repo"
+      "@react-native-async-storage/expo-with-async-storage",
+      "expo-asset",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
