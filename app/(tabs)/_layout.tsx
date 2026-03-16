@@ -1,6 +1,6 @@
 /**
  * Tab Layout
- * 
+ *
  * Main navigation tabs for the wallet.
  */
 

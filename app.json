@@ -8,11 +8,6 @@
     "icon": "./assets/icon.png",
     "scheme": "starr",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A0A0F"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -78,6 +73,18 @@
         }
       ],
       "@react-native-async-storage/expo-with-async-storage",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
       "expo-asset",
       "expo-font"
     ],

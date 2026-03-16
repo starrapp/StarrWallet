@@ -1,13 +1,12 @@
 /**
  * Root Layout
- * 
+ *
  * Main app layout with navigation structure.
  */
 
 // Polyfills must be imported first
 import '@/polyfills';
 
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,15 +19,6 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutInner() {
   const { colors: themeColors, isDark } = useTheme();
-
-  useEffect(() => {
-    // Hide splash screen after a short delay
-    const hideSplash = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await SplashScreen.hideAsync();
-    };
-    hideSplash();
-  }, []);
 
   return (
     <AuthGate>
@@ -43,43 +33,43 @@ function RootLayoutInner() {
         >
           <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-          <Stack.Screen 
-            name="onboarding" 
-            options={{ animation: 'slide_from_bottom' }} 
-          />
-          <Stack.Screen 
-            name="send" 
-            options={{ 
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
-            }} 
-          />
-          <Stack.Screen 
-            name="receive" 
-            options={{ 
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
-            }} 
-          />
-          <Stack.Screen 
-            name="scan" 
-            options={{ 
-              animation: 'slide_from_bottom',
-              presentation: 'fullScreenModal',
-            }} 
-          />
-          <Stack.Screen 
-            name="delete-wallet" 
-            options={{ 
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
-            }} 
+          <Stack.Screen
+            name="onboarding"
+            options={{ animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
-            name="payment/[id]" 
-            options={{ 
+            name="send"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="receive"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="scan"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'fullScreenModal',
+            }}
+          />
+          <Stack.Screen
+            name="delete-wallet"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="payment/[id]"
+            options={{
               animation: 'slide_from_right',
-            }} 
+            }}
           />
         </Stack>
       </View>
