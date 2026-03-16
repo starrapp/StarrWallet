@@ -30,6 +30,7 @@
     },
     "production": {
       "extends": "base",
+      "autoIncrement": true,
       "ios": {
         "resourceClass": "m-medium"
       },
