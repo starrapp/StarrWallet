@@ -19,7 +19,8 @@
         "NSCameraUsageDescription": "Starr needs camera access to scan QR codes for Lightning payments",
         "NSFaceIDUsageDescription": "Allow Starr to use Face ID for secure authentication",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "3M4KWD4BUU"
     },
     "android": {
       "adaptiveIcon": {

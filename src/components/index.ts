@@ -6,4 +6,5 @@ export * from './wallet';
 
 // App-level Components
 export { AuthGate } from './AuthGate';
+export { Scanner } from './Scanner';
 

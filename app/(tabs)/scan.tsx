@@ -1,14 +1,10 @@
 /**
- * Scan Tab Placeholder
- * 
- * This screen is never shown - the scan button in the tab bar
- * opens the /scan modal directly.
+ * QR Scanner Screen (Tab)
  */
 
-import { View } from 'react-native';
-import { useColors } from '@/contexts';
+import { Scanner } from '@/components/Scanner';
+import { layout } from '@/theme';
 
-export default function ScanTabPlaceholder() {
-  const colors = useColors();
-  return <View style={{ flex: 1, backgroundColor: colors.background.primary }} />;
+export default function ScanTabScreen() {
+  return <Scanner bottomInset={layout.tabBarHeight} />;
 }
