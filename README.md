@@ -189,7 +189,7 @@ The Breez SDK implementation has been archived in the `archive/breez-sdk-impleme
 ### Bundle Identifiers
 
 - **iOS**: `com.starwallet`
-- **Android**: `com.starwallet`
+- **Android**: `com.starrwallet`
 
 ## Security
 
