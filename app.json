@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a0a2e"
       },
-      "package": "com.starwallet",
+      "package": "com.starrwallet",
       "permissions": [
         "CAMERA",
         "USE_BIOMETRIC",
