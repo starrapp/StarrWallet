@@ -25,7 +25,7 @@ import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import { formatSats } from '@/utils/format';
+import { formatByCurrency, formatSats } from '@/utils/format';
 import type { Invoice, UnclaimedDeposit } from '@/types/wallet';
 
 type ReceiveMode = 'lightning' | 'onchain' | 'spark';
@@ -45,6 +45,7 @@ export default function ReceiveScreen() {
     isCreatingInvoice,
     getOnchainReceiveAddress,
     getSparkReceiveAddress,
+    settings,
     unclaimedDeposits,
     isLoadingUnclaimed,
     listUnclaimedDeposits,
@@ -132,9 +133,11 @@ export default function ReceiveScreen() {
   const handleClaimDeposit = useCallback(
     (d: UnclaimedDeposit) => {
       const fee = d.requiredFeeSats;
+      const formattedAmount = formatByCurrency(d.amountSats, settings.currency);
+      const formattedFee = fee != null ? formatByCurrency(fee, settings.currency) : null;
       const message = fee != null
-        ? `Amount: ${formatSats(d.amountSats)}\nFee: ${formatSats(fee)}`
-        : `Amount: ${formatSats(d.amountSats)}`;
+        ? `Amount: ${formattedAmount.value} ${formattedAmount.unit}\nFee: ${formattedFee?.value} ${formattedFee?.unit}`
+        : `Amount: ${formattedAmount.value} ${formattedAmount.unit}`;
       Alert.alert(
         'Claim deposit',
         message,
@@ -163,7 +166,7 @@ export default function ReceiveScreen() {
         ]
       );
     },
-    [claimDeposit]
+    [claimDeposit, settings.currency]
   );
 
   const handleCreateInvoice = async () => {
@@ -584,7 +587,7 @@ export default function ReceiveScreen() {
                         Amount
                       </Text>
                       <Text variant="titleSmall" color={colors.text.primary}>
-                        {formatSats(d.amountSats)}
+                        {formatByCurrency(d.amountSats, settings.currency).value} {formatByCurrency(d.amountSats, settings.currency).unit}
                       </Text>
                     </View>
                     {d.requiredFeeSats != null && (
@@ -593,7 +596,7 @@ export default function ReceiveScreen() {
                           Claim fee
                         </Text>
                         <Text variant="bodyMedium" color={colors.text.secondary}>
-                          {formatSats(d.requiredFeeSats)}
+                          {formatByCurrency(d.requiredFeeSats, settings.currency).value} {formatByCurrency(d.requiredFeeSats, settings.currency).unit}
                         </Text>
                       </View>
                     )}

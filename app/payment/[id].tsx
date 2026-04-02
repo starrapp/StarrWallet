@@ -19,7 +19,7 @@ import { Button, Text, Card } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
-import { formatSats, formatSignedSats } from '@/utils/format';
+import { formatByCurrency, formatSignedByCurrency } from '@/utils/format';
 import type { LightningPayment } from '@/types/wallet';
 
 export default function PaymentDetailScreen() {
@@ -27,6 +27,7 @@ export default function PaymentDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const getPayment = useWalletStore((s) => s.getPayment);
+  const currency = useWalletStore((s) => s.settings.currency);
   const [payment, setPayment] = useState<LightningPayment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +140,8 @@ export default function PaymentDetailScreen() {
         : isReceive
           ? colors.status.success
           : colors.text.primary;
+  const formattedAmount = formatSignedByCurrency(payment.amountSats, isReceive ? '+' : '-', currency);
+  const formattedFee = payment.feeSats != null ? formatByCurrency(payment.feeSats, currency) : null;
 
   return (
     <View style={styles.container}>
@@ -166,7 +169,7 @@ export default function PaymentDetailScreen() {
               />
             </View>
             <Text variant="headlineMedium" color={colors.text.primary} align="center">
-              {formatSignedSats(payment.amountSats, isReceive ? '+' : '-')} sats
+              {formattedAmount.value} {formattedAmount.unit}
             </Text>
             <Text variant="bodyMedium" color={colors.text.secondary} align="center">
               {payment.description ?? (isReceive ? 'Received' : 'Sent')}
@@ -205,7 +208,7 @@ export default function PaymentDetailScreen() {
                   Fee
                 </Text>
                 <Text variant="bodyMedium" color={colors.text.primary}>
-                  {formatSats(payment.feeSats)} sats
+                  {formattedFee?.value} {formattedFee?.unit}
                 </Text>
               </>
             )}

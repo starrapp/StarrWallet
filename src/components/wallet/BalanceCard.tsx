@@ -11,7 +11,8 @@ import { Text, Amount } from '@/components/ui';
 import { layout, spacing } from '@/theme';
 import { useColors } from '@/contexts';
 import type { Balance } from '@/types/wallet';
-import { formatSats } from '@/utils/format';
+import { formatByCurrency } from '@/utils/format';
+import { useWalletStore } from '@/stores/walletStore';
 
 interface BalanceCardProps {
   balance: Balance | null;
@@ -25,8 +26,10 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   isLoading = false,
 }) => {
   const colors = useColors();
+  const currency = useWalletStore((state) => state.settings.currency);
   const lightning = balance?.lightning ?? 0n;
   const totalBalance = lightning;
+  const formattedLightning = formatByCurrency(lightning, currency);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
@@ -63,7 +66,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               Lightning
             </Text>
             <Text variant="titleSmall" color={colors.text.primary}>
-              {formatSats(lightning)} sats
+              {formattedLightning.value} {formattedLightning.unit}
             </Text>
           </View>
         </View>

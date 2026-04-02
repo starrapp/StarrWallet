@@ -234,6 +234,7 @@ class BreezServiceImpl {
     const sdk = this.requireSdk();
     const raw = input.trim();
     const parsed = await sdk.parse(raw);
+    this.assertSendAmount(parsed, amountSats);
 
     // LNURL-Pay / Lightning Address → separate SDK flow
     if (parsed.tag === InputType_Tags.LnurlPay || parsed.tag === InputType_Tags.LightningAddress) {
@@ -321,6 +322,7 @@ class BreezServiceImpl {
     const sdk = this.requireSdk();
     const raw = input.trim();
     const parsed = await sdk.parse(raw);
+    this.assertSendAmount(parsed, amountSats);
 
     // LNURL-Pay / Lightning Address → separate SDK prepare
     if (parsed.tag === InputType_Tags.LnurlPay || parsed.tag === InputType_Tags.LightningAddress) {
@@ -363,10 +365,14 @@ class BreezServiceImpl {
     }
 
     if (method.tag === SendPaymentMethod_Tags.BitcoinAddress) {
+      const feeQuote = method.inner.feeQuote?.speedMedium?.userFeeSat;
+      if (feeQuote == null) {
+        throw new Error('Could not estimate on-chain fee. Please try again.');
+      }
       return {
         paymentMethod: 'onchain',
         amountSats: prepareResponse.amount,
-        feeSats: method.inner.feeQuote.speedMedium.userFeeSat,
+        feeSats: feeQuote,
       };
     }
 
@@ -596,6 +602,23 @@ class BreezServiceImpl {
       conversionOptions: undefined,
       feePolicy: undefined,
     });
+  }
+
+  private assertSendAmount(parsed: InputType, amountSats?: bigint): void {
+    if (amountSats != null && amountSats <= 0n) {
+      throw new Error('Amount must be greater than zero');
+    }
+
+    const amountRequired =
+      parsed.tag === InputType_Tags.BitcoinAddress
+      || parsed.tag === InputType_Tags.SparkAddress
+      || parsed.tag === InputType_Tags.SparkInvoice
+      || parsed.tag === InputType_Tags.LnurlPay
+      || parsed.tag === InputType_Tags.LightningAddress;
+
+    if (amountRequired && amountSats == null) {
+      throw new Error('Amount is required for this payment request');
+    }
   }
 
   private mapParsedInput(input: InputType, raw: string): ParsedInput {

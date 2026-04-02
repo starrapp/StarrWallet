@@ -39,6 +39,8 @@ interface WalletState {
 
   // Payments
   recentPayments: LightningPayment[];
+  incomingPayment: LightningPayment | null;
+  lastPresentedIncomingPaymentId: string | null;
   isLoadingRecentPayments: boolean;
   payments: LightningPayment[];
   isLoadingPayments: boolean;
@@ -71,6 +73,7 @@ interface WalletState {
   getOnchainReceiveAddress: () => Promise<string>;
   getSparkReceiveAddress: () => Promise<string>;
   sendPayment: (input: string, amountSats?: bigint, comment?: string) => Promise<LightningPayment>;
+  dismissIncomingPayment: () => void;
 
   updateSettings: (settings: Partial<WalletSettings>) => void;
 
@@ -96,6 +99,8 @@ export const useWalletStore = create<WalletState>()(persist(
     isLoadingBalance: false,
 
     recentPayments: [],
+    incomingPayment: null,
+    lastPresentedIncomingPaymentId: null,
     isLoadingRecentPayments: false,
     payments: [],
     isLoadingPayments: false,
@@ -146,8 +151,14 @@ export const useWalletStore = create<WalletState>()(persist(
               recentPayments.unshift(payment);
             }
             recentPayments.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+            const shouldShowIncoming =
+              payment.type === 'receive'
+              && payment.status === 'completed'
+              && state.lastPresentedIncomingPaymentId !== payment.id
+              && state.incomingPayment?.id !== payment.id;
             return {
               recentPayments: recentPayments.slice(0, 5),
+              incomingPayment: shouldShowIncoming ? payment : state.incomingPayment,
             };
           });
           get().refreshBalance();
@@ -311,6 +322,13 @@ export const useWalletStore = create<WalletState>()(persist(
       const payment = await BreezService.sendPayment(input, amountSats, comment);
       get().refreshBalance();
       return payment;
+    },
+
+    dismissIncomingPayment: () => {
+      set((state) => ({
+        lastPresentedIncomingPaymentId: state.incomingPayment?.id ?? state.lastPresentedIncomingPaymentId,
+        incomingPayment: null,
+      }));
     },
 
     // Update settings

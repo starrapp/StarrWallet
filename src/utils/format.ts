@@ -1,6 +1,7 @@
 /**
  * Formatting utilities for the wallet
  */
+import type { Currency } from '@/types/wallet';
 
 /**
  * Format satoshis with thousands separator
@@ -14,6 +15,60 @@ export const formatSats = (sats: bigint): string => {
  */
 export const formatSignedSats = (sats: bigint, sign: '+' | '-'): string => {
   return `${sign}${formatSats(sats)}`;
+};
+
+const FIAT_CURRENCIES: ReadonlySet<Currency> = new Set([
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'CAD',
+  'AUD',
+  'CHF',
+  'CNY',
+  'INR',
+  'MXN',
+  'BRL',
+  'KRW',
+]);
+
+export interface FormattedAmount {
+  value: string;
+  unit: string;
+  // True when selected fiat currency falls back to BTC denomination.
+  usesFallback: boolean;
+}
+
+export const formatByCurrency = (sats: bigint, currency: Currency): FormattedAmount => {
+  if (currency === 'SATS') {
+    return { value: formatSats(sats), unit: 'sats', usesFallback: false };
+  }
+
+  if (currency === 'BTC') {
+    return { value: satsToBtc(sats), unit: 'BTC', usesFallback: false };
+  }
+
+  if (FIAT_CURRENCIES.has(currency)) {
+    return {
+      value: satsToBtc(sats),
+      unit: `${currency} (BTC)`,
+      usesFallback: true,
+    };
+  }
+
+  return { value: formatSats(sats), unit: 'sats', usesFallback: true };
+};
+
+export const formatSignedByCurrency = (
+  sats: bigint,
+  sign: '+' | '-',
+  currency: Currency
+): FormattedAmount => {
+  const formatted = formatByCurrency(sats, currency);
+  return {
+    ...formatted,
+    value: `${sign}${formatted.value}`,
+  };
 };
 
 /**

@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +27,8 @@ export default function CreateWalletScreen() {
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revealed, setRevealed] = useState(false);
+  const [hasAcknowledgedLoss, setHasAcknowledgedLoss] = useState(false);
+  const [hasAcknowledgedStorage, setHasAcknowledgedStorage] = useState(false);
 
   const styles = useMemo(
     () =>
@@ -86,8 +89,11 @@ export default function CreateWalletScreen() {
         checkboxContainer: { gap: spacing.sm },
         checkItem: {
           flexDirection: 'row',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           gap: spacing.sm,
+          backgroundColor: colors.background.secondary,
+          borderRadius: layout.radius.md,
+          padding: spacing.sm,
         },
         actions: {
           padding: spacing.lg,
@@ -118,6 +124,7 @@ export default function CreateWalletScreen() {
       setRevealed(true);
       return;
     }
+    if (!hasAcknowledgedLoss || !hasAcknowledgedStorage) return;
 
     setOnboardingMnemonic(mnemonic);
     router.push('/onboarding/backup');
@@ -199,18 +206,36 @@ export default function CreateWalletScreen() {
         {/* Checkboxes */}
         {revealed && (
           <View style={styles.checkboxContainer}>
-            <View style={styles.checkItem}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.status.success} />
+            <TouchableOpacity
+              style={styles.checkItem}
+              onPress={() => setHasAcknowledgedLoss((current) => !current)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: hasAcknowledgedLoss }}
+            >
+              <Ionicons
+                name={hasAcknowledgedLoss ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={hasAcknowledgedLoss ? colors.status.success : colors.text.muted}
+              />
               <Text variant="bodySmall" color={colors.text.secondary}>
                 I understand that if I lose this phrase, I lose access to my Bitcoin
               </Text>
-            </View>
-            <View style={styles.checkItem}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.status.success} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.checkItem}
+              onPress={() => setHasAcknowledgedStorage((current) => !current)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: hasAcknowledgedStorage }}
+            >
+              <Ionicons
+                name={hasAcknowledgedStorage ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={hasAcknowledgedStorage ? colors.status.success : colors.text.muted}
+              />
               <Text variant="bodySmall" color={colors.text.secondary}>
                 I will store this phrase securely and never share it
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -222,6 +247,7 @@ export default function CreateWalletScreen() {
           onPress={handleContinue}
           variant="primary"
           size="lg"
+          disabled={revealed && (!hasAcknowledgedLoss || !hasAcknowledgedStorage)}
         />
         <Button
           title="Go Back"

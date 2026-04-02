@@ -8,7 +8,9 @@ import React from 'react';
 import { Text as RNText, TextStyle, StyleSheet, StyleProp } from 'react-native';
 import { typography } from '@/theme';
 import { useColors } from '@/contexts';
-import { formatSats } from '@/utils/format';
+import { formatByCurrency } from '@/utils/format';
+import { useWalletStore } from '@/stores/walletStore';
+import type { Currency } from '@/types/wallet';
 
 type TextVariant = keyof typeof typography;
 
@@ -54,6 +56,7 @@ interface AmountProps {
   showUnit?: boolean;
   color?: string;
   style?: StyleProp<TextStyle>;
+  currency?: Currency;
 }
 
 export const Amount: React.FC<AmountProps> = ({
@@ -62,8 +65,12 @@ export const Amount: React.FC<AmountProps> = ({
   showUnit = true,
   color,
   style,
+  currency,
 }) => {
   const colors = useColors();
+  const selectedCurrency = useWalletStore((state) => state.settings.currency);
+  const displayCurrency = currency ?? selectedCurrency;
+  const formatted = formatByCurrency(sats, displayCurrency);
   const amountColor = color || colors.text.primary;
 
   const getVariant = (): TextVariant => {
@@ -76,10 +83,10 @@ export const Amount: React.FC<AmountProps> = ({
 
   return (
     <RNText style={[typography[getVariant()], { color: amountColor }, style]}>
-      {formatSats(sats)}
+      {formatted.value}
       {showUnit && (
         <RNText style={[styles.unit, { color: colors.text.secondary }]}>
-          {' '}sats
+          {' '}{formatted.unit}
         </RNText>
       )}
     </RNText>

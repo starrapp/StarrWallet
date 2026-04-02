@@ -23,9 +23,9 @@ import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import { formatSignedSats } from '@/utils/format';
+import { formatSignedByCurrency } from '@/utils/format';
 import type { ColorTheme } from '@/theme/colors';
-import type { LightningPayment } from '@/types/wallet';
+import type { LightningPayment, Currency as WalletCurrency } from '@/types/wallet';
 
 // Styles function - defined before component to ensure it's available
 const getStyles = (colors: ColorTheme) => StyleSheet.create({
@@ -148,6 +148,7 @@ export default function HomeScreen() {
   const {
     balance,
     recentPayments,
+    settings,
     isLoadingBalance,
     isInitializing,
     initError,
@@ -253,7 +254,7 @@ export default function HomeScreen() {
           </View>
           <TouchableOpacity
             style={[styles.notificationButton, { backgroundColor: colors.background.secondary }]}
-            onPress={() => {}}
+            onPress={() => router.push('/notifications')}
           >
             <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
           </TouchableOpacity>
@@ -321,7 +322,7 @@ export default function HomeScreen() {
             {recentPayments.length > 0 ? (
               <View style={styles.paymentsList}>
                 {recentPayments.map((payment) => (
-                  <PaymentItem key={payment.id} payment={payment} />
+                  <PaymentItem key={payment.id} payment={payment} currency={settings.currency} />
                 ))}
               </View>
             ) : (
@@ -342,13 +343,26 @@ export default function HomeScreen() {
   );
 }
 
-const PaymentItem: React.FC<{ payment: LightningPayment }> = ({ payment }) => {
+const PaymentItem: React.FC<{ payment: LightningPayment; currency: WalletCurrency }> = ({ payment, currency }) => {
+  const router = useRouter();
   const colors = useColors();
   const isReceive = payment.type === 'receive';
   const styles = getStyles(colors);
+  const formattedAmount = formatSignedByCurrency(payment.amountSats, isReceive ? '+' : '-', currency);
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/payment/${payment.id}`);
+  };
 
   return (
-    <View style={[styles.paymentItem, { backgroundColor: colors.background.secondary }]}>
+    <TouchableOpacity
+      style={[styles.paymentItem, { backgroundColor: colors.background.secondary }]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${isReceive ? 'Received' : 'Sent'} ${payment.description ?? ''}, ${formattedAmount.value} ${formattedAmount.unit}`}
+    >
       <View style={[
         styles.paymentIcon,
         { backgroundColor: isReceive ? colors.status.success + '20' : colors.text.muted + '20' },
@@ -371,8 +385,8 @@ const PaymentItem: React.FC<{ payment: LightningPayment }> = ({ payment }) => {
         variant="titleSmall"
         color={isReceive ? colors.status.success : colors.text.primary}
       >
-        {formatSignedSats(payment.amountSats, isReceive ? '+' : '-')}
+        {formattedAmount.value} {formattedAmount.unit}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 };

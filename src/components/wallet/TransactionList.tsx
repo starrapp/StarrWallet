@@ -18,8 +18,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { Text } from '@/components/ui';
 import { layout, spacing } from '@/theme';
 import { useColors } from '@/contexts';
+import { useWalletStore } from '@/stores/walletStore';
 import type { LightningPayment } from '@/types/wallet';
-import { formatSignedSats } from '@/utils/format';
+import { formatSignedByCurrency } from '@/utils/format';
 
 interface TransactionListProps {
   transactions: LightningPayment[];
@@ -124,6 +125,8 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   const isReceive = transaction.type === 'receive';
   const isPending = transaction.status === 'pending';
   const isFailed = transaction.status === 'failed';
+  const currency = useWalletStore((state) => state.settings.currency);
+  const formattedAmount = formatSignedByCurrency(transaction.amountSats, isReceive ? '+' : '-', currency);
 
   const getStatusColor = (): string => {
     if (isFailed) return colors.status.error;
@@ -192,10 +195,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
           variant="titleSmall"
           color={isReceive ? colors.status.success : colors.text.primary}
         >
-          {formatSignedSats(transaction.amountSats, isReceive ? '+' : '-')}
+          {formattedAmount.value}
         </Text>
         <Text variant="labelSmall" color={colors.text.muted}>
-          sats
+          {formattedAmount.unit}
         </Text>
       </View>
     </TouchableOpacity>

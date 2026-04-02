@@ -25,7 +25,7 @@ import { useWalletStore } from '@/stores/walletStore';
 import { BreezService, formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
-import { formatSats, msatToSatCeil } from '@/utils/format';
+import { formatByCurrency, formatSats, msatToSatCeil } from '@/utils/format';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -41,7 +41,7 @@ export default function SendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ invoice?: string }>();
   const colors = useColors();
-  const { balance, sendPayment } = useWalletStore();
+  const { balance, sendPayment, settings } = useWalletStore();
   const [invoice, setInvoice] = useState('');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
@@ -135,6 +135,11 @@ export default function SendScreen() {
     setError(null);
     try {
       const result = await BreezService.prepareSendPayment(invoice.trim(), amountSats, comment || undefined);
+      const totalDebit = result.amountSats + result.feeSats;
+      if (balance && totalDebit > balance.lightning) {
+        setError('Insufficient balance to cover amount and network fee');
+        return;
+      }
       setPrepareResult(result);
       setShowConfirm(true);
     } catch (err) {
@@ -142,11 +147,26 @@ export default function SendScreen() {
     }
   };
 
+  const handleCancel = useCallback(() => {
+    if (router.canDismiss()) {
+      router.dismiss();
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [router]);
+
   const handleSend = async () => {
     if (!prepareResult || !invoice.trim()) return;
     const amountSats = prepareResult.amountSats;
+    const totalDebit = prepareResult.amountSats + prepareResult.feeSats;
     if (amountSats <= 0n) {
       setError('Please enter an amount');
+      return;
+    }
+    if (balance && totalDebit > balance.lightning) {
+      setError('Insufficient balance to cover amount and network fee');
       return;
     }
     setIsLoading(true);
@@ -157,8 +177,9 @@ export default function SendScreen() {
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Payment sent', `Successfully sent ${formatSats(amountSats)} sats`, [
-        { text: 'OK', onPress: () => router.back() },
+      const sentAmount = formatByCurrency(amountSats, settings.currency);
+      Alert.alert('Payment sent', `Successfully sent ${sentAmount.value} ${sentAmount.unit}`, [
+        { text: 'OK', onPress: handleCancel },
       ]);
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -177,11 +198,19 @@ export default function SendScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm,
           borderBottomWidth: 1,
           borderBottomColor: colors.border.subtle,
+        },
+        headerSide: {
+          minWidth: 76,
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+        },
+        headerTitle: {
+          flex: 1,
+          textAlign: 'center',
         },
         scrollView: { flex: 1 },
         scrollContent: { padding: spacing.lg, gap: spacing.md },
@@ -197,10 +226,8 @@ export default function SendScreen() {
           gap: spacing.xs,
           paddingVertical: spacing.md,
         },
-        footer: {
-          padding: spacing.lg,
-          borderTopWidth: 1,
-          borderTopColor: colors.border.subtle,
+        actionContainer: {
+          marginTop: spacing.sm,
         },
         parsedRow: {
           flexDirection: 'row',
@@ -224,20 +251,23 @@ export default function SendScreen() {
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
           style={styles.keyboardView}
         >
           {/* Header */}
           <View style={styles.header}>
-            <Button
-              title="Cancel"
-              variant="ghost"
-              size="sm"
-              onPress={() => router.back()}
-            />
-            <Text variant="titleLarge" color={colors.text.primary}>
+            <View style={styles.headerSide}>
+              <Button title="Cancel" variant="ghost" size="sm" onPress={handleCancel} />
+            </View>
+            <Text
+              variant="titleLarge"
+              color={colors.text.primary}
+              style={styles.headerTitle}
+              numberOfLines={1}
+            >
               Send Payment
             </Text>
-            <View style={{ width: 60 }} />
+            <View style={styles.headerSide} />
           </View>
 
           <ScrollView
@@ -382,14 +412,14 @@ export default function SendScreen() {
                 <View style={styles.invoiceRow}>
                   <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
                   <Text variant="titleSmall" color={colors.text.primary}>
-                    {formatSats(prepareResult.amountSats)} sats
+                    {formatByCurrency(prepareResult.amountSats, settings.currency).value} {formatByCurrency(prepareResult.amountSats, settings.currency).unit}
                   </Text>
                 </View>
                 {prepareResult.feeSats > 0n && (
                   <View style={styles.invoiceRow}>
                     <Text variant="bodyMedium" color={colors.text.secondary}>Fee</Text>
                     <Text variant="bodyMedium" color={colors.text.primary}>
-                      {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatSats(prepareResult.feeSats)} sats
+                      {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatByCurrency(prepareResult.feeSats, settings.currency).value} {formatByCurrency(prepareResult.feeSats, settings.currency).unit}
                     </Text>
                   </View>
                 )}
@@ -404,23 +434,22 @@ export default function SendScreen() {
             <View style={styles.balanceInfo}>
               <Ionicons name="wallet" size={16} color={colors.text.muted} />
               <Text variant="bodySmall" color={colors.text.muted}>
-                Available: {balance ? formatSats(balance.lightning) : '0'} sats
+                Available: {balance ? formatByCurrency(balance.lightning, settings.currency).value : '0'} {formatByCurrency(balance?.lightning ?? 0n, settings.currency).unit}
               </Text>
             </View>
-          </ScrollView>
 
-          {/* Primary action: Prepare or Send */}
-          <View style={styles.footer}>
             {!showConfirm ? (
-              <Button
-                title={parsed ? 'Continue' : 'Enter payment request'}
-                variant="primary"
-                size="lg"
-                onPress={handlePrepareAndConfirm}
-                disabled={!invoice.trim() || isParsing}
-              />
+              <View style={styles.actionContainer}>
+                <Button
+                  title={parsed ? 'Continue' : 'Enter payment request'}
+                  variant="primary"
+                  size="lg"
+                  onPress={handlePrepareAndConfirm}
+                  disabled={!invoice.trim() || isParsing}
+                />
+              </View>
             ) : null}
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>

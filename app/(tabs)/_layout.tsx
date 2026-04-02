@@ -10,12 +10,13 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { useColors } from '@/contexts';
+import { useColors, useTheme } from '@/contexts';
 import { layout, spacing } from '@/theme';
 
 export default function TabLayout() {
   const router = useRouter();
   const colors = useColors();
+  const { isDark } = useTheme();
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -68,12 +69,12 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: colors.gold.pure,
-        tabBarInactiveTintColor: colors.text.muted,
+        tabBarInactiveTintColor: isDark ? colors.text.muted : colors.text.secondary,
         tabBarShowLabel: true,
         tabBarLabelStyle: styles.tabLabel,
         tabBarBackground: () => (
           <View style={styles.tabBarBackground}>
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
           </View>
         ),
       }}

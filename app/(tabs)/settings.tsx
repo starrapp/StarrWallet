@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { Text, Input } from '@/components/ui';
-import type { MaxDepositClaimFeeSetting } from '@/types/wallet';
+import type { Currency, MaxDepositClaimFeeSetting } from '@/types/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
@@ -49,7 +49,10 @@ const FIAT_CURRENCIES = [
 const EXTERNAL_LINKS = {
   TERMS: 'https://starr.app/terms',
   PRIVACY: 'https://starr.app/privacy',
-  SUPPORT: 'https://starr.app/support',
+  SUPPORT: 'https://github.com/starrapp/StarrWallet/issues',
+  ABOUT: 'https://starr.app/about',
+  BLOG: 'https://github.com/starr-wallet/starr',
+  CAREERS: 'mailto:careers@starr.app',
   GITHUB: 'https://github.com/starr-wallet/starr',
 };
 
@@ -83,9 +86,9 @@ export default function SettingsScreen() {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showMaxDepositClaimFeeModal, setShowMaxDepositClaimFeeModal] = useState(false);
 
-  const handleCurrencySelect = (currency: string) => {
+  const handleCurrencySelect = (currency: Currency) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    updateSettings({ currency: currency as any });
+    updateSettings({ currency });
     setShowCurrencyModal(false);
   };
 
@@ -116,6 +119,9 @@ export default function SettingsScreen() {
       'About Starr',
       `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.`,
       [
+        { text: 'About', onPress: () => openExternalLink(EXTERNAL_LINKS.ABOUT) },
+        { text: 'Blog', onPress: () => openExternalLink(EXTERNAL_LINKS.BLOG) },
+        { text: 'Careers', onPress: () => openExternalLink(EXTERNAL_LINKS.CAREERS) },
         { text: 'View on GitHub', onPress: () => openExternalLink(EXTERNAL_LINKS.GITHUB) },
         { text: 'OK' },
       ]
@@ -129,6 +135,7 @@ export default function SettingsScreen() {
       [
         { text: 'Visit Support Page', onPress: () => openExternalLink(EXTERNAL_LINKS.SUPPORT) },
         { text: 'Email Support', onPress: () => Linking.openURL('mailto:support@starr.app') },
+        { text: 'Careers', onPress: () => openExternalLink(EXTERNAL_LINKS.CAREERS) },
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -665,7 +672,9 @@ const createSettingsStyles = (colors: ColorTheme) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.gold.glow,
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -772,6 +781,8 @@ const createSettingsStyles = (colors: ColorTheme) => StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
@@ -792,7 +803,9 @@ const createSettingsItemStyles = (colors: ColorTheme) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.gold.glow,
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
