@@ -7,7 +7,6 @@
 // Polyfills must be imported first
 import '@/polyfills';
 
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -16,8 +15,6 @@ import { ThemeProvider, useTheme } from '@/contexts';
 import { AuthGate } from '@/components';
 import { IncomingPaymentOverlay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
-import { BackupService } from '@/services/backup';
-
 // Keep splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
 
@@ -26,12 +23,6 @@ function RootLayoutInner() {
   const incomingPayment = useWalletStore((state) => state.incomingPayment);
   const currency = useWalletStore((state) => state.settings.currency);
   const dismissIncomingPayment = useWalletStore((state) => state.dismissIncomingPayment);
-
-  useEffect(() => {
-    BackupService.initialize().catch((error) => {
-      console.error('[RootLayout] Failed to initialize backup service:', error);
-    });
-  }, []);
 
   return (
     <AuthGate>
@@ -76,12 +67,6 @@ function RootLayoutInner() {
             options={{
               animation: 'slide_from_bottom',
               presentation: 'modal',
-            }}
-          />
-          <Stack.Screen
-            name="privacy-policy"
-            options={{
-              animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
