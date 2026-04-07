@@ -51,9 +51,8 @@ const EXTERNAL_LINKS = {
   PRIVACY: 'https://starr.app/privacy',
   SUPPORT: 'https://github.com/starrapp/StarrWallet/issues',
   ABOUT: 'https://starr.app/about',
-  BLOG: 'https://github.com/starr-wallet/starr',
   CAREERS: 'mailto:careers@starr.app',
-  GITHUB: 'https://github.com/starr-wallet/starr',
+  GITHUB: 'https://github.com/starrapp/StarrWallet',
 };
 
 // Get app version from expo constants
@@ -120,7 +119,6 @@ export default function SettingsScreen() {
       `Version ${APP_VERSION}\n\nStarr is a non-custodial Lightning wallet built for simplicity and security.`,
       [
         { text: 'About', onPress: () => openExternalLink(EXTERNAL_LINKS.ABOUT) },
-        { text: 'Blog', onPress: () => openExternalLink(EXTERNAL_LINKS.BLOG) },
         { text: 'Careers', onPress: () => openExternalLink(EXTERNAL_LINKS.CAREERS) },
         { text: 'View on GitHub', onPress: () => openExternalLink(EXTERNAL_LINKS.GITHUB) },
         { text: 'OK' },
@@ -237,7 +235,7 @@ export default function SettingsScreen() {
               Danger zone
             </Text>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.dangerButton}
               onPress={() => router.push('/delete-wallet')}
             >
@@ -388,10 +386,10 @@ export default function SettingsScreen() {
                     }}
                   >
                     <View style={styles.themeOptionIcon}>
-                      <Ionicons 
-                        name={option.icon} 
-                        size={24} 
-                        color={themeMode === option.value ? colors.gold.pure : colors.text.secondary} 
+                      <Ionicons
+                        name={option.icon}
+                        size={24}
+                        color={themeMode === option.value ? colors.gold.pure : colors.text.secondary}
                       />
                     </View>
                     <View style={styles.currencyInfo}>
