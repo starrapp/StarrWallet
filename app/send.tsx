@@ -20,12 +20,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
+import { Button, Text, Input, AmountInput, Card, FiatAmount } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { BreezService, formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
-import { formatByCurrency, formatSats, msatToSatCeil } from '@/utils/format';
+import { formatAmountStr, formatSats, msatToSatCeil } from '@/utils/format';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -177,8 +177,8 @@ export default function SendScreen() {
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const sentAmount = formatByCurrency(amountSats, settings.currency);
-      Alert.alert('Payment sent', `Successfully sent ${sentAmount.value} ${sentAmount.unit}`, [
+      const sentAmount = formatAmountStr(amountSats, settings.bitcoinUnit);
+      Alert.alert('Payment sent', `Successfully sent ${sentAmount}`, [
         { text: 'OK', onPress: handleCancel },
       ]);
     } catch (err) {
@@ -411,16 +411,22 @@ export default function SendScreen() {
                 </Text>
                 <View style={styles.invoiceRow}>
                   <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
-                  <Text variant="titleSmall" color={colors.text.primary}>
-                    {formatByCurrency(prepareResult.amountSats, settings.currency).value} {formatByCurrency(prepareResult.amountSats, settings.currency).unit}
-                  </Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text variant="titleSmall" color={colors.text.primary}>
+                      {formatAmountStr(prepareResult.amountSats, settings.bitcoinUnit)}
+                    </Text>
+                    <FiatAmount sats={prepareResult.amountSats} style={{ textAlign: 'right' }} />
+                  </View>
                 </View>
                 {prepareResult.feeSats > 0n && (
                   <View style={styles.invoiceRow}>
                     <Text variant="bodyMedium" color={colors.text.secondary}>Fee</Text>
-                    <Text variant="bodyMedium" color={colors.text.primary}>
-                      {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatByCurrency(prepareResult.feeSats, settings.currency).value} {formatByCurrency(prepareResult.feeSats, settings.currency).unit}
-                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text variant="bodyMedium" color={colors.text.primary}>
+                        {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatAmountStr(prepareResult.feeSats, settings.bitcoinUnit)}
+                      </Text>
+                      <FiatAmount sats={prepareResult.feeSats} style={{ textAlign: 'right' }} />
+                    </View>
                   </View>
                 )}
                 <View style={styles.confirmActions}>
@@ -434,7 +440,7 @@ export default function SendScreen() {
             <View style={styles.balanceInfo}>
               <Ionicons name="wallet" size={16} color={colors.text.muted} />
               <Text variant="bodySmall" color={colors.text.muted}>
-                Available: {balance ? formatByCurrency(balance.lightning, settings.currency).value : '0'} {formatByCurrency(balance?.lightning ?? 0n, settings.currency).unit}
+                Available: {formatAmountStr(balance?.lightning ?? 0n, settings.bitcoinUnit)}
               </Text>
             </View>
 

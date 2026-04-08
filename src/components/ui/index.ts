@@ -1,5 +1,5 @@
 export { Button } from './Button';
 export { Card } from './Card';
-export { Text, Amount } from './Text';
+export { Text, Amount, FiatAmount } from './Text';
 export { Input, AmountInput } from './Input';
 

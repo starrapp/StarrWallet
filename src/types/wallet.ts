@@ -123,9 +123,9 @@ export interface ListPaymentsFilter {
 }
 
 // Currency types
-export type Currency =
-  | 'BTC'
-  | 'SATS'
+export type BitcoinUnit = 'BTC' | 'SATS';
+
+export type FiatCurrency =
   | 'USD'
   | 'EUR'
   | 'GBP'
@@ -161,8 +161,8 @@ export interface MaxDepositClaimFeeSetting {
 // Settings
 export interface WalletSettings {
   // Display
-  currency: Currency;
-
+  bitcoinUnit: BitcoinUnit;
+  fiatCurrency: FiatCurrency;
 
   // On-chain: max fee for automatic deposit claiming
   maxDepositClaimFee: MaxDepositClaimFeeSetting;

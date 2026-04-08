@@ -55,6 +55,8 @@ interface WalletState {
   unclaimedDeposits: UnclaimedDeposit[];
   isLoadingUnclaimed: boolean;
 
+  // Price
+  btcFiatPrice: number | null;
 
   // Settings
   settings: WalletSettings;
@@ -76,13 +78,15 @@ interface WalletState {
   dismissIncomingPayment: () => void;
 
   updateSettings: (settings: Partial<WalletSettings>) => void;
+  fetchBtcPrice: () => Promise<void>;
 
   syncNode: () => Promise<void>;
 }
 
 // Default settings
 const defaultSettings: WalletSettings = {
-  currency: 'SATS',
+  bitcoinUnit: 'SATS',
+  fiatCurrency: 'USD',
   maxDepositClaimFee: {
     type: 'conservative',
   },
@@ -113,6 +117,7 @@ export const useWalletStore = create<WalletState>()(persist(
     unclaimedDeposits: [],
     isLoadingUnclaimed: false,
 
+    btcFiatPrice: null,
 
     settings: defaultSettings,
 
@@ -137,6 +142,9 @@ export const useWalletStore = create<WalletState>()(persist(
             sortAscending: false,
           }),
         ]);
+
+        // Fetch BTC price in background (non-blocking)
+        get().fetchBtcPrice();
 
         if (paymentListener) {
           BreezService.off('payment', paymentListener);
@@ -333,9 +341,30 @@ export const useWalletStore = create<WalletState>()(persist(
 
     // Update settings
     updateSettings: (newSettings: Partial<WalletSettings>) => {
+      const fiatChanged = newSettings.fiatCurrency && newSettings.fiatCurrency !== get().settings.fiatCurrency;
       set((state) => ({
         settings: { ...state.settings, ...newSettings },
       }));
+      if (fiatChanged) {
+        get().fetchBtcPrice();
+      }
+    },
+
+    fetchBtcPrice: async () => {
+      const { fiatCurrency } = get().settings;
+      try {
+        const response = await fetch(
+          `https://price.coin.space/api/v1/public/prices?cryptoIds=bitcoin@bitcoin&fiat=${fiatCurrency.toLowerCase()}`
+        );
+        if (!response.ok) throw new Error(`Price API ${response.status}`);
+        const data = await response.json();
+        const price = data?.[0]?.price;
+        if (typeof price === 'number' && price > 0) {
+          set({ btcFiatPrice: price });
+        }
+      } catch (error) {
+        console.error('[WalletStore] Failed to fetch BTC price:', error);
+      }
     },
 
     // Sync node with network
@@ -353,5 +382,12 @@ export const useWalletStore = create<WalletState>()(persist(
     name: 'starr-wallet-settings',
     storage: createJSONStorage(() => AsyncStorage),
     partialize: (state) => ({ settings: state.settings }),
+    merge: (persisted, current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        ...(persisted as Partial<WalletState>)?.settings,
+      },
+    }),
   },
 ));

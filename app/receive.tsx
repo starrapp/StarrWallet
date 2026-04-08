@@ -20,12 +20,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import { Button, Text, Input, AmountInput, Card } from '@/components/ui';
+import { Button, Text, Input, AmountInput, Card, FiatAmount } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import { formatByCurrency, formatSats } from '@/utils/format';
+import { formatAmountStr, formatSats } from '@/utils/format';
 import type { Invoice, UnclaimedDeposit } from '@/types/wallet';
 
 type ReceiveMode = 'lightning' | 'onchain' | 'spark';
@@ -133,11 +133,11 @@ export default function ReceiveScreen() {
   const handleClaimDeposit = useCallback(
     (d: UnclaimedDeposit) => {
       const fee = d.requiredFeeSats;
-      const formattedAmount = formatByCurrency(d.amountSats, settings.currency);
-      const formattedFee = fee != null ? formatByCurrency(fee, settings.currency) : null;
+      const formattedAmount = formatAmountStr(d.amountSats, settings.bitcoinUnit);
+      const formattedFee = fee != null ? formatAmountStr(fee, settings.bitcoinUnit) : null;
       const message = fee != null
-        ? `Amount: ${formattedAmount.value} ${formattedAmount.unit}\nFee: ${formattedFee?.value} ${formattedFee?.unit}`
-        : `Amount: ${formattedAmount.value} ${formattedAmount.unit}`;
+        ? `Amount: ${formattedAmount}\nFee: ${formattedFee}`
+        : `Amount: ${formattedAmount}`;
       Alert.alert(
         'Claim deposit',
         message,
@@ -166,7 +166,7 @@ export default function ReceiveScreen() {
         ]
       );
     },
-    [claimDeposit, settings.currency]
+    [claimDeposit, settings.bitcoinUnit]
   );
 
   const handleCreateInvoice = async () => {
@@ -586,18 +586,24 @@ export default function ReceiveScreen() {
                       <Text variant="labelMedium" color={colors.text.muted}>
                         Amount
                       </Text>
-                      <Text variant="titleSmall" color={colors.text.primary}>
-                        {formatByCurrency(d.amountSats, settings.currency).value} {formatByCurrency(d.amountSats, settings.currency).unit}
-                      </Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text variant="titleSmall" color={colors.text.primary}>
+                          {formatAmountStr(d.amountSats, settings.bitcoinUnit)}
+                        </Text>
+                        <FiatAmount sats={d.amountSats} style={{ textAlign: 'right' }} />
+                      </View>
                     </View>
                     {d.requiredFeeSats != null && (
                       <View style={styles.unclaimedRow}>
                         <Text variant="labelMedium" color={colors.text.muted}>
                           Claim fee
                         </Text>
-                        <Text variant="bodyMedium" color={colors.text.secondary}>
-                          {formatByCurrency(d.requiredFeeSats, settings.currency).value} {formatByCurrency(d.requiredFeeSats, settings.currency).unit}
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text variant="bodyMedium" color={colors.text.secondary}>
+                            {formatAmountStr(d.requiredFeeSats, settings.bitcoinUnit)}
+                          </Text>
+                          <FiatAmount sats={d.requiredFeeSats} style={{ textAlign: 'right' }} />
+                        </View>
                       </View>
                     )}
                     {d.claimError && (

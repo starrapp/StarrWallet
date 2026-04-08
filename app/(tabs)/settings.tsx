@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { Text, Input } from '@/components/ui';
-import type { Currency, MaxDepositClaimFeeSetting } from '@/types/wallet';
+import type { BitcoinUnit, FiatCurrency, MaxDepositClaimFeeSetting } from '@/types/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
@@ -81,22 +81,21 @@ export default function SettingsScreen() {
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const colors = useColors();
   const styles = useMemo(() => createSettingsStyles(colors), [colors]);
-  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showBitcoinUnitModal, setShowBitcoinUnitModal] = useState(false);
+  const [showFiatCurrencyModal, setShowFiatCurrencyModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showMaxDepositClaimFeeModal, setShowMaxDepositClaimFeeModal] = useState(false);
 
-  const handleCurrencySelect = (currency: Currency) => {
+  const handleBitcoinUnitSelect = (unit: BitcoinUnit) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    updateSettings({ currency });
-    setShowCurrencyModal(false);
+    updateSettings({ bitcoinUnit: unit });
+    setShowBitcoinUnitModal(false);
   };
 
-  const getCurrencyDisplayName = () => {
-    const btcUnit = BITCOIN_UNITS.find(u => u.value === settings.currency);
-    if (btcUnit) return btcUnit.label;
-    const fiat = FIAT_CURRENCIES.find(c => c.value === settings.currency);
-    if (fiat) return fiat.label;
-    return settings.currency;
+  const handleFiatCurrencySelect = (currency: FiatCurrency) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    updateSettings({ fiatCurrency: currency });
+    setShowFiatCurrencyModal(false);
   };
 
   const openExternalLink = async (url: string) => {
@@ -161,10 +160,17 @@ export default function SettingsScreen() {
             </Text>
 
             <SettingsItem
+              icon="logo-bitcoin"
+              title="Bitcoin Unit"
+              subtitle={BITCOIN_UNITS.find(u => u.value === settings.bitcoinUnit)?.label ?? settings.bitcoinUnit}
+              onPress={() => setShowBitcoinUnitModal(true)}
+            />
+
+            <SettingsItem
               icon="cash"
-              title="Currency"
-              subtitle={getCurrencyDisplayName()}
-              onPress={() => setShowCurrencyModal(true)}
+              title="Fiat Currency"
+              subtitle={FIAT_CURRENCIES.find(c => c.value === settings.fiatCurrency)?.label ?? settings.fiatCurrency}
+              onPress={() => setShowFiatCurrencyModal(true)}
             />
 
             <SettingsItem
@@ -248,42 +254,37 @@ export default function SettingsScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Currency Selection Modal */}
+      {/* Bitcoin Unit Selection Modal */}
       <Modal
-        visible={showCurrencyModal}
+        visible={showBitcoinUnitModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowCurrencyModal(false)}
+        onRequestClose={() => setShowBitcoinUnitModal(false)}
       >
         <View style={styles.modalContainer}>
           <SafeAreaView style={styles.modalSafeArea}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text variant="headlineSmall" color={colors.text.primary}>
-                Select Currency
+                Bitcoin Unit
               </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
-                onPress={() => setShowCurrencyModal(false)}
+                onPress={() => setShowBitcoinUnitModal(false)}
               >
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {/* Bitcoin Units */}
               <View style={styles.modalSection}>
-                <Text variant="labelMedium" color={colors.gold.pure} style={styles.modalSectionLabel}>
-                  Bitcoin units
-                </Text>
                 {BITCOIN_UNITS.map((unit) => (
                   <TouchableOpacity
                     key={unit.value}
                     style={[
                       styles.currencyOption,
-                      settings.currency === unit.value && styles.currencyOptionSelected,
+                      settings.bitcoinUnit === unit.value && styles.currencyOptionSelected,
                     ]}
-                    onPress={() => handleCurrencySelect(unit.value)}
+                    onPress={() => handleBitcoinUnitSelect(unit.value as BitcoinUnit)}
                   >
                     <View style={styles.currencyInfo}>
                       <View style={styles.currencyHeader}>
@@ -298,29 +299,48 @@ export default function SettingsScreen() {
                         {unit.description}
                       </Text>
                     </View>
-                    {settings.currency === unit.value && (
+                    {settings.bitcoinUnit === unit.value && (
                       <Ionicons name="checkmark-circle" size={24} color={colors.gold.pure} />
                     )}
                   </TouchableOpacity>
                 ))}
               </View>
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
 
-              {/* Fiat Currencies */}
+      {/* Fiat Currency Selection Modal */}
+      <Modal
+        visible={showFiatCurrencyModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowFiatCurrencyModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <SafeAreaView style={styles.modalSafeArea}>
+            <View style={styles.modalHeader}>
+              <Text variant="headlineSmall" color={colors.text.primary}>
+                Fiat Currency
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowFiatCurrencyModal(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               <View style={styles.modalSection}>
-                <Text variant="labelMedium" color={colors.accent.cyan} style={styles.modalSectionLabel}>
-                  Fiat currencies
-                </Text>
-                <Text variant="bodySmall" color={colors.text.muted} style={styles.fiatHint}>
-                  Show equivalent value in fiat currency
-                </Text>
                 {FIAT_CURRENCIES.map((currency) => (
                   <TouchableOpacity
                     key={currency.value}
                     style={[
                       styles.currencyOption,
-                      settings.currency === currency.value && styles.currencyOptionSelected,
+                      settings.fiatCurrency === currency.value && styles.currencyOptionSelected,
                     ]}
-                    onPress={() => handleCurrencySelect(currency.value)}
+                    onPress={() => handleFiatCurrencySelect(currency.value as FiatCurrency)}
                   >
                     <View style={styles.currencyInfo}>
                       <View style={styles.currencyHeader}>
@@ -332,7 +352,7 @@ export default function SettingsScreen() {
                         </Text>
                       </View>
                     </View>
-                    {settings.currency === currency.value && (
+                    {settings.fiatCurrency === currency.value && (
                       <Ionicons name="checkmark-circle" size={24} color={colors.accent.cyan} />
                     )}
                   </TouchableOpacity>

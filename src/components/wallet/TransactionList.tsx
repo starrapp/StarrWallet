@@ -15,12 +15,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
-import { Text } from '@/components/ui';
+import { Text, FiatAmount } from '@/components/ui';
 import { layout, spacing } from '@/theme';
 import { useColors } from '@/contexts';
 import { useWalletStore } from '@/stores/walletStore';
 import type { LightningPayment } from '@/types/wallet';
-import { formatSignedByCurrency } from '@/utils/format';
+import { formatSignedAmount } from '@/utils/format';
 
 interface TransactionListProps {
   transactions: LightningPayment[];
@@ -125,8 +125,8 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   const isReceive = transaction.type === 'receive';
   const isPending = transaction.status === 'pending';
   const isFailed = transaction.status === 'failed';
-  const currency = useWalletStore((state) => state.settings.currency);
-  const formattedAmount = formatSignedByCurrency(transaction.amountSats, isReceive ? '+' : '-', currency);
+  const bitcoinUnit = useWalletStore((state) => state.settings.bitcoinUnit);
+  const formattedAmount = formatSignedAmount(transaction.amountSats, isReceive ? '+' : '-', bitcoinUnit);
 
   const getStatusColor = (): string => {
     if (isFailed) return colors.status.error;
@@ -200,6 +200,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         <Text variant="labelSmall" color={colors.text.muted}>
           {formattedAmount.unit}
         </Text>
+        <FiatAmount sats={transaction.amountSats} style={{ textAlign: 'right' }} />
       </View>
     </TouchableOpacity>
   );
@@ -262,5 +263,6 @@ const styles = StyleSheet.create({
   },
   amountContainer: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
 });

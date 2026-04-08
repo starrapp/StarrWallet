@@ -21,7 +21,7 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutInner() {
   const { colors: themeColors, isDark } = useTheme();
   const incomingPayment = useWalletStore((state) => state.incomingPayment);
-  const currency = useWalletStore((state) => state.settings.currency);
+  const bitcoinUnit = useWalletStore((state) => state.settings.bitcoinUnit);
   const dismissIncomingPayment = useWalletStore((state) => state.dismissIncomingPayment);
 
   return (
@@ -84,7 +84,7 @@ function RootLayoutInner() {
         </Stack>
         <IncomingPaymentOverlay
           payment={incomingPayment}
-          currency={currency}
+          currency={bitcoinUnit}
           onDismiss={dismissIncomingPayment}
         />
       </View>

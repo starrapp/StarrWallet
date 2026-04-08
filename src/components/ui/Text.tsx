@@ -8,9 +8,9 @@ import React from 'react';
 import { Text as RNText, TextStyle, StyleSheet, StyleProp } from 'react-native';
 import { typography } from '@/theme';
 import { useColors } from '@/contexts';
-import { formatByCurrency } from '@/utils/format';
+import { formatAmount, formatFiat } from '@/utils/format';
 import { useWalletStore } from '@/stores/walletStore';
-import type { Currency } from '@/types/wallet';
+import type { BitcoinUnit } from '@/types/wallet';
 
 type TextVariant = keyof typeof typography;
 
@@ -56,7 +56,7 @@ interface AmountProps {
   showUnit?: boolean;
   color?: string;
   style?: StyleProp<TextStyle>;
-  currency?: Currency;
+  currency?: BitcoinUnit;
 }
 
 export const Amount: React.FC<AmountProps> = ({
@@ -68,9 +68,9 @@ export const Amount: React.FC<AmountProps> = ({
   currency,
 }) => {
   const colors = useColors();
-  const selectedCurrency = useWalletStore((state) => state.settings.currency);
-  const displayCurrency = currency ?? selectedCurrency;
-  const formatted = formatByCurrency(sats, displayCurrency);
+  const storeBitcoinUnit = useWalletStore((state) => state.settings.bitcoinUnit);
+  const displayCurrency = currency ?? storeBitcoinUnit;
+  const formatted = formatAmount(sats, displayCurrency);
   const amountColor = color || colors.text.primary;
 
   const getVariant = (): TextVariant => {
@@ -89,6 +89,26 @@ export const Amount: React.FC<AmountProps> = ({
           {' '}{formatted.unit}
         </RNText>
       )}
+    </RNText>
+  );
+};
+
+// Fiat equivalent display component
+interface FiatAmountProps {
+  sats: bigint;
+  style?: StyleProp<TextStyle>;
+  color?: string;
+}
+
+export const FiatAmount: React.FC<FiatAmountProps> = ({ sats, style, color }) => {
+  const colors = useColors();
+  const btcFiatPrice = useWalletStore((s) => s.btcFiatPrice);
+  const fiatCurrency = useWalletStore((s) => s.settings.fiatCurrency);
+  if (btcFiatPrice == null) return null;
+  const formatted = formatFiat(sats, btcFiatPrice, fiatCurrency);
+  return (
+    <RNText style={[typography.bodySmall, { color: color || colors.text.muted, alignSelf: 'stretch' }, style]}>
+      {formatted}
     </RNText>
   );
 };

@@ -2,16 +2,16 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Text } from '@/components/ui';
+import { Text, FiatAmount } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
-import { formatByCurrency } from '@/utils/format';
-import type { Currency, LightningPayment } from '@/types/wallet';
+import { formatAmount } from '@/utils/format';
+import type { BitcoinUnit, LightningPayment } from '@/types/wallet';
 import type { ColorTheme } from '@/theme/colors';
 
 interface IncomingPaymentOverlayProps {
   payment: LightningPayment | null;
-  currency: Currency;
+  currency: BitcoinUnit;
   onDismiss: () => void;
 }
 
@@ -65,11 +65,11 @@ export const IncomingPaymentOverlay: React.FC<IncomingPaymentOverlayProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const timer = setTimeout(() => onDismissRef.current(), 3500);
     return () => clearTimeout(timer);
-  }, [payment?.id]);
+  }, [payment]);
 
   if (!payment) return null;
 
-  const amount = formatByCurrency(payment.amountSats, currency);
+  const amount = formatAmount(payment.amountSats, currency);
 
   return (
     <TouchableOpacity
@@ -83,7 +83,7 @@ export const IncomingPaymentOverlay: React.FC<IncomingPaymentOverlayProps> = ({
         <View style={styles.icon}>
           <Ionicons name="checkmark" size={42} color={colors.status.success} />
         </View>
-        <Text variant="headlineSmall" color={colors.text.primary} align="center">
+        <Text variant="headlineSmall" color={colors.text.primary}>
           Payment received
         </Text>
         <Text variant="amountMedium" color={colors.status.success}>
@@ -92,7 +92,8 @@ export const IncomingPaymentOverlay: React.FC<IncomingPaymentOverlayProps> = ({
         <Text variant="titleSmall" color={colors.text.secondary}>
           {amount.unit}
         </Text>
-        <Text variant="bodySmall" color={colors.text.muted} align="center">
+        <FiatAmount sats={payment.amountSats} style={{ textAlign: 'center' }} />
+        <Text variant="bodySmall" color={colors.text.muted}>
           Tap anywhere to dismiss
         </Text>
       </View>

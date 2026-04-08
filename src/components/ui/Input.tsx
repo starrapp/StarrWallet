@@ -15,7 +15,8 @@ import {
 import { Text } from './Text';
 import { layout, spacing, typography } from '@/theme';
 import { useColors } from '@/contexts';
-import { formatSats } from '@/utils/format';
+import { formatFiat, satsToBtc, formatAmount } from '@/utils/format';
+import { useWalletStore } from '@/stores/walletStore';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -120,12 +121,63 @@ export const AmountInput: React.FC<AmountInputProps> = ({
   editable = true,
 }) => {
   const colors = useColors();
+  const btcFiatPrice = useWalletStore((s) => s.btcFiatPrice);
+  const fiatCurrency = useWalletStore((s) => s.settings.fiatCurrency);
+  const bitcoinUnit = useWalletStore((s) => s.settings.bitcoinUnit);
+  const isBtc = bitcoinUnit === 'BTC';
 
-  const handleChange = (text: string) => {
-    // Only allow numbers
+  // Local display value for BTC mode (decimal string the user edits)
+  const [btcDisplay, setBtcDisplay] = useState('');
+
+  // Sync btcDisplay when value (sats) changes externally (e.g. reset to '')
+  const satsValue = BigInt(value || '0');
+  const prevSatsRef = React.useRef(satsValue);
+  if (satsValue !== prevSatsRef.current) {
+    prevSatsRef.current = satsValue;
+    if (isBtc) {
+      const expected = satsValue === 0n ? '' : satsToBtc(satsValue);
+      // Only update if the external sats don't match what user typed
+      const currentSats = btcDisplayToSats(btcDisplay);
+      if (currentSats !== satsValue) {
+        setBtcDisplay(expected);
+      }
+    }
+  }
+
+  const handleChangeSats = (text: string) => {
     const numericValue = text.replace(/[^0-9]/g, '');
     onChangeValue(numericValue);
   };
+
+  const handleChangeBtc = (text: string) => {
+    // Allow digits and one decimal point
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    // Prevent multiple dots
+    const parts = cleaned.split('.');
+    const sanitized = parts.length > 2
+      ? parts[0] + '.' + parts.slice(1).join('')
+      : cleaned;
+    // Limit to 8 decimal places
+    const [whole, frac] = sanitized.split('.');
+    const limited = frac !== undefined
+      ? whole + '.' + frac.slice(0, 8)
+      : sanitized;
+
+    setBtcDisplay(limited);
+    const sats = btcDisplayToSats(limited);
+    onChangeValue(sats === 0n ? '' : sats.toString());
+  };
+
+  const displayValue = isBtc ? btcDisplay : value;
+  const unitLabel = isBtc ? 'BTC' : 'sats';
+
+  const fiatText = btcFiatPrice != null && satsValue > 0n
+    ? formatFiat(satsValue, btcFiatPrice, fiatCurrency)
+    : null;
+
+  const maxFormatted = maxAmount !== undefined
+    ? formatAmount(maxAmount, bitcoinUnit)
+    : null;
 
   return (
     <View style={styles.container}>
@@ -134,7 +186,7 @@ export const AmountInput: React.FC<AmountInputProps> = ({
           {label}
         </Text>
       )}
-      
+
       <View style={styles.amountContainer}>
         <TextInput
           style={[
@@ -142,25 +194,31 @@ export const AmountInput: React.FC<AmountInputProps> = ({
             typography.amountMedium,
             { color: editable ? colors.text.primary : colors.text.muted }
           ]}
-          value={value}
-          onChangeText={handleChange}
-          keyboardType="numeric"
+          value={displayValue}
+          onChangeText={isBtc ? handleChangeBtc : handleChangeSats}
+          keyboardType={isBtc ? 'decimal-pad' : 'numeric'}
           placeholder="0"
           placeholderTextColor={colors.text.muted}
           selectionColor={colors.gold.pure}
           editable={editable}
         />
         <Text variant="titleLarge" color={colors.text.secondary}>
-          sats
+          {unitLabel}
         </Text>
       </View>
-      
-      {maxAmount !== undefined && (
-        <Text variant="bodySmall" color={colors.text.muted} style={styles.hint}>
-          Max: {formatSats(maxAmount)} sats
+
+      {fiatText && (
+        <Text variant="bodySmall" color={colors.text.muted} style={styles.fiatHint}>
+          {fiatText}
         </Text>
       )}
-      
+
+      {maxFormatted && (
+        <Text variant="bodySmall" color={colors.text.muted} style={styles.hint}>
+          Max: {maxFormatted.value} {maxFormatted.unit}
+        </Text>
+      )}
+
       {error && (
         <Text variant="bodySmall" color={colors.status.error} style={styles.hint}>
           {error}
@@ -169,6 +227,13 @@ export const AmountInput: React.FC<AmountInputProps> = ({
     </View>
   );
 };
+
+function btcDisplayToSats(btcStr: string): bigint {
+  if (!btcStr || btcStr === '.' || btcStr === '0.') return 0n;
+  const num = parseFloat(btcStr);
+  if (Number.isNaN(num) || num <= 0) return 0n;
+  return BigInt(Math.round(num * 100_000_000));
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -205,5 +270,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     minWidth: 80,
     marginRight: spacing.sm,
+  },
+  fiatHint: {
+    textAlign: 'center',
+    marginTop: -spacing.sm,
+    marginBottom: spacing.xs,
   },
 });

@@ -17,15 +17,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { formatDistanceToNow } from 'date-fns';
-import { Text } from '@/components/ui';
+import { Text, FiatAmount } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import { formatSignedByCurrency } from '@/utils/format';
+import { formatSignedAmountStr } from '@/utils/format';
 import type { ColorTheme } from '@/theme/colors';
-import type { LightningPayment, Currency as WalletCurrency } from '@/types/wallet';
+import type { LightningPayment, BitcoinUnit } from '@/types/wallet';
 
 // Styles function - defined before component to ensure it's available
 const getStyles = (colors: ColorTheme) => StyleSheet.create({
@@ -154,6 +154,7 @@ export default function HomeScreen() {
     initError,
     refreshBalance,
     refreshRecentPayments,
+    fetchBtcPrice,
     initializeWallet,
     isInitialized,
   } = useWalletStore();
@@ -172,7 +173,7 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([refreshBalance(), refreshRecentPayments()]);
+    await Promise.all([refreshBalance(), refreshRecentPayments(), fetchBtcPrice()]);
     setIsRefreshing(false);
   };
 
@@ -322,7 +323,7 @@ export default function HomeScreen() {
             {recentPayments.length > 0 ? (
               <View style={styles.paymentsList}>
                 {recentPayments.map((payment) => (
-                  <PaymentItem key={payment.id} payment={payment} currency={settings.currency} />
+                  <PaymentItem key={payment.id} payment={payment} currency={settings.bitcoinUnit} />
                 ))}
               </View>
             ) : (
@@ -343,12 +344,12 @@ export default function HomeScreen() {
   );
 }
 
-const PaymentItem: React.FC<{ payment: LightningPayment; currency: WalletCurrency }> = ({ payment, currency }) => {
+const PaymentItem: React.FC<{ payment: LightningPayment; currency: BitcoinUnit }> = ({ payment, currency }) => {
   const router = useRouter();
   const colors = useColors();
   const isReceive = payment.type === 'receive';
   const styles = getStyles(colors);
-  const formattedAmount = formatSignedByCurrency(payment.amountSats, isReceive ? '+' : '-', currency);
+  const formattedAmount = formatSignedAmountStr(payment.amountSats, isReceive ? '+' : '-', currency);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -361,7 +362,7 @@ const PaymentItem: React.FC<{ payment: LightningPayment; currency: WalletCurrenc
       onPress={handlePress}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${isReceive ? 'Received' : 'Sent'} ${payment.description ?? ''}, ${formattedAmount.value} ${formattedAmount.unit}`}
+      accessibilityLabel={`${isReceive ? 'Received' : 'Sent'} ${payment.description ?? ''}, ${formattedAmount}`}
     >
       <View style={[
         styles.paymentIcon,
@@ -381,12 +382,15 @@ const PaymentItem: React.FC<{ payment: LightningPayment; currency: WalletCurrenc
           {formatDistanceToNow(payment.timestamp, { addSuffix: true })}
         </Text>
       </View>
-      <Text
-        variant="titleSmall"
-        color={isReceive ? colors.status.success : colors.text.primary}
-      >
-        {formattedAmount.value} {formattedAmount.unit}
-      </Text>
+      <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
+        <Text
+          variant="titleSmall"
+          color={isReceive ? colors.status.success : colors.text.primary}
+        >
+          {formattedAmount}
+        </Text>
+        <FiatAmount sats={payment.amountSats} style={{ textAlign: 'right' }} />
+      </View>
     </TouchableOpacity>
   );
 };

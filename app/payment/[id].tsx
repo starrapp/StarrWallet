@@ -15,11 +15,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { Button, Text, Card } from '@/components/ui';
+import { Button, Text, Card, FiatAmount } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
-import { formatByCurrency, formatSignedByCurrency } from '@/utils/format';
+import { formatSignedAmountStr, formatAmountStr } from '@/utils/format';
 import type { LightningPayment } from '@/types/wallet';
 
 export default function PaymentDetailScreen() {
@@ -27,7 +27,7 @@ export default function PaymentDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const getPayment = useWalletStore((s) => s.getPayment);
-  const currency = useWalletStore((s) => s.settings.currency);
+  const bitcoinUnit = useWalletStore((s) => s.settings.bitcoinUnit);
   const [payment, setPayment] = useState<LightningPayment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,8 +140,8 @@ export default function PaymentDetailScreen() {
         : isReceive
           ? colors.status.success
           : colors.text.primary;
-  const formattedAmount = formatSignedByCurrency(payment.amountSats, isReceive ? '+' : '-', currency);
-  const formattedFee = payment.feeSats != null ? formatByCurrency(payment.feeSats, currency) : null;
+  const formattedAmount = formatSignedAmountStr(payment.amountSats, isReceive ? '+' : '-', bitcoinUnit);
+  const formattedFee = payment.feeSats != null ? formatAmountStr(payment.feeSats, bitcoinUnit) : null;
 
   return (
     <View style={styles.container}>
@@ -168,10 +168,11 @@ export default function PaymentDetailScreen() {
                 color={statusColor}
               />
             </View>
-            <Text variant="headlineMedium" color={colors.text.primary} align="center">
-              {formattedAmount.value} {formattedAmount.unit}
+            <Text variant="headlineMedium" color={colors.text.primary}>
+              {formattedAmount}
             </Text>
-            <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+            <FiatAmount sats={payment.amountSats} style={{ textAlign: 'center' }} />
+            <Text variant="bodyMedium" color={colors.text.secondary}>
               {payment.description ?? (isReceive ? 'Received' : 'Sent')}
             </Text>
             <View style={[styles.row, { marginTop: spacing.sm }]}>
@@ -208,8 +209,9 @@ export default function PaymentDetailScreen() {
                   Fee
                 </Text>
                 <Text variant="bodyMedium" color={colors.text.primary}>
-                  {formattedFee?.value} {formattedFee?.unit}
+                  {formattedFee}
                 </Text>
+                <FiatAmount sats={payment.feeSats!} />
               </>
             )}
             <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>

@@ -7,11 +7,11 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Amount } from '@/components/ui';
+import { Text, Amount, FiatAmount } from '@/components/ui';
 import { layout, spacing } from '@/theme';
 import { useColors } from '@/contexts';
 import type { Balance } from '@/types/wallet';
-import { formatByCurrency } from '@/utils/format';
+import { formatAmountStr } from '@/utils/format';
 import { useWalletStore } from '@/stores/walletStore';
 
 interface BalanceCardProps {
@@ -26,10 +26,10 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   isLoading = false,
 }) => {
   const colors = useColors();
-  const currency = useWalletStore((state) => state.settings.currency);
+  const bitcoinUnit = useWalletStore((state) => state.settings.bitcoinUnit);
   const lightning = balance?.lightning ?? 0n;
   const totalBalance = lightning;
-  const formattedLightning = formatByCurrency(lightning, currency);
+  const formattedLightning = formatAmountStr(lightning, bitcoinUnit);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
@@ -53,6 +53,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       {/* Main balance */}
       <View style={styles.balanceContainer}>
         <Amount sats={totalBalance} size="lg" color={colors.text.primary} />
+        <FiatAmount sats={totalBalance} />
       </View>
 
       {/* Breakdown */}
@@ -66,7 +67,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               Lightning
             </Text>
             <Text variant="titleSmall" color={colors.text.primary}>
-              {formattedLightning.value} {formattedLightning.unit}
+              {formattedLightning}
             </Text>
           </View>
         </View>

@@ -1,7 +1,7 @@
 /**
  * Formatting utilities for the wallet
  */
-import type { Currency } from '@/types/wallet';
+import type { BitcoinUnit } from '@/types/wallet';
 
 /**
  * Format satoshis with thousands separator
@@ -10,119 +10,51 @@ export const formatSats = (sats: bigint): string => {
   return sats.toLocaleString('en-US');
 };
 
-/**
- * Format satoshis with explicit sign prefix
- */
-export const formatSignedSats = (sats: bigint, sign: '+' | '-'): string => {
-  return `${sign}${formatSats(sats)}`;
-};
-
-const FIAT_CURRENCIES: ReadonlySet<Currency> = new Set([
-  'USD',
-  'EUR',
-  'GBP',
-  'JPY',
-  'CAD',
-  'AUD',
-  'CHF',
-  'CNY',
-  'INR',
-  'MXN',
-  'BRL',
-  'KRW',
-]);
-
 export interface FormattedAmount {
   value: string;
   unit: string;
-  // True when selected fiat currency falls back to BTC denomination.
-  usesFallback: boolean;
 }
 
-export const formatByCurrency = (sats: bigint, currency: Currency): FormattedAmount => {
-  if (currency === 'SATS') {
-    return { value: formatSats(sats), unit: 'sats', usesFallback: false };
+export const formatAmount = (sats: bigint, unit: BitcoinUnit): FormattedAmount => {
+  if (unit === 'BTC') {
+    return { value: satsToBtc(sats), unit: 'BTC' };
   }
-
-  if (currency === 'BTC') {
-    return { value: satsToBtc(sats), unit: 'BTC', usesFallback: false };
-  }
-
-  if (FIAT_CURRENCIES.has(currency)) {
-    return {
-      value: satsToBtc(sats),
-      unit: `${currency} (BTC)`,
-      usesFallback: true,
-    };
-  }
-
-  return { value: formatSats(sats), unit: 'sats', usesFallback: true };
+  return { value: formatSats(sats), unit: 'sats' };
 };
 
-export const formatSignedByCurrency = (
+export const formatAmountStr = (sats: bigint, unit: BitcoinUnit): string => {
+  const f = formatAmount(sats, unit);
+  return `${f.value} ${f.unit}`;
+};
+
+export const formatSignedAmount = (
   sats: bigint,
   sign: '+' | '-',
-  currency: Currency
+  unit: BitcoinUnit
 ): FormattedAmount => {
-  const formatted = formatByCurrency(sats, currency);
+  const formatted = formatAmount(sats, unit);
   return {
     ...formatted,
     value: `${sign}${formatted.value}`,
   };
 };
 
+export const formatSignedAmountStr = (
+  sats: bigint,
+  sign: '+' | '-',
+  unit: BitcoinUnit
+): string => {
+  const f = formatAmount(sats, unit);
+  return `${sign}${f.value} ${f.unit}`;
+};
+
 /**
- * Format satoshis to BTC string
+ * Format satoshis to BTC decimal string (always positive, sign handled by caller)
  */
 export const satsToBtc = (sats: bigint): string => {
-  const sign = sats < 0n ? '-' : '';
-  const abs = sats < 0n ? -sats : sats;
-  const whole = abs / 100_000_000n;
-  const frac = (abs % 100_000_000n).toString().padStart(8, '0');
-  return `${sign}${whole.toString()}.${frac}`;
-};
-
-/**
- * Parse BTC to satoshis
- */
-export const btcToSats = (btc: number): bigint => {
-  return BigInt(Math.round(btc * 100_000_000));
-};
-
-/**
- * Truncate a string with ellipsis in the middle
- */
-export const truncateMiddle = (str: string, startChars = 8, endChars = 8): string => {
-  if (str.length <= startChars + endChars) return str;
-  return `${str.slice(0, startChars)}...${str.slice(-endChars)}`;
-};
-
-/**
- * Format a Lightning invoice for display
- */
-export const formatInvoice = (invoice: string): string => {
-  return truncateMiddle(invoice, 10, 10);
-};
-
-/**
- * Format a public key or node ID
- */
-export const formatPubkey = (pubkey: string): string => {
-  return truncateMiddle(pubkey, 8, 8);
-};
-
-/**
- * Format a payment hash
- */
-export const formatPaymentHash = (hash: string): string => {
-  return truncateMiddle(hash, 6, 6);
-};
-
-/**
- * Format millisats to sats with proper rounding
- */
-export const msatToSat = (msat: bigint): bigint => {
-  return msat / 1000n;
+  const whole = sats / 100_000_000n;
+  const frac = (sats % 100_000_000n).toString().padStart(8, '0');
+  return `${whole.toString()}.${frac}`;
 };
 
 /**
@@ -133,26 +65,13 @@ export const msatToSatCeil = (msat: bigint): bigint => {
 };
 
 /**
- * Format sats to millisats
+ * Convert sats to fiat string using BTC price
  */
-export const satToMsat = (sat: bigint): bigint => {
-  return sat * 1000n;
-};
-
-/**
- * Format a fee rate (parts per million) to percentage
- */
-export const ppmToPercent = (ppm: number): string => {
-  return (ppm / 10000).toFixed(2) + '%';
-};
-
-/**
- * Format bytes to human readable size
- */
-export const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+export const formatFiat = (sats: bigint, btcPrice: number, fiatCurrency: string): string => {
+  const btcValue = Number(sats) / 100_000_000;
+  const fiatValue = btcValue * btcPrice;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: fiatCurrency,
+  }).format(fiatValue);
 };
