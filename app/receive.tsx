@@ -8,15 +8,13 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
   TouchableOpacity,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
@@ -209,7 +207,6 @@ export default function ReceiveScreen() {
       StyleSheet.create({
         container: { flex: 1, backgroundColor: colors.background.primary },
         safeArea: { flex: 1 },
-        keyboardView: { flex: 1 },
         header: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -221,6 +218,7 @@ export default function ReceiveScreen() {
         },
         scrollView: { flex: 1 },
         scrollContent: {
+          flexGrow: 1,
           padding: spacing.lg,
           gap: spacing.lg,
           alignItems: 'center',
@@ -316,317 +314,313 @@ export default function ReceiveScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Button
-              title="Close"
-              variant="ghost"
-              size="sm"
-              onPress={() => router.back()}
-            />
-            <Text variant="titleLarge" color={colors.text.primary}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Button
+            title="Close"
+            variant="ghost"
+            size="sm"
+            onPress={() => router.back()}
+          />
+          <Text variant="titleLarge" color={colors.text.primary}>
               Receive Payment
-            </Text>
-            <View style={{ width: 60 }} />
+          </Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={20}
+        >
+          {/* Lightning / On-chain switch */}
+          <View style={styles.segmentRow}>
+            <TouchableOpacity
+              style={[
+                styles.segmentButton,
+                receiveMode === 'lightning' ? styles.segmentButtonActive : styles.segmentButtonInactive,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setReceiveMode('lightning');
+              }}
+            >
+              <Ionicons
+                name="flash"
+                size={18}
+                color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
+              />
+              <Text
+                variant="labelLarge"
+                color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
+              >
+                  Lightning
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.segmentButton,
+                receiveMode === 'onchain' ? styles.segmentButtonActive : styles.segmentButtonInactive,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setReceiveMode('onchain');
+              }}
+            >
+              <Ionicons
+                name="link"
+                size={18}
+                color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
+              />
+              <Text
+                variant="labelLarge"
+                color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
+              >
+                  On-chain
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.segmentButton,
+                receiveMode === 'spark' ? styles.segmentButtonActive : styles.segmentButtonInactive,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setReceiveMode('spark');
+              }}
+            >
+              <Ionicons
+                name="flash-outline"
+                size={18}
+                color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
+              />
+              <Text
+                variant="labelLarge"
+                color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
+              >
+                  Spark
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Lightning / On-chain switch */}
-            <View style={styles.segmentRow}>
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  receiveMode === 'lightning' ? styles.segmentButtonActive : styles.segmentButtonInactive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReceiveMode('lightning');
-                }}
-              >
-                <Ionicons
-                  name="flash"
-                  size={18}
-                  color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
-                />
-                <Text
-                  variant="labelLarge"
-                  color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
-                >
-                  Lightning
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  receiveMode === 'onchain' ? styles.segmentButtonActive : styles.segmentButtonInactive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReceiveMode('onchain');
-                }}
-              >
-                <Ionicons
-                  name="link"
-                  size={18}
-                  color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
-                />
-                <Text
-                  variant="labelLarge"
-                  color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
-                >
-                  On-chain
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  receiveMode === 'spark' ? styles.segmentButtonActive : styles.segmentButtonInactive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReceiveMode('spark');
-                }}
-              >
-                <Ionicons
-                  name="flash-outline"
-                  size={18}
-                  color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
-                />
-                <Text
-                  variant="labelLarge"
-                  color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
-                >
-                  Spark
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {receiveMode === 'onchain' ? (
-              /* On-chain address */
-              <View style={styles.onchainSection}>
-                <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+          {receiveMode === 'onchain' ? (
+          /* On-chain address */
+            <View style={styles.onchainSection}>
+              <Text variant="bodyMedium" color={colors.text.secondary} align="center">
                   Receive Bitcoin to your on-chain address. Funds may take time to confirm and will appear after confirmation.
-                </Text>
-                {isLoadingOnchain ? (
-                  <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color={colors.gold.pure} />
-                    <Text variant="bodySmall" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
-                      Getting address...
-                    </Text>
-                  </View>
-                ) : onchainError ? (
-                  <View style={{ alignItems: 'center', gap: spacing.sm }}>
-                    <Text variant="bodyMedium" color={colors.status.error}>
-                      {onchainError}
-                    </Text>
-                    <Button title="Retry" variant="secondary" size="sm" onPress={fetchOnchainAddress} />
-                  </View>
-                ) : onchainAddress ? (
-                  <>
-                    <QRDisplay value={onchainAddress} label="Scan to send Bitcoin" />
-                    <View style={styles.addressText}>
-                      <Text variant="bodySmall" color={colors.text.secondary} style={{ fontFamily: 'monospace' }}>
-                        {onchainAddress}
-                      </Text>
-                    </View>
-                    <Button
-                      title="Copy address"
-                      variant="secondary"
-                      size="md"
-                      onPress={handleCopyOnchainAddress}
-                      icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
-                    />
-                  </>
-                ) : null}
-              </View>
-            ) : receiveMode === 'spark' ? (
-              /* Spark address */
-              <View style={styles.onchainSection}>
-                <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-                  Receive from other Spark users. Your Spark address is static and can be shared.
-                </Text>
-                {isLoadingSpark ? (
-                  <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color={colors.gold.pure} />
-                    <Text variant="bodySmall" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
-                      Getting Spark address...
-                    </Text>
-                  </View>
-                ) : sparkError ? (
-                  <View style={{ alignItems: 'center', gap: spacing.sm }}>
-                    <Text variant="bodyMedium" color={colors.status.error}>
-                      {sparkError}
-                    </Text>
-                    <Button title="Retry" variant="secondary" size="sm" onPress={fetchSparkAddress} />
-                  </View>
-                ) : sparkAddress ? (
-                  <>
-                    <QRDisplay value={sparkAddress} label="Scan to send via Spark" />
-                    <View style={styles.addressText}>
-                      <Text variant="bodySmall" color={colors.text.secondary} style={{ fontFamily: 'monospace' }}>
-                        {sparkAddress}
-                      </Text>
-                    </View>
-                    <Button
-                      title="Copy Spark address"
-                      variant="secondary"
-                      size="md"
-                      onPress={handleCopySparkAddress}
-                      icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
-                    />
-                  </>
-                ) : null}
-              </View>
-            ) : !invoice ? (
-              // Invoice creation form
-              <>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="arrow-down-circle" size={64} color={colors.status.success} />
-                </View>
-
-                <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-                  Create a Lightning invoice to receive Bitcoin
-                </Text>
-
-                <AmountInput
-                  value={amount}
-                  onChangeValue={setAmount}
-                  label="Amount to receive"
-                  error={error || undefined}
-                />
-
-                <Input
-                  label="Description (optional)"
-                  placeholder="What's this payment for?"
-                  value={description}
-                  onChangeText={setDescription}
-                />
-
-                <Button
-                  title={isCreatingInvoice ? 'Creating...' : 'Create Invoice'}
-                  variant="primary"
-                  size="lg"
-                  onPress={handleCreateInvoice}
-                  loading={isCreatingInvoice}
-                  disabled={!amount || isCreatingInvoice}
-                />
-              </>
-            ) : (
-              // Invoice display
-              <>
-                <View style={styles.successHeader}>
-                  <View style={styles.successIcon}>
-                    <Ionicons name="checkmark" size={32} color={colors.status.success} />
-                  </View>
-                  <Text variant="titleLarge" color={colors.text.primary}>
-                    Invoice Created
-                  </Text>
-                </View>
-
-                {/* Amount */}
-                <View style={styles.amountContainer}>
-                  <Text variant="amountLarge" color={colors.gold.pure}>
-                    {invoice.amountSats != null ? formatSats(invoice.amountSats) : '0'}
-                  </Text>
-                  <Text variant="titleMedium" color={colors.text.secondary}>
-                    sats
-                  </Text>
-                </View>
-
-                {/* QR Code */}
-                <QRDisplay
-                  value={invoice.bolt11}
-                  label="Scan to pay"
-                />
-
-                {/* Expiry info */}
-                <View style={styles.expiryInfo}>
-                  <Ionicons name="time" size={16} color={colors.text.muted} />
-                  <Text variant="bodySmall" color={colors.text.muted}>
-                    {expiryCopy(invoice.expiresAt)}
-                  </Text>
-                </View>
-
-                {/* Actions */}
-                <Button
-                  title="Create New Invoice"
-                  variant="secondary"
-                  size="md"
-                  onPress={handleNewInvoice}
-                />
-              </>
-            )}
-
-            {/* Unclaimed on-chain deposits */}
-            <View style={styles.unclaimedSection}>
-              <Text variant="labelMedium" color={colors.text.muted}>
-                Unclaimed on-chain deposits
               </Text>
-              {isLoadingUnclaimed ? (
-                <View style={{ padding: spacing.lg, alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color={colors.gold.pure} />
+              {isLoadingOnchain ? (
+                <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.gold.pure} />
+                  <Text variant="bodySmall" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
+                      Getting address...
+                  </Text>
                 </View>
-              ) : unclaimedDeposits.length === 0 ? (
-                <Text variant="bodySmall" color={colors.text.muted}>
-                  No unclaimed deposits. When you receive Bitcoin to your on-chain address and auto-claim fails (e.g. low fee), they will appear here so you can claim manually.
+              ) : onchainError ? (
+                <View style={{ alignItems: 'center', gap: spacing.sm }}>
+                  <Text variant="bodyMedium" color={colors.status.error}>
+                    {onchainError}
+                  </Text>
+                  <Button title="Retry" variant="secondary" size="sm" onPress={fetchOnchainAddress} />
+                </View>
+              ) : onchainAddress ? (
+                <>
+                  <QRDisplay value={onchainAddress} label="Scan to send Bitcoin" />
+                  <View style={styles.addressText}>
+                    <Text variant="bodySmall" color={colors.text.secondary} style={{ fontFamily: 'monospace' }}>
+                      {onchainAddress}
+                    </Text>
+                  </View>
+                  <Button
+                    title="Copy address"
+                    variant="secondary"
+                    size="md"
+                    onPress={handleCopyOnchainAddress}
+                    icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
+                  />
+                </>
+              ) : null}
+            </View>
+          ) : receiveMode === 'spark' ? (
+          /* Spark address */
+            <View style={styles.onchainSection}>
+              <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+                  Receive from other Spark users. Your Spark address is static and can be shared.
+              </Text>
+              {isLoadingSpark ? (
+                <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.gold.pure} />
+                  <Text variant="bodySmall" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
+                      Getting Spark address...
+                  </Text>
+                </View>
+              ) : sparkError ? (
+                <View style={{ alignItems: 'center', gap: spacing.sm }}>
+                  <Text variant="bodyMedium" color={colors.status.error}>
+                    {sparkError}
+                  </Text>
+                  <Button title="Retry" variant="secondary" size="sm" onPress={fetchSparkAddress} />
+                </View>
+              ) : sparkAddress ? (
+                <>
+                  <QRDisplay value={sparkAddress} label="Scan to send via Spark" />
+                  <View style={styles.addressText}>
+                    <Text variant="bodySmall" color={colors.text.secondary} style={{ fontFamily: 'monospace' }}>
+                      {sparkAddress}
+                    </Text>
+                  </View>
+                  <Button
+                    title="Copy Spark address"
+                    variant="secondary"
+                    size="md"
+                    onPress={handleCopySparkAddress}
+                    icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
+                  />
+                </>
+              ) : null}
+            </View>
+          ) : !invoice ? (
+          // Invoice creation form
+            <>
+              <View style={styles.iconContainer}>
+                <Ionicons name="arrow-down-circle" size={64} color={colors.status.success} />
+              </View>
+
+              <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+                  Create a Lightning invoice to receive Bitcoin
+              </Text>
+
+              <AmountInput
+                value={amount}
+                onChangeValue={setAmount}
+                label="Amount to receive"
+                error={error || undefined}
+              />
+
+              <Input
+                label="Description (optional)"
+                placeholder="What's this payment for?"
+                value={description}
+                onChangeText={setDescription}
+              />
+
+              <Button
+                title={isCreatingInvoice ? 'Creating...' : 'Create Invoice'}
+                variant="primary"
+                size="lg"
+                onPress={handleCreateInvoice}
+                loading={isCreatingInvoice}
+                disabled={!amount || isCreatingInvoice}
+              />
+            </>
+          ) : (
+          // Invoice display
+            <>
+              <View style={styles.successHeader}>
+                <View style={styles.successIcon}>
+                  <Ionicons name="checkmark" size={32} color={colors.status.success} />
+                </View>
+                <Text variant="titleLarge" color={colors.text.primary}>
+                    Invoice Created
                 </Text>
-              ) : (
-                unclaimedDeposits.map((d) => (
-                  <Card key={`${d.txid}-${d.vout}`} variant="outlined" style={styles.unclaimedCard}>
+              </View>
+
+              {/* Amount */}
+              <View style={styles.amountContainer}>
+                <Text variant="amountLarge" color={colors.gold.pure}>
+                  {invoice.amountSats != null ? formatSats(invoice.amountSats) : '0'}
+                </Text>
+                <Text variant="titleMedium" color={colors.text.secondary}>
+                    sats
+                </Text>
+              </View>
+
+              {/* QR Code */}
+              <QRDisplay
+                value={invoice.bolt11}
+                label="Scan to pay"
+              />
+
+              {/* Expiry info */}
+              <View style={styles.expiryInfo}>
+                <Ionicons name="time" size={16} color={colors.text.muted} />
+                <Text variant="bodySmall" color={colors.text.muted}>
+                  {expiryCopy(invoice.expiresAt)}
+                </Text>
+              </View>
+
+              {/* Actions */}
+              <Button
+                title="Create New Invoice"
+                variant="secondary"
+                size="md"
+                onPress={handleNewInvoice}
+              />
+            </>
+          )}
+
+          {/* Unclaimed on-chain deposits */}
+          <View style={styles.unclaimedSection}>
+            <Text variant="labelMedium" color={colors.text.muted}>
+                Unclaimed on-chain deposits
+            </Text>
+            {isLoadingUnclaimed ? (
+              <View style={{ padding: spacing.lg, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.gold.pure} />
+              </View>
+            ) : unclaimedDeposits.length === 0 ? (
+              <Text variant="bodySmall" color={colors.text.muted}>
+                  No unclaimed deposits. When you receive Bitcoin to your on-chain address and auto-claim fails (e.g. low fee), they will appear here so you can claim manually.
+              </Text>
+            ) : (
+              unclaimedDeposits.map((d) => (
+                <Card key={`${d.txid}-${d.vout}`} variant="outlined" style={styles.unclaimedCard}>
+                  <View style={styles.unclaimedRow}>
+                    <Text variant="labelMedium" color={colors.text.muted}>
+                        Amount
+                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text variant="titleSmall" color={colors.text.primary}>
+                        {formatAmountStr(d.amountSats, settings.bitcoinUnit)}
+                      </Text>
+                      <FiatAmount sats={d.amountSats} style={{ textAlign: 'right' }} />
+                    </View>
+                  </View>
+                  {d.requiredFeeSats != null && (
                     <View style={styles.unclaimedRow}>
                       <Text variant="labelMedium" color={colors.text.muted}>
-                        Amount
+                          Claim fee
                       </Text>
                       <View style={{ alignItems: 'flex-end' }}>
-                        <Text variant="titleSmall" color={colors.text.primary}>
-                          {formatAmountStr(d.amountSats, settings.bitcoinUnit)}
+                        <Text variant="bodyMedium" color={colors.text.secondary}>
+                          {formatAmountStr(d.requiredFeeSats, settings.bitcoinUnit)}
                         </Text>
-                        <FiatAmount sats={d.amountSats} style={{ textAlign: 'right' }} />
+                        <FiatAmount sats={d.requiredFeeSats} style={{ textAlign: 'right' }} />
                       </View>
                     </View>
-                    {d.requiredFeeSats != null && (
-                      <View style={styles.unclaimedRow}>
-                        <Text variant="labelMedium" color={colors.text.muted}>
-                          Claim fee
-                        </Text>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text variant="bodyMedium" color={colors.text.secondary}>
-                            {formatAmountStr(d.requiredFeeSats, settings.bitcoinUnit)}
-                          </Text>
-                          <FiatAmount sats={d.requiredFeeSats} style={{ textAlign: 'right' }} />
-                        </View>
-                      </View>
-                    )}
-                    {d.claimError && (
-                      <Text variant="bodySmall" color={colors.status.error}>
-                        {d.claimError}
-                      </Text>
-                    )}
-                    <View style={styles.unclaimedActions}>
-                      <Button
-                        title={claimingTxid === d.txid ? 'Claiming...' : 'Claim'}
-                        variant="primary"
-                        size="sm"
-                        onPress={() => handleClaimDeposit(d)}
-                        disabled={claimingTxid != null}
-                        loading={claimingTxid === d.txid}
-                      />
-                    </View>
-                  </Card>
-                ))
-              )}
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+                  )}
+                  {d.claimError && (
+                    <Text variant="bodySmall" color={colors.status.error}>
+                      {d.claimError}
+                    </Text>
+                  )}
+                  <View style={styles.unclaimedActions}>
+                    <Button
+                      title={claimingTxid === d.txid ? 'Claiming...' : 'Claim'}
+                      variant="primary"
+                      size="sm"
+                      onPress={() => handleClaimDeposit(d)}
+                      disabled={claimingTxid != null}
+                      loading={claimingTxid === d.txid}
+                    />
+                  </View>
+                </Card>
+              ))
+            )}
+          </View>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </View>
   );

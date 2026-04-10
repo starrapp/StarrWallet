@@ -11,6 +11,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { ThemeProvider, useTheme } from '@/contexts';
 import { AuthGate } from '@/components';
 import { IncomingPaymentOverlay } from '@/components/wallet';
@@ -94,9 +95,11 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <RootLayoutInner />
-    </ThemeProvider>
+    <KeyboardProvider>
+      <ThemeProvider>
+        <RootLayoutInner />
+      </ThemeProvider>
+    </KeyboardProvider>
   );
 }
 

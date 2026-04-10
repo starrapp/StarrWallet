@@ -89,11 +89,14 @@ export default function CreateWalletScreen() {
         checkboxContainer: { gap: spacing.sm },
         checkItem: {
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: spacing.sm,
           backgroundColor: colors.background.secondary,
           borderRadius: layout.radius.md,
-          padding: spacing.sm,
+          padding: spacing.md,
+        },
+        checkItemText: {
+          flex: 1,
         },
         actions: {
           padding: spacing.lg,
@@ -217,7 +220,7 @@ export default function CreateWalletScreen() {
                 size={20}
                 color={hasAcknowledgedLoss ? colors.status.success : colors.text.muted}
               />
-              <Text variant="bodySmall" color={colors.text.secondary}>
+              <Text variant="bodySmall" color={colors.text.secondary} style={styles.checkItemText}>
                 I understand that if I lose this phrase, I lose access to my Bitcoin
               </Text>
             </TouchableOpacity>
@@ -232,7 +235,7 @@ export default function CreateWalletScreen() {
                 size={20}
                 color={hasAcknowledgedStorage ? colors.status.success : colors.text.muted}
               />
-              <Text variant="bodySmall" color={colors.text.secondary}>
+              <Text variant="bodySmall" color={colors.text.secondary} style={styles.checkItemText}>
                 I will store this phrase securely and never share it
               </Text>
             </TouchableOpacity>
