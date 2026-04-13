@@ -48,14 +48,6 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.overlay.light,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollView: {
     flex: 1,
   },
@@ -253,12 +245,6 @@ export default function HomeScreen() {
               Starr
             </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.notificationButton, { backgroundColor: colors.background.secondary }]}
-            onPress={() => router.push('/notifications')}
-          >
-            <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
         </View>
 
         <ScrollView
