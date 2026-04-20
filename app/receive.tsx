@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -272,13 +273,12 @@ export default function ReceiveScreen() {
           paddingVertical: spacing.sm,
           gap: spacing.xs,
           width: '100%',
-          maxWidth: 320,
           alignSelf: 'center',
         },
         segmentButton: {
           flex: 1,
           paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
+          paddingHorizontal: spacing.xs,
           borderRadius: layout.radius.md,
           alignItems: 'center',
           justifyContent: 'center',
@@ -355,6 +355,7 @@ export default function ReceiveScreen() {
               <Text
                 variant="labelLarge"
                 color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
+                numberOfLines={1}
               >
                   Lightning
               </Text>
@@ -377,6 +378,7 @@ export default function ReceiveScreen() {
               <Text
                 variant="labelLarge"
                 color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
+                numberOfLines={1}
               >
                   On-chain
               </Text>
@@ -399,8 +401,24 @@ export default function ReceiveScreen() {
               <Text
                 variant="labelLarge"
                 color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
+                numberOfLines={1}
               >
                   Spark
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentButton, styles.segmentButtonInactive]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Linking.openURL('https://coin.space/buy-bitcoin/').catch((err) => {
+                  console.error('[Receive] Failed to open buy URL:', err);
+                  Alert.alert('Error', 'Unable to open this link.');
+                });
+              }}
+            >
+              <Ionicons name="card-outline" size={18} color={colors.text.secondary} />
+              <Text variant="labelLarge" color={colors.text.secondary} numberOfLines={1}>
+                  Buy
               </Text>
             </TouchableOpacity>
           </View>
