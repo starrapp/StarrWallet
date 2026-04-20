@@ -12,6 +12,7 @@ import {
   Alert,
   TouchableOpacity,
   Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +40,9 @@ function expiryCopy(expiresAt: Date): string {
 export default function ReceiveScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width < 380;
+  const segmentIconSize = isCompactScreen ? 16 : 18;
   const {
     createInvoice,
     isCreatingInvoice,
@@ -270,21 +274,29 @@ export default function ReceiveScreen() {
         segmentRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
-          paddingHorizontal: spacing.sm,
-          paddingVertical: spacing.sm,
-          gap: spacing.sm,
+          paddingHorizontal: isCompactScreen ? spacing.xs : spacing.sm,
+          paddingVertical: isCompactScreen ? spacing.xs : spacing.sm,
+          gap: isCompactScreen ? spacing.xs : spacing.sm,
           width: '100%',
-          maxWidth: 360,
+          maxWidth: isCompactScreen ? 332 : 360,
           alignSelf: 'center',
         },
         segmentButton: {
           flexBasis: '48%',
           flexGrow: 1,
-          paddingVertical: spacing.md,
+          paddingVertical: isCompactScreen ? spacing.sm : spacing.md,
           paddingHorizontal: spacing.sm,
+          minHeight: isCompactScreen ? 84 : 92,
           borderRadius: layout.radius.md,
           alignItems: 'center',
           justifyContent: 'center',
+        },
+        segmentLabel: {
+          width: '100%',
+          textAlign: 'center',
+          flexShrink: 1,
+          marginTop: isCompactScreen ? 4 : spacing.xs,
+          lineHeight: isCompactScreen ? 18 : 20,
         },
         segmentButtonActive: {
           backgroundColor: colors.gold.glow,
@@ -311,7 +323,7 @@ export default function ReceiveScreen() {
           maxWidth: 320,
         },
       }),
-    [colors]
+    [colors, isCompactScreen]
   );
 
   return (
@@ -352,13 +364,15 @@ export default function ReceiveScreen() {
             >
               <Ionicons
                 name="flash"
-                size={18}
+                size={segmentIconSize}
                 color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
               />
               <Text
-                variant="labelLarge"
+                variant="labelMedium"
                 color={receiveMode === 'lightning' ? colors.gold.pure : colors.text.secondary}
-                numberOfLines={1}
+                numberOfLines={2}
+                align="center"
+                style={styles.segmentLabel}
               >
                   Lightning
               </Text>
@@ -375,13 +389,15 @@ export default function ReceiveScreen() {
             >
               <Ionicons
                 name="link"
-                size={18}
+                size={segmentIconSize}
                 color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
               />
               <Text
-                variant="labelLarge"
+                variant="labelMedium"
                 color={receiveMode === 'onchain' ? colors.gold.pure : colors.text.secondary}
-                numberOfLines={1}
+                numberOfLines={2}
+                align="center"
+                style={styles.segmentLabel}
               >
                   On-chain
               </Text>
@@ -398,13 +414,15 @@ export default function ReceiveScreen() {
             >
               <Ionicons
                 name="flash-outline"
-                size={18}
+                size={segmentIconSize}
                 color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
               />
               <Text
-                variant="labelLarge"
+                variant="labelMedium"
                 color={receiveMode === 'spark' ? colors.gold.pure : colors.text.secondary}
-                numberOfLines={1}
+                numberOfLines={2}
+                align="center"
+                style={styles.segmentLabel}
               >
                   Spark
               </Text>
@@ -419,8 +437,14 @@ export default function ReceiveScreen() {
                 });
               }}
             >
-              <Ionicons name="card-outline" size={18} color={colors.text.secondary} />
-              <Text variant="labelLarge" color={colors.text.secondary} numberOfLines={1}>
+              <Ionicons name="card-outline" size={segmentIconSize} color={colors.text.secondary} />
+              <Text
+                variant="labelMedium"
+                color={colors.text.secondary}
+                numberOfLines={2}
+                align="center"
+                style={styles.segmentLabel}
+              >
                   Buy
               </Text>
             </TouchableOpacity>
