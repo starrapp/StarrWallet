@@ -49,7 +49,7 @@ const FIAT_CURRENCIES = [
 const EXTERNAL_LINKS = {
   TERMS: 'https://starr.app/terms',
   PRIVACY: 'https://starr.app/privacy',
-  SUPPORT: 'https://github.com/starrapp/StarrWallet/issues',
+  SUPPORT: 'https://starr.app/support',
   ABOUT: 'https://starr.app/about',
   CAREERS: 'mailto:careers@starr.app',
   GITHUB: 'https://github.com/starrapp/StarrWallet',
