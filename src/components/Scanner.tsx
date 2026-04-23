@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -226,6 +227,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
 
   // Permission denied
   if (!permission.granted) {
+    const canAskAgain = permission.canAskAgain;
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.centerContent}>
@@ -235,12 +237,14 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
               Camera Access Required
             </Text>
             <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-              We need camera access to scan QR codes for Lightning payments
+              {canAskAgain
+                ? 'We need camera access to scan QR codes for Lightning payments'
+                : 'Camera access was denied. Enable it in Settings to scan QR codes.'}
             </Text>
             <Button
-              title="Grant Permission"
+              title={canAskAgain ? 'Continue' : 'Open Settings'}
               variant="primary"
-              onPress={requestPermission}
+              onPress={canAskAgain ? requestPermission : () => Linking.openSettings()}
             />
             <Button
               title="Go Back"
