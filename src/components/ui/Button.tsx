@@ -126,7 +126,14 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         <>
           {icon}
-          <Text style={[styles.text, getTextStyle()]}>{title}</Text>
+          <Text
+            style={[styles.text, getTextStyle()]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
+            {title}
+          </Text>
         </>
       )}
     </TouchableOpacity>
@@ -137,5 +144,6 @@ const styles = StyleSheet.create({
   text: {
     fontWeight: '600',
     textAlign: 'center',
+    flexShrink: 1,
   },
 });

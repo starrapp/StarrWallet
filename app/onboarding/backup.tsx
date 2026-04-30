@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +29,8 @@ function shuffle<T>(arr: T[]): T[] {
 export default function BackupVerificationScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width < 390;
   const [mnemonic] = useState<string[]>(() => consumeMnemonic() ?? []);
   const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +89,10 @@ export default function BackupVerificationScreen() {
           alignItems: 'center',
           gap: spacing.sm,
           marginBottom: spacing.lg,
+        },
+        headerText: {
+          width: '100%',
+          paddingHorizontal: isCompactScreen ? spacing.sm : spacing.md,
         },
         iconContainer: {
           width: 64,
@@ -183,7 +189,7 @@ export default function BackupVerificationScreen() {
           backgroundColor: colors.background.primary,
         },
       }),
-    [colors]
+    [colors, isCompactScreen]
   );
 
   if (!puzzle) {
@@ -203,10 +209,10 @@ export default function BackupVerificationScreen() {
           <View style={styles.iconContainer}>
             <Ionicons name="shield-checkmark" size={32} color={colors.gold.pure} />
           </View>
-          <Text variant="headlineMedium" color={colors.text.primary} align="center">
+          <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
             Verify Your Backup
           </Text>
-          <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+          <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
             Select the correct words in the order shown to verify you&apos;ve saved your recovery phrase
           </Text>
         </View>

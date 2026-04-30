@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,8 @@ import { spacing, layout, typography } from '@/theme';
 export default function ImportWalletScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width < 390;
   const [words, setWords] = useState<string[]>(Array(24).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -113,6 +116,11 @@ export default function ImportWalletScreen() {
           alignItems: 'center',
           gap: spacing.sm,
           marginBottom: spacing.lg,
+          paddingTop: spacing.sm,
+        },
+        headerText: {
+          width: '100%',
+          paddingHorizontal: isCompactScreen ? 56 : spacing.lg,
         },
         wordsContainer: {
           flexDirection: 'row',
@@ -162,7 +170,7 @@ export default function ImportWalletScreen() {
           backgroundColor: colors.background.primary,
         },
       }),
-    [colors]
+    [colors, isCompactScreen]
   );
 
   return (
@@ -188,10 +196,10 @@ export default function ImportWalletScreen() {
             <View style={styles.iconContainer}>
               <Ionicons name="download" size={32} color={colors.gold.pure} />
             </View>
-            <Text variant="headlineMedium" color={colors.text.primary} align="center">
+            <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
               Import Wallet
             </Text>
-            <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+            <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
               Enter your 24-word recovery phrase to restore your wallet
             </Text>
           </View>

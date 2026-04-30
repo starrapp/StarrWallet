@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +25,8 @@ import { spacing, layout } from '@/theme';
 export default function CreateWalletScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width < 390;
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revealed, setRevealed] = useState(false);
@@ -59,6 +62,10 @@ export default function CreateWalletScreen() {
           alignItems: 'flex-start',
         },
         warningText: { flex: 1, gap: spacing.xxs },
+        headerText: {
+          width: '100%',
+          paddingHorizontal: isCompactScreen ? spacing.sm : spacing.md,
+        },
         mnemonicContainer: {
           minHeight: 320,
           backgroundColor: colors.background.secondary,
@@ -104,7 +111,7 @@ export default function CreateWalletScreen() {
           backgroundColor: colors.background.primary,
         },
       }),
-    [colors]
+    [colors, isCompactScreen]
   );
 
   useEffect(() => {
@@ -155,10 +162,10 @@ export default function CreateWalletScreen() {
           <View style={styles.iconContainer}>
             <Ionicons name="key" size={32} color={colors.gold.pure} />
           </View>
-          <Text variant="headlineMedium" color={colors.text.primary} align="center">
+          <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
             Your Recovery Phrase
           </Text>
-          <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+          <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
             Write down these 24 words in order. This is the ONLY way to recover your wallet.
           </Text>
         </View>

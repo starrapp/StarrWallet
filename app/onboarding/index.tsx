@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,8 @@ import { spacing, layout } from '@/theme';
 export default function OnboardingWelcome() {
   const router = useRouter();
   const colors = useColors();
+  const { width, height } = useWindowDimensions();
+  const isCompactScreen = width < 390 || height < 760;
 
   const styles = useMemo(
     () =>
@@ -23,10 +25,11 @@ export default function OnboardingWelcome() {
         gradient: { flex: 1 },
         safeArea: { flex: 1, padding: spacing.lg },
         heroSection: {
-          flex: 1,
+          minHeight: isCompactScreen ? 170 : 220,
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
+          marginBottom: isCompactScreen ? spacing.sm : spacing.md,
         },
         starsContainer: {
           position: 'absolute',
@@ -36,11 +39,11 @@ export default function OnboardingWelcome() {
           bottom: 0,
         },
         starDecor: { position: 'absolute' },
-        logoContainer: { marginBottom: spacing.lg },
+        logoContainer: { marginBottom: isCompactScreen ? spacing.md : spacing.lg },
         logoGradient: {
-          width: 120,
-          height: 120,
-          borderRadius: 60,
+          width: isCompactScreen ? 96 : 120,
+          height: isCompactScreen ? 96 : 120,
+          borderRadius: isCompactScreen ? 48 : 60,
           alignItems: 'center',
           justifyContent: 'center',
           shadowColor: colors.gold.pure,
@@ -67,10 +70,11 @@ export default function OnboardingWelcome() {
           justifyContent: 'center',
         },
         featureText: { flex: 1, gap: spacing.xxs },
+        appNameContainer: { alignItems: 'center', gap: spacing.xxs },
         actionsSection: { gap: spacing.md },
         footer: { marginTop: spacing.lg, paddingBottom: spacing.md },
       }),
-    [colors]
+    [colors, isCompactScreen]
   );
 
   return (
@@ -109,17 +113,19 @@ export default function OnboardingWelcome() {
                 colors={[colors.gold.bright, colors.gold.pure]}
                 style={styles.logoGradient}
               >
-                <Ionicons name="star" size={64} color={colors.background.primary} />
+                <Ionicons name="star" size={isCompactScreen ? 52 : 64} color={colors.background.primary} />
               </LinearGradient>
             </View>
 
             {/* App name */}
-            <Text variant="displayMedium" color={colors.text.primary} align="center">
-              Starr
-            </Text>
-            <Text variant="titleLarge" color={colors.gold.pure} align="center">
-              Lightning Wallet
-            </Text>
+            <View style={styles.appNameContainer}>
+              <Text variant={isCompactScreen ? 'displaySmall' : 'displayMedium'} color={colors.text.primary} align="center" numberOfLines={1}>
+                Starr
+              </Text>
+              <Text variant={isCompactScreen ? 'titleMedium' : 'titleLarge'} color={colors.gold.pure} align="center" numberOfLines={1}>
+                Lightning Wallet
+              </Text>
+            </View>
           </View>
 
           {/* Features */}
@@ -129,8 +135,8 @@ export default function OnboardingWelcome() {
                 <Ionicons name="flash" size={24} color={colors.gold.pure} />
               </View>
               <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary}>Instant Payments</Text>
-                <Text variant="bodySmall" color={colors.text.secondary}>Send and receive Bitcoin in seconds</Text>
+                <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Instant Payments</Text>
+                <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>Send and receive Bitcoin in seconds</Text>
               </View>
             </View>
             <View style={styles.featureItem}>
@@ -138,8 +144,8 @@ export default function OnboardingWelcome() {
                 <Ionicons name="key" size={24} color={colors.gold.pure} />
               </View>
               <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary}>Non-Custodial</Text>
-                <Text variant="bodySmall" color={colors.text.secondary}>You control your keys, your coins</Text>
+                <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Non-Custodial</Text>
+                <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>You control your keys, your coins</Text>
               </View>
             </View>
             <View style={styles.featureItem}>
@@ -147,8 +153,8 @@ export default function OnboardingWelcome() {
                 <Ionicons name="shield-checkmark" size={24} color={colors.gold.pure} />
               </View>
               <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary}>Biometric Security</Text>
-                <Text variant="bodySmall" color={colors.text.secondary}>Protected by native device authentication</Text>
+                <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Biometric Security</Text>
+                <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>Protected by native device authentication</Text>
               </View>
             </View>
           </View>
