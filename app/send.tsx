@@ -15,14 +15,17 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+// eslint-disable-next-line import/no-unresolved
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { ContentColumn } from '@/components';
 import { Button, Text, Input, AmountInput, Card, FiatAmount } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { BreezService, formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
+import { useResponsive } from '@/hooks';
 import { formatAmountStr, formatSats, msatToSatCeil } from '@/utils/format';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
 
@@ -39,6 +42,7 @@ export default function SendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ invoice?: string }>();
   const colors = useColors();
+  const { isTabletWidth } = useResponsive();
   const { balance, sendPayment, settings } = useWalletStore();
   const [invoice, setInvoice] = useState('');
   const [amount, setAmount] = useState('');
@@ -262,193 +266,195 @@ export default function SendScreen() {
           <View style={styles.headerSide} />
         </View>
 
-        <KeyboardAwareScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          bottomOffset={20}
-        >
-          {/* Payment request input */}
-          <Input
-            label="Payment request"
-            placeholder="Invoice, address, or LNURL..."
-            value={invoice}
-            onChangeText={handleInvoiceChange}
-            multiline
-            numberOfLines={3}
-            leftIcon={<Ionicons name="flash" size={20} color={colors.text.muted} />}
-            error={error || undefined}
-          />
-
-          {/* Scan button */}
-          <Button
-            title="Scan QR Code"
-            variant="secondary"
-            size="md"
-            icon={<Ionicons name="scan" size={20} color={colors.gold.pure} />}
-            onPress={() => router.push('/scan')}
-            style={styles.scanButton}
-          />
-
-          {/* Parsed type + details */}
-          {isParsing && (
-            <View style={styles.parsedRow}>
-              <ActivityIndicator size="small" color={colors.gold.pure} />
-              <Text variant="bodySmall" color={colors.text.muted}>Detecting type...</Text>
-            </View>
-          )}
-          {parsed && !isParsing && (
-            <Card variant="default" style={styles.invoiceCard}>
-              <View style={styles.invoiceRow}>
-                <Text variant="labelMedium" color={colors.text.muted}>
-                    Type
-                </Text>
-                <Text variant="bodyMedium" color={colors.text.primary}>
-                  {parsed.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).address
-                    ? 'Lightning address'
-                    : (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type)}
-                </Text>
-              </View>
-              {parsed.type === 'bolt11_invoice' && (
-                <>
-                  {(parsed as ParsedBolt11).payee && (
-                    <View style={styles.invoiceRow}>
-                      <Text variant="labelMedium" color={colors.text.muted}>To</Text>
-                      <Text variant="address" color={colors.text.secondary} numberOfLines={1}>
-                        {(parsed as ParsedBolt11).payee!.substring(0, 24)}...
-                      </Text>
-                    </View>
-                  )}
-                  {(parsed as ParsedBolt11).description && (
-                    <View style={styles.invoiceRow}>
-                      <Text variant="labelMedium" color={colors.text.muted}>Description</Text>
-                      <Text variant="bodyMedium" color={colors.text.primary}>
-                        {(parsed as ParsedBolt11).description}
-                      </Text>
-                    </View>
-                  )}
-                  {(parsed as ParsedBolt11).amountMsat != null && (
-                    <View style={styles.invoiceRow}>
-                      <Text variant="labelMedium" color={colors.text.muted}>Amount</Text>
-                      <Text variant="bodyMedium" color={colors.text.primary}>
-                        {formatSats(msatToSatCeil((parsed as ParsedBolt11).amountMsat!))} sats
-                      </Text>
-                    </View>
-                  )}
-                  {(parsed as ParsedBolt11).expiry != null && (
-                    <View style={styles.invoiceRow}>
-                      <Text variant="labelMedium" color={colors.text.muted}>Expiry</Text>
-                      <Text variant="bodySmall" color={colors.text.secondary}>
-                        {(parsed as ParsedBolt11).expiry! / 60} min
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
-              {parsed.type === 'lnurl_pay' && (
-                <>
-                  {(parsed as ParsedLnurlPay).address && (
-                    <View style={styles.invoiceRow}>
-                      <Text variant="labelMedium" color={colors.text.muted}>Address</Text>
-                      <Text variant="bodyMedium" color={colors.text.primary}>
-                        {(parsed as ParsedLnurlPay).address}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.invoiceRow}>
-                    <Text variant="labelMedium" color={colors.text.muted}>Domain</Text>
-                    <Text variant="bodyMedium" color={colors.text.primary}>
-                      {(parsed as ParsedLnurlPay).domain}
-                    </Text>
-                  </View>
-                  <View style={styles.invoiceRow}>
-                    <Text variant="labelMedium" color={colors.text.muted}>Range</Text>
-                    <Text variant="bodySmall" color={colors.text.secondary}>
-                      {formatSats(msatToSatCeil((parsed as ParsedLnurlPay).minSendable))} – {formatSats(msatToSatCeil((parsed as ParsedLnurlPay).maxSendable))} sats
-                    </Text>
-                  </View>
-                </>
-              )}
-            </Card>
-          )}
-
-          {/* Amount input (for amountless invoices, addresses, LNURL) */}
-          {needsAmount && (
-            <AmountInput
-              value={amount}
-              onChangeValue={setAmount}
-              label="Amount to send"
-              maxAmount={balance?.lightning}
-              editable={!showConfirm}
-            />
-          )}
-
-          {/* Comment input for LNURL-Pay when supported */}
-          {parsed?.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).commentAllowed > 0 && (
+        <ContentColumn style={{ flex: 1 }} maxWidth={isTabletWidth ? 900 : undefined}>
+          <KeyboardAwareScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bottomOffset={20}
+          >
+            {/* Payment request input */}
             <Input
-              label="Comment (optional)"
-              placeholder="Add a message..."
-              value={comment}
-              onChangeText={setComment}
-              maxLength={(parsed as ParsedLnurlPay).commentAllowed}
-              editable={!showConfirm}
+              label="Payment request"
+              placeholder="Invoice, address, or LNURL..."
+              value={invoice}
+              onChangeText={handleInvoiceChange}
+              multiline
+              numberOfLines={3}
+              leftIcon={<Ionicons name="flash" size={20} color={colors.text.muted} />}
+              error={error || undefined}
             />
-          )}
 
-          {/* Fee confirmation step */}
-          {showConfirm && prepareResult && (
-            <Card variant="outlined" style={styles.confirmCard}>
-              <Text variant="labelMedium" color={colors.text.muted} style={styles.confirmTitle}>
-                  Confirm payment
-              </Text>
-              <View style={styles.invoiceRow}>
-                <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text variant="titleSmall" color={colors.text.primary}>
-                    {formatAmountStr(prepareResult.amountSats, settings.bitcoinUnit)}
-                  </Text>
-                  <FiatAmount sats={prepareResult.amountSats} style={{ textAlign: 'right' }} />
-                </View>
+            {/* Scan button */}
+            <Button
+              title="Scan QR Code"
+              variant="secondary"
+              size="md"
+              icon={<Ionicons name="scan" size={20} color={colors.gold.pure} />}
+              onPress={() => router.push('/scan')}
+              style={styles.scanButton}
+            />
+
+            {/* Parsed type + details */}
+            {isParsing && (
+              <View style={styles.parsedRow}>
+                <ActivityIndicator size="small" color={colors.gold.pure} />
+                <Text variant="bodySmall" color={colors.text.muted}>Detecting type...</Text>
               </View>
-              {prepareResult.feeSats > 0n && (
+            )}
+            {parsed && !isParsing && (
+              <Card variant="default" style={styles.invoiceCard}>
                 <View style={styles.invoiceRow}>
-                  <Text variant="bodyMedium" color={colors.text.secondary}>Fee</Text>
+                  <Text variant="labelMedium" color={colors.text.muted}>
+                    Type
+                  </Text>
+                  <Text variant="bodyMedium" color={colors.text.primary}>
+                    {parsed.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).address
+                      ? 'Lightning address'
+                      : (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type)}
+                  </Text>
+                </View>
+                {parsed.type === 'bolt11_invoice' && (
+                  <>
+                    {(parsed as ParsedBolt11).payee && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>To</Text>
+                        <Text variant="address" color={colors.text.secondary} numberOfLines={1}>
+                          {(parsed as ParsedBolt11).payee!.substring(0, 24)}...
+                        </Text>
+                      </View>
+                    )}
+                    {(parsed as ParsedBolt11).description && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>Description</Text>
+                        <Text variant="bodyMedium" color={colors.text.primary}>
+                          {(parsed as ParsedBolt11).description}
+                        </Text>
+                      </View>
+                    )}
+                    {(parsed as ParsedBolt11).amountMsat != null && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>Amount</Text>
+                        <Text variant="bodyMedium" color={colors.text.primary}>
+                          {formatSats(msatToSatCeil((parsed as ParsedBolt11).amountMsat!))} sats
+                        </Text>
+                      </View>
+                    )}
+                    {(parsed as ParsedBolt11).expiry != null && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>Expiry</Text>
+                        <Text variant="bodySmall" color={colors.text.secondary}>
+                          {(parsed as ParsedBolt11).expiry! / 60} min
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+                {parsed.type === 'lnurl_pay' && (
+                  <>
+                    {(parsed as ParsedLnurlPay).address && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>Address</Text>
+                        <Text variant="bodyMedium" color={colors.text.primary}>
+                          {(parsed as ParsedLnurlPay).address}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.invoiceRow}>
+                      <Text variant="labelMedium" color={colors.text.muted}>Domain</Text>
+                      <Text variant="bodyMedium" color={colors.text.primary}>
+                        {(parsed as ParsedLnurlPay).domain}
+                      </Text>
+                    </View>
+                    <View style={styles.invoiceRow}>
+                      <Text variant="labelMedium" color={colors.text.muted}>Range</Text>
+                      <Text variant="bodySmall" color={colors.text.secondary}>
+                        {formatSats(msatToSatCeil((parsed as ParsedLnurlPay).minSendable))} – {formatSats(msatToSatCeil((parsed as ParsedLnurlPay).maxSendable))} sats
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </Card>
+            )}
+
+            {/* Amount input (for amountless invoices, addresses, LNURL) */}
+            {needsAmount && (
+              <AmountInput
+                value={amount}
+                onChangeValue={setAmount}
+                label="Amount to send"
+                maxAmount={balance?.lightning}
+                editable={!showConfirm}
+              />
+            )}
+
+            {/* Comment input for LNURL-Pay when supported */}
+            {parsed?.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).commentAllowed > 0 && (
+              <Input
+                label="Comment (optional)"
+                placeholder="Add a message..."
+                value={comment}
+                onChangeText={setComment}
+                maxLength={(parsed as ParsedLnurlPay).commentAllowed}
+                editable={!showConfirm}
+              />
+            )}
+
+            {/* Fee confirmation step */}
+            {showConfirm && prepareResult && (
+              <Card variant="outlined" style={styles.confirmCard}>
+                <Text variant="labelMedium" color={colors.text.muted} style={styles.confirmTitle}>
+                  Confirm payment
+                </Text>
+                <View style={styles.invoiceRow}>
+                  <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text variant="bodyMedium" color={colors.text.primary}>
-                      {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatAmountStr(prepareResult.feeSats, settings.bitcoinUnit)}
+                    <Text variant="titleSmall" color={colors.text.primary}>
+                      {formatAmountStr(prepareResult.amountSats, settings.bitcoinUnit)}
                     </Text>
-                    <FiatAmount sats={prepareResult.feeSats} style={{ textAlign: 'right' }} />
+                    <FiatAmount sats={prepareResult.amountSats} style={{ textAlign: 'right' }} />
                   </View>
                 </View>
-              )}
-              <View style={styles.confirmActions}>
-                <Button title="Back" variant="ghost" size="md" onPress={() => { setShowConfirm(false); setPrepareResult(null); }} />
-                <Button title={isLoading ? 'Sending...' : 'Send'} variant="primary" size="md" onPress={handleSend} loading={isLoading} disabled={isLoading} />
-              </View>
-            </Card>
-          )}
+                {prepareResult.feeSats > 0n && (
+                  <View style={styles.invoiceRow}>
+                    <Text variant="bodyMedium" color={colors.text.secondary}>Fee</Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text variant="bodyMedium" color={colors.text.primary}>
+                        {prepareResult.paymentMethod === 'onchain' ? '~' : ''}{formatAmountStr(prepareResult.feeSats, settings.bitcoinUnit)}
+                      </Text>
+                      <FiatAmount sats={prepareResult.feeSats} style={{ textAlign: 'right' }} />
+                    </View>
+                  </View>
+                )}
+                <View style={styles.confirmActions}>
+                  <Button title="Back" variant="ghost" size="md" onPress={() => { setShowConfirm(false); setPrepareResult(null); }} />
+                  <Button title={isLoading ? 'Sending...' : 'Send'} variant="primary" size="md" onPress={handleSend} loading={isLoading} disabled={isLoading} />
+                </View>
+              </Card>
+            )}
 
-          {/* Balance info */}
-          <View style={styles.balanceInfo}>
-            <Ionicons name="wallet" size={16} color={colors.text.muted} />
-            <Text variant="bodySmall" color={colors.text.muted}>
+            {/* Balance info */}
+            <View style={styles.balanceInfo}>
+              <Ionicons name="wallet" size={16} color={colors.text.muted} />
+              <Text variant="bodySmall" color={colors.text.muted}>
                 Available: {formatAmountStr(balance?.lightning ?? 0n, settings.bitcoinUnit)}
-            </Text>
-          </View>
-
-          {!showConfirm ? (
-            <View style={styles.actionContainer}>
-              <Button
-                title={parsed ? 'Continue' : 'Enter payment request'}
-                variant="primary"
-                size="lg"
-                onPress={handlePrepareAndConfirm}
-                disabled={!invoice.trim() || isParsing}
-              />
+              </Text>
             </View>
-          ) : null}
-        </KeyboardAwareScrollView>
+
+            {!showConfirm ? (
+              <View style={styles.actionContainer}>
+                <Button
+                  title={parsed ? 'Continue' : 'Enter payment request'}
+                  variant="primary"
+                  size="lg"
+                  onPress={handlePrepareAndConfirm}
+                  disabled={!invoice.trim() || isParsing}
+                />
+              </View>
+            ) : null}
+          </KeyboardAwareScrollView>
+        </ContentColumn>
       </SafeAreaView>
     </View>
   );

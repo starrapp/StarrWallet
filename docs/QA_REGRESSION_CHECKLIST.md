@@ -7,6 +7,36 @@ Use this checklist with the original QA sheet to validate each bug on iOS and An
 - [ ] iOS
 - [ ] Android
 
+## Device Matrix
+
+- [ ] iPhone portrait
+- [ ] iPhone landscape (where supported)
+- [ ] iPad portrait
+- [ ] iPad landscape
+- [ ] iPad split view (roughly 1/3, 1/2, 2/3 widths)
+
+## iPad Layout Validation
+
+### L01 - Global layout scaling and spacing
+- [ ] Confirm no screen has clipped/overlapping text in portrait or landscape.
+- [ ] Confirm content uses readable max-width columns (no ultra-wide stretched forms/cards).
+- [ ] Confirm large title/header areas do not overlap body content after rotation.
+
+### L02 - History split-view behavior
+- [ ] Open History on iPad landscape and verify list/detail split view appears.
+- [ ] Tap different transactions and confirm right pane updates payment details.
+- [ ] Confirm narrow widths fall back to push navigation to payment details.
+
+### L03 - Onboarding responsiveness
+- [ ] Verify onboarding welcome hero text does not overlap feature cards.
+- [ ] Verify create/import/backup screens keep controls visible and readable in portrait/landscape.
+- [ ] Verify action buttons remain fully readable with Dynamic Type increased.
+
+### L04 - Send/Receive/Scan modal sizing
+- [ ] Verify Send and Receive forms stay centered/readable on iPad with no clipped buttons.
+- [ ] Verify scanner framing box resizes correctly after orientation changes.
+- [ ] Verify scanner controls remain reachable in split view and landscape.
+
 ## Bug Validation
 
 ### B01 - Wallet currency set to Bitcoin still shows sats

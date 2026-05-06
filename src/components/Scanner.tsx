@@ -9,7 +9,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Alert,
   Linking,
 } from 'react-native';
@@ -22,9 +21,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Text, Button } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SCAN_AREA_SIZE = SCREEN_WIDTH * 0.7;
+import { useResponsive } from '@/hooks';
 
 interface ScannerProps {
   bottomInset?: number;
@@ -33,9 +30,11 @@ interface ScannerProps {
 export function Scanner({ bottomInset = 0 }: ScannerProps) {
   const router = useRouter();
   const colors = useColors();
+  const { width, isTabletWidth } = useResponsive();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [torch, setTorch] = useState(false);
+  const scanAreaSize = Math.min(isTabletWidth ? 460 : 340, width * 0.7);
 
   const styles = useMemo(
     () =>
@@ -80,8 +79,8 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
         torchActive: { backgroundColor: colors.gold.glow },
         scanAreaContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
         scanArea: {
-          width: SCAN_AREA_SIZE,
-          height: SCAN_AREA_SIZE,
+          width: scanAreaSize,
+          height: scanAreaSize,
           position: 'relative',
         },
         corner: {
@@ -145,7 +144,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
           paddingVertical: spacing.sm,
         },
       }),
-    [colors, bottomInset]
+    [colors, bottomInset, scanAreaSize]
   );
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {

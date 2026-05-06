@@ -4,16 +4,18 @@
  * List payments with filters (type, status) and pagination (load more).
  */
 
-import React, { useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from '@/components/ui';
-import { TransactionList } from '@/components/wallet';
+import { ContentColumn, SplitLayout } from '@/components';
+import { Text, Card } from '@/components/ui';
+import { PaymentDetailsContent, TransactionList } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { useResponsive } from '@/hooks';
 import type { LightningPayment, ListPaymentsFilter } from '@/types/wallet';
 
 const TYPE_OPTIONS: { value: 'all' | 'send' | 'receive'; label: string }[] = [
@@ -38,6 +40,7 @@ const DATE_OPTIONS: { value: 'all' | '7' | '30'; label: string; fromTimestamp?: 
 export default function HistoryScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { isSplitWidth } = useResponsive();
   const {
     payments,
     isLoadingPayments,
@@ -45,7 +48,13 @@ export default function HistoryScreen() {
     hasMorePayments,
     paymentFilter,
     listPayments,
+    getPayment,
+    settings,
   } = useWalletStore();
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<LightningPayment | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,10 +64,55 @@ export default function HistoryScreen() {
 
   const handleTransactionPress = useCallback(
     (tx: LightningPayment) => {
+      if (isSplitWidth) {
+        setSelectedPaymentId(tx.id);
+        return;
+      }
       router.push(`/payment/${tx.id}`);
     },
-    [router]
+    [isSplitWidth, router]
   );
+
+  useEffect(() => {
+    if (!isSplitWidth) {
+      setSelectedPaymentId(null);
+      setSelectedPayment(null);
+      setDetailError(null);
+      return;
+    }
+
+    if (!selectedPaymentId && payments.length > 0) {
+      setSelectedPaymentId(payments[0].id);
+    }
+  }, [isSplitWidth, payments, selectedPaymentId]);
+
+  useEffect(() => {
+    if (!isSplitWidth || !selectedPaymentId) return;
+
+    let cancelled = false;
+    setDetailLoading(true);
+    setDetailError(null);
+    getPayment(selectedPaymentId)
+      .then((payment) => {
+        if (!cancelled) {
+          setSelectedPayment(payment ?? null);
+          if (!payment) setDetailError('Payment not found');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDetailError(err instanceof Error ? err.message : 'Failed to load payment');
+          setSelectedPayment(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getPayment, isSplitWidth, selectedPaymentId]);
 
   const buildFilter = useCallback(
     (
@@ -152,124 +206,182 @@ export default function HistoryScreen() {
         chipActive: {},
         listContainer: {
           flex: 1,
-          paddingHorizontal: spacing.lg,
+          paddingHorizontal: isSplitWidth ? 0 : spacing.lg,
           paddingBottom: layout.tabBarHeight,
         },
+        splitSecondary: {
+          flex: 1,
+          borderRadius: layout.radius.lg,
+          backgroundColor: colors.background.secondary,
+          overflow: 'hidden',
+        },
+        splitHeader: {
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border.subtle,
+        },
+        splitCenter: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+        },
       }),
-    [colors]
+    [colors, isSplitWidth]
+  );
+
+  const historyContent = (
+    <>
+      <View style={styles.header}>
+        <Text variant="headlineMedium" color={colors.text.primary}>
+          Transaction history
+        </Text>
+        <Text variant="bodyMedium" color={colors.text.secondary}>
+          {payments.length} transaction{payments.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+
+      <View style={styles.filterSection}>
+        <Text variant="labelMedium" color={colors.text.muted}>
+          Type
+        </Text>
+        <View style={styles.filterRow}>
+          {TYPE_OPTIONS.map((opt) => {
+            const active = currentType === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? colors.gold.glow : colors.background.secondary,
+                    borderColor: active ? colors.gold.pure : colors.border.subtle,
+                  },
+                ]}
+                onPress={() => applyType(opt.value)}
+              >
+                <Text
+                  variant="labelMedium"
+                  color={active ? colors.gold.pure : colors.text.secondary}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text variant="labelMedium" color={colors.text.muted} style={{ marginTop: spacing.xs }}>
+          Status
+        </Text>
+        <View style={styles.filterRow}>
+          {STATUS_OPTIONS.map((opt) => {
+            const active = currentStatus === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? colors.gold.glow : colors.background.secondary,
+                    borderColor: active ? colors.gold.pure : colors.border.subtle,
+                  },
+                ]}
+                onPress={() => applyStatus(opt.value)}
+              >
+                <Text
+                  variant="labelMedium"
+                  color={active ? colors.gold.pure : colors.text.secondary}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text variant="labelMedium" color={colors.text.muted} style={{ marginTop: spacing.xs }}>
+          Date range
+        </Text>
+        <View style={styles.filterRow}>
+          {DATE_OPTIONS.map((opt) => {
+            const active = currentDateRange === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? colors.gold.glow : colors.background.secondary,
+                    borderColor: active ? colors.gold.pure : colors.border.subtle,
+                  },
+                ]}
+                onPress={() => applyDateRange(opt.value)}
+              >
+                <Text
+                  variant="labelMedium"
+                  color={active ? colors.gold.pure : colors.text.secondary}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.listContainer}>
+        <TransactionList
+          transactions={payments}
+          onTransactionPress={handleTransactionPress}
+          onRefresh={() => listPayments()}
+          onEndReached={() => listPayments({ append: true })}
+          isLoading={isLoadingPayments}
+          isLoadingMore={isLoadingMorePayments}
+          hasMore={hasMorePayments}
+        />
+      </View>
+    </>
+  );
+
+  const paymentPane = (
+    <Card variant="outlined" padding="none" style={styles.splitSecondary}>
+      <View style={styles.splitHeader}>
+        <Text variant="titleLarge" color={colors.text.primary}>
+          Payment details
+        </Text>
+      </View>
+      {detailLoading ? (
+        <View style={styles.splitCenter}>
+          <ActivityIndicator size="small" color={colors.gold.pure} />
+          <Text variant="bodyMedium" color={colors.text.secondary}>
+            Loading payment...
+          </Text>
+        </View>
+      ) : detailError ? (
+        <View style={styles.splitCenter}>
+          <Text variant="bodyMedium" color={colors.status.error}>
+            {detailError}
+          </Text>
+        </View>
+      ) : selectedPayment ? (
+        <PaymentDetailsContent payment={selectedPayment} bitcoinUnit={settings.bitcoinUnit} />
+      ) : (
+        <View style={styles.splitCenter}>
+          <Text variant="bodyMedium" color={colors.text.secondary}>
+            Select a transaction to view details.
+          </Text>
+        </View>
+      )}
+    </Card>
   );
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text variant="headlineMedium" color={colors.text.primary}>
-            Transaction history
-          </Text>
-          <Text variant="bodyMedium" color={colors.text.secondary}>
-            {payments.length} transaction{payments.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-
-        {/* Filters */}
-        <View style={styles.filterSection}>
-          <Text variant="labelMedium" color={colors.text.muted}>
-            Type
-          </Text>
-          <View style={styles.filterRow}>
-            {TYPE_OPTIONS.map((opt) => {
-              const active = currentType === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: active ? colors.gold.glow : colors.background.secondary,
-                      borderColor: active ? colors.gold.pure : colors.border.subtle,
-                    },
-                  ]}
-                  onPress={() => applyType(opt.value)}
-                >
-                  <Text
-                    variant="labelMedium"
-                    color={active ? colors.gold.pure : colors.text.secondary}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <Text variant="labelMedium" color={colors.text.muted} style={{ marginTop: spacing.xs }}>
-            Status
-          </Text>
-          <View style={styles.filterRow}>
-            {STATUS_OPTIONS.map((opt) => {
-              const active = currentStatus === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: active ? colors.gold.glow : colors.background.secondary,
-                      borderColor: active ? colors.gold.pure : colors.border.subtle,
-                    },
-                  ]}
-                  onPress={() => applyStatus(opt.value)}
-                >
-                  <Text
-                    variant="labelMedium"
-                    color={active ? colors.gold.pure : colors.text.secondary}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <Text variant="labelMedium" color={colors.text.muted} style={{ marginTop: spacing.xs }}>
-            Date range
-          </Text>
-          <View style={styles.filterRow}>
-            {DATE_OPTIONS.map((opt) => {
-              const active = currentDateRange === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: active ? colors.gold.glow : colors.background.secondary,
-                      borderColor: active ? colors.gold.pure : colors.border.subtle,
-                    },
-                  ]}
-                  onPress={() => applyDateRange(opt.value)}
-                >
-                  <Text
-                    variant="labelMedium"
-                    color={active ? colors.gold.pure : colors.text.secondary}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.listContainer}>
-          <TransactionList
-            transactions={payments}
-            onTransactionPress={handleTransactionPress}
-            onRefresh={() => listPayments()}
-            onEndReached={() => listPayments({ append: true })}
-            isLoading={isLoadingPayments}
-            isLoadingMore={isLoadingMorePayments}
-            hasMore={hasMorePayments}
-          />
-        </View>
+        <ContentColumn style={{ flex: 1 }} maxWidth={isSplitWidth ? undefined : 820}>
+          <SplitLayout primary={historyContent} secondary={paymentPane} primaryWidth={460} />
+        </ContentColumn>
       </SafeAreaView>
     </View>
   );

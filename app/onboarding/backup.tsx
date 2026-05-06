@@ -5,17 +5,19 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { ContentColumn } from '@/components';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { useWalletStore } from '@/stores/walletStore';
 import { consumeMnemonic } from '@/stores/onboardingStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { useResponsive } from '@/hooks';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -29,8 +31,8 @@ function shuffle<T>(arr: T[]): T[] {
 export default function BackupVerificationScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { width } = useWindowDimensions();
-  const isCompactScreen = width < 390;
+  const { isCompactWidth } = useResponsive();
+  const isCompactScreen = isCompactWidth;
   const [mnemonic] = useState<string[]>(() => consumeMnemonic() ?? []);
   const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -199,131 +201,133 @@ export default function BackupVerificationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="shield-checkmark" size={32} color={colors.gold.pure} />
-          </View>
-          <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
+      <ContentColumn style={{ flex: 1 }} maxWidth={760}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="shield-checkmark" size={32} color={colors.gold.pure} />
+            </View>
+            <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
             Verify Your Backup
-          </Text>
-          <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
             Select the correct words in the order shown to verify you&apos;ve saved your recovery phrase
-          </Text>
-        </View>
+            </Text>
+          </View>
 
-        {/* Word prompts - what we're asking for */}
-        <View style={styles.promptsContainer}>
-          <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+          {/* Word prompts - what we're asking for */}
+          <View style={styles.promptsContainer}>
+            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
             Select these words in order:
-          </Text>
-          {puzzle.indices.map((index, i) => (
-            <View key={index} style={styles.promptItem}>
-              <View style={styles.promptRow}>
-                <View style={styles.promptNumber}>
-                  <Text variant="titleSmall" color={colors.gold.pure}>
+            </Text>
+            {puzzle.indices.map((index, i) => (
+              <View key={index} style={styles.promptItem}>
+                <View style={styles.promptRow}>
+                  <View style={styles.promptNumber}>
+                    <Text variant="titleSmall" color={colors.gold.pure}>
                     #{index + 1}
-                  </Text>
-                </View>
-                <View style={[
-                  styles.promptSlot,
-                  selectedWords[i] && styles.promptSlotFilled,
-                ]}>
-                  {selectedWords[i] ? (
-                    <Text variant="titleMedium" color={colors.gold.pure}>
-                      {selectedWords[i]}
                     </Text>
-                  ) : (
-                    <Text variant="bodyMedium" color={colors.text.muted}>
+                  </View>
+                  <View style={[
+                    styles.promptSlot,
+                    selectedWords[i] && styles.promptSlotFilled,
+                  ]}>
+                    {selectedWords[i] ? (
+                      <Text variant="titleMedium" color={colors.gold.pure}>
+                        {selectedWords[i]}
+                      </Text>
+                    ) : (
+                      <Text variant="bodyMedium" color={colors.text.muted}>
                       Tap a word below...
-                    </Text>
-                  )}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Word options to choose from */}
-        <View style={styles.optionsSection}>
-          <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-            Choose from these words:
-          </Text>
-          <View style={styles.optionsContainer}>
-            {puzzle.options.map((option) => {
-              const isSelected = selectedOptionIds.includes(option.id);
-              const selectionOrder = selectedOptionIds.indexOf(option.id) + 1;
-              return (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.optionButton,
-                    isSelected && styles.optionButtonSelected,
-                  ]}
-                  onPress={() => handleOptionSelect(option.id)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    variant="titleSmall"
-                    color={isSelected ? colors.gold.pure : colors.text.primary}
-                  >
-                    {option.word}
-                  </Text>
-                  {isSelected && (
-                    <View style={styles.selectedBadge}>
-                      <Text variant="labelSmall" color={colors.background.primary}>
-                        {selectionOrder}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            ))}
           </View>
-        </View>
 
-        {/* Error */}
-        {error && (
-          <Card variant="outlined" style={styles.errorCard}>
-            <View style={styles.errorContent}>
-              <Ionicons name="alert-circle" size={20} color={colors.status.error} />
-              <Text variant="bodySmall" color={colors.status.error}>
-                {error}
-              </Text>
+          {/* Word options to choose from */}
+          <View style={styles.optionsSection}>
+            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+            Choose from these words:
+            </Text>
+            <View style={styles.optionsContainer}>
+              {puzzle.options.map((option) => {
+                const isSelected = selectedOptionIds.includes(option.id);
+                const selectionOrder = selectedOptionIds.indexOf(option.id) + 1;
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.optionButton,
+                      isSelected && styles.optionButtonSelected,
+                    ]}
+                    onPress={() => handleOptionSelect(option.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      variant="titleSmall"
+                      color={isSelected ? colors.gold.pure : colors.text.primary}
+                    >
+                      {option.word}
+                    </Text>
+                    {isSelected && (
+                      <View style={styles.selectedBadge}>
+                        <Text variant="labelSmall" color={colors.background.primary}>
+                          {selectionOrder}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </Card>
-        )}
+          </View>
 
-        {/* Hint */}
-        <View style={styles.hintContainer}>
-          <Ionicons name="information-circle" size={16} color={colors.text.muted} />
-          <Text variant="bodySmall" color={colors.text.muted}>
+          {/* Error */}
+          {error && (
+            <Card variant="outlined" style={styles.errorCard}>
+              <View style={styles.errorContent}>
+                <Ionicons name="alert-circle" size={20} color={colors.status.error} />
+                <Text variant="bodySmall" color={colors.status.error}>
+                  {error}
+                </Text>
+              </View>
+            </Card>
+          )}
+
+          {/* Hint */}
+          <View style={styles.hintContainer}>
+            <Ionicons name="information-circle" size={16} color={colors.text.muted} />
+            <Text variant="bodySmall" color={colors.text.muted}>
             Tap words in the correct order. Tap again to deselect.
-          </Text>
-        </View>
-      </ScrollView>
+            </Text>
+          </View>
+        </ScrollView>
 
-      {/* Actions - Fixed at bottom */}
-      <View style={styles.actions}>
-        <Button
-          title="Verify & Continue"
-          onPress={handleVerify}
-          variant="primary"
-          size="lg"
-          disabled={selectedOptionIds.length < 3}
-        />
-        <Button
-          title="Go Back"
-          onPress={() => router.back()}
-          variant="ghost"
-          size="md"
-        />
-      </View>
+        {/* Actions - Fixed at bottom */}
+        <View style={styles.actions}>
+          <Button
+            title="Verify & Continue"
+            onPress={handleVerify}
+            variant="primary"
+            size="lg"
+            disabled={selectedOptionIds.length < 3}
+          />
+          <Button
+            title="Go Back"
+            onPress={() => router.back()}
+            variant="ghost"
+            size="md"
+          />
+        </View>
+      </ContentColumn>
     </SafeAreaView>
   );
 }

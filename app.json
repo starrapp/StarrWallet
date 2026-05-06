@@ -4,7 +4,7 @@
     "slug": "starr-wallet",
     "owner": "jspeigner",
     "version": "2.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "starr",
     "userInterfaceStyle": "automatic",
@@ -12,7 +12,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.starwallet",
       "buildNumber": "2",
       "infoPlist": {

@@ -13,23 +13,24 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { ContentColumn } from '@/components';
 import { Button, Text } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout, typography } from '@/theme';
+import { useResponsive } from '@/hooks';
 
 export default function ImportWalletScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { width } = useWindowDimensions();
-  const isCompactScreen = width < 390;
+  const { isCompactWidth } = useResponsive();
+  const isCompactScreen = isCompactWidth;
   const [words, setWords] = useState<string[]>(Array(24).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -179,87 +180,89 @@ export default function ImportWalletScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-            </TouchableOpacity>
+        <ContentColumn style={{ flex: 1 }} maxWidth={760}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
             
-            <View style={styles.iconContainer}>
-              <Ionicons name="download" size={32} color={colors.gold.pure} />
-            </View>
-            <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
-              Import Wallet
-            </Text>
-            <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
-              Enter your 24-word recovery phrase to restore your wallet
-            </Text>
-          </View>
-
-          {/* Word inputs */}
-          <View style={styles.wordsContainer}>
-            {words.map((word, index) => (
-              <View key={index} style={styles.wordInput}>
-                <Text variant="labelSmall" color={colors.text.muted} style={styles.wordNumber}>
-                  {index + 1}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  value={word}
-                  onChangeText={(text) => handleWordChange(index, text)}
-                  onBlur={() => {}}
-                  placeholder="..."
-                  placeholderTextColor={colors.text.muted}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  spellCheck={false}
-                  returnKeyType={index < 23 ? 'next' : 'done'}
-                  onSubmitEditing={() => {
-                    // Focus next input
-                  }}
-                />
+              <View style={styles.iconContainer}>
+                <Ionicons name="download" size={32} color={colors.gold.pure} />
               </View>
-            ))}
-          </View>
-
-          {/* Error */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={20} color={colors.status.error} />
-              <Text variant="bodySmall" color={colors.status.error}>
-                {error}
+              <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
+              Import Wallet
+              </Text>
+              <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
+              Enter your 24-word recovery phrase to restore your wallet
               </Text>
             </View>
-          )}
 
-          {/* Tip */}
-          <View style={styles.tipContainer}>
-            <Ionicons name="information-circle" size={20} color={colors.accent.cyan} />
-            <Text variant="bodySmall" color={colors.text.secondary}>
+            {/* Word inputs */}
+            <View style={styles.wordsContainer}>
+              {words.map((word, index) => (
+                <View key={index} style={styles.wordInput}>
+                  <Text variant="labelSmall" color={colors.text.muted} style={styles.wordNumber}>
+                    {index + 1}
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    value={word}
+                    onChangeText={(text) => handleWordChange(index, text)}
+                    onBlur={() => {}}
+                    placeholder="..."
+                    placeholderTextColor={colors.text.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    returnKeyType={index < 23 ? 'next' : 'done'}
+                    onSubmitEditing={() => {
+                    // Focus next input
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+
+            {/* Error */}
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.status.error} />
+                <Text variant="bodySmall" color={colors.status.error}>
+                  {error}
+                </Text>
+              </View>
+            )}
+
+            {/* Tip */}
+            <View style={styles.tipContainer}>
+              <Ionicons name="information-circle" size={20} color={colors.accent.cyan} />
+              <Text variant="bodySmall" color={colors.text.secondary}>
               Tip: You can paste your entire recovery phrase and it will automatically fill in all fields
-            </Text>
-          </View>
-        </ScrollView>
+              </Text>
+            </View>
+          </ScrollView>
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Button
-            title="Import Wallet"
-            onPress={handleImport}
-            variant="primary"
-            size="lg"
-            loading={isLoading}
-            disabled={words.some((w) => !w)}
-          />
-        </View>
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Button
+              title="Import Wallet"
+              onPress={handleImport}
+              variant="primary"
+              size="lg"
+              loading={isLoading}
+              disabled={words.some((w) => !w)}
+            />
+          </View>
+        </ContentColumn>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

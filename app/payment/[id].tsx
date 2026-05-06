@@ -8,24 +8,25 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
-import { Button, Text, Card, FiatAmount } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
+import { ContentColumn } from '@/components';
+import { PaymentDetailsContent } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
-import { formatSignedAmountStr, formatAmountStr } from '@/utils/format';
+import { useResponsive } from '@/hooks';
 import type { LightningPayment } from '@/types/wallet';
 
 export default function PaymentDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
+  const { isTabletWidth } = useResponsive();
   const getPayment = useWalletStore((s) => s.getPayment);
   const bitcoinUnit = useWalletStore((s) => s.settings.bitcoinUnit);
   const [payment, setPayment] = useState<LightningPayment | null>(null);
@@ -77,20 +78,7 @@ export default function PaymentDetailScreen() {
           borderBottomWidth: 1,
           borderBottomColor: colors.border.subtle,
         },
-        scroll: { flex: 1 },
-        scrollContent: { padding: spacing.lg, gap: spacing.lg },
         center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-        iconLarge: {
-          width: 80,
-          height: 80,
-          borderRadius: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        card: { padding: spacing.md, gap: spacing.sm },
-        row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-        label: { marginBottom: spacing.xxs },
-        mono: { fontFamily: 'monospace', fontSize: 12 },
       }),
     [colors]
   );
@@ -131,107 +119,19 @@ export default function PaymentDetailScreen() {
     );
   }
 
-  const isReceive = payment.type === 'receive';
-  const statusColor =
-    payment.status === 'failed'
-      ? colors.status.error
-      : payment.status === 'pending'
-        ? colors.status.warning
-        : isReceive
-          ? colors.status.success
-          : colors.text.primary;
-  const formattedAmount = formatSignedAmountStr(payment.amountSats, isReceive ? '+' : '-', bitcoinUnit);
-  const formattedFee = payment.feeSats != null ? formatAmountStr(payment.feeSats, bitcoinUnit) : null;
-
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <Button title="Back" variant="ghost" size="sm" onPress={() => router.back()} />
+          <Button title={isTabletWidth ? 'History' : 'Back'} variant="ghost" size="sm" onPress={() => router.back()} />
           <Text variant="titleLarge" color={colors.text.primary}>
             Payment details
           </Text>
           <View style={{ width: 60 }} />
         </View>
-
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Amount card */}
-          <Card variant="default" style={styles.card}>
-            <View style={[styles.iconLarge, { backgroundColor: statusColor + '20' }]}>
-              <Ionicons
-                name={isReceive ? 'arrow-down' : 'arrow-up'}
-                size={40}
-                color={statusColor}
-              />
-            </View>
-            <Text variant="headlineMedium" color={colors.text.primary}>
-              {formattedAmount}
-            </Text>
-            <FiatAmount sats={payment.amountSats} style={{ textAlign: 'center' }} />
-            <Text variant="bodyMedium" color={colors.text.secondary}>
-              {payment.description ?? (isReceive ? 'Received' : 'Sent')}
-            </Text>
-            <View style={[styles.row, { marginTop: spacing.sm }]}>
-              <Text variant="labelMedium" color={colors.text.muted}>
-                Status
-              </Text>
-              <Text variant="labelMedium" color={statusColor} style={{ textTransform: 'capitalize' }}>
-                {payment.status}
-              </Text>
-            </View>
-          </Card>
-
-          {/* Details */}
-          <Card variant="outlined" style={styles.card}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.label}>
-              Date
-            </Text>
-            <Text variant="bodyMedium" color={colors.text.primary}>
-              {format(new Date(payment.timestamp), 'PPp')}
-            </Text>
-            {payment.completedAt && (
-              <>
-                <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
-                  Completed
-                </Text>
-                <Text variant="bodyMedium" color={colors.text.primary}>
-                  {format(new Date(payment.completedAt), 'PPp')}
-                </Text>
-              </>
-            )}
-            {payment.feeSats != null && payment.feeSats > 0n && (
-              <>
-                <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
-                  Fee
-                </Text>
-                <Text variant="bodyMedium" color={colors.text.primary}>
-                  {formattedFee}
-                </Text>
-                <FiatAmount sats={payment.feeSats!} />
-              </>
-            )}
-            <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
-              Payment hash
-            </Text>
-            <Text variant="bodySmall" color={colors.text.secondary} style={styles.mono} numberOfLines={1}>
-              {payment.paymentHash || '—'}
-            </Text>
-            {payment.invoice && (
-              <>
-                <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
-                  Invoice
-                </Text>
-                <Text variant="bodySmall" color={colors.text.secondary} style={styles.mono} numberOfLines={2}>
-                  {payment.invoice}
-                </Text>
-              </>
-            )}
-          </Card>
-        </ScrollView>
+        <ContentColumn style={{ flex: 1 }}>
+          <PaymentDetailsContent payment={payment} bitcoinUnit={bitcoinUnit} contentContainerStyle={{ paddingHorizontal: 0 }} />
+        </ContentColumn>
       </SafeAreaView>
     </View>
   );

@@ -3,20 +3,22 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ContentColumn } from '@/components';
 import { Button, Text } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { useResponsive } from '@/hooks';
 
 export default function OnboardingWelcome() {
   const router = useRouter();
   const colors = useColors();
-  const { width, height } = useWindowDimensions();
-  const isCompactScreen = width < 390 || height < 760;
+  const { isCompactWidth, height } = useResponsive();
+  const isCompactScreen = isCompactWidth || height < 760;
 
   const styles = useMemo(
     () =>
@@ -85,102 +87,104 @@ export default function OnboardingWelcome() {
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea}>
-          {/* Hero Section */}
-          <View style={styles.heroSection}>
-            {/* Animated stars background */}
-            <View style={styles.starsContainer}>
-              {[...Array(12)].map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name="star"
-                  size={8 + Math.random() * 8}
-                  color={colors.gold.pure}
-                  style={[
-                    styles.starDecor,
-                    {
-                      top: `${Math.random() * 100}%`,
-                      left: `${Math.random() * 100}%`,
-                      opacity: 0.2 + Math.random() * 0.5,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
+          <ContentColumn style={{ flex: 1 }} maxWidth={680}>
+            {/* Hero Section */}
+            <View style={styles.heroSection}>
+              {/* Animated stars background */}
+              <View style={styles.starsContainer}>
+                {[...Array(12)].map((_, i) => (
+                  <Ionicons
+                    key={i}
+                    name="star"
+                    size={8 + Math.random() * 8}
+                    color={colors.gold.pure}
+                    style={[
+                      styles.starDecor,
+                      {
+                        top: `${Math.random() * 100}%`,
+                        left: `${Math.random() * 100}%`,
+                        opacity: 0.2 + Math.random() * 0.5,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
 
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={[colors.gold.bright, colors.gold.pure]}
-                style={styles.logoGradient}
-              >
-                <Ionicons name="star" size={isCompactScreen ? 52 : 64} color={colors.background.primary} />
-              </LinearGradient>
-            </View>
+              {/* Logo */}
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={[colors.gold.bright, colors.gold.pure]}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="star" size={isCompactScreen ? 52 : 64} color={colors.background.primary} />
+                </LinearGradient>
+              </View>
 
-            {/* App name */}
-            <View style={styles.appNameContainer}>
-              <Text variant={isCompactScreen ? 'displaySmall' : 'displayMedium'} color={colors.text.primary} align="center" numberOfLines={1}>
+              {/* App name */}
+              <View style={styles.appNameContainer}>
+                <Text variant={isCompactScreen ? 'displaySmall' : 'displayMedium'} color={colors.text.primary} align="center" numberOfLines={1}>
                 Starr
-              </Text>
-              <Text variant={isCompactScreen ? 'titleMedium' : 'titleLarge'} color={colors.gold.pure} align="center" numberOfLines={1}>
+                </Text>
+                <Text variant={isCompactScreen ? 'titleMedium' : 'titleLarge'} color={colors.gold.pure} align="center" numberOfLines={1}>
                 Lightning Wallet
+                </Text>
+              </View>
+            </View>
+
+            {/* Features */}
+            <View style={styles.featuresSection}>
+              <View style={styles.featureItem}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="flash" size={24} color={colors.gold.pure} />
+                </View>
+                <View style={styles.featureText}>
+                  <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Instant Payments</Text>
+                  <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>Send and receive Bitcoin in seconds</Text>
+                </View>
+              </View>
+              <View style={styles.featureItem}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="key" size={24} color={colors.gold.pure} />
+                </View>
+                <View style={styles.featureText}>
+                  <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Non-Custodial</Text>
+                  <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>You control your keys, your coins</Text>
+                </View>
+              </View>
+              <View style={styles.featureItem}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="shield-checkmark" size={24} color={colors.gold.pure} />
+                </View>
+                <View style={styles.featureText}>
+                  <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Biometric Security</Text>
+                  <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>Protected by native device authentication</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Actions */}
+            <View style={styles.actionsSection}>
+              <Button
+                title="Create New Wallet"
+                onPress={() => router.push('/onboarding/create')}
+                variant="primary"
+                size="lg"
+              />
+              <Button
+                title="Import Existing Wallet"
+                onPress={() => router.push('/onboarding/import')}
+                variant="secondary"
+                size="lg"
+              />
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text variant="bodySmall" color={colors.text.muted} align="center">
+              By continuing, you agree to our Terms of Service
               </Text>
             </View>
-          </View>
-
-          {/* Features */}
-          <View style={styles.featuresSection}>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="flash" size={24} color={colors.gold.pure} />
-              </View>
-              <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Instant Payments</Text>
-                <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>Send and receive Bitcoin in seconds</Text>
-              </View>
-            </View>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="key" size={24} color={colors.gold.pure} />
-              </View>
-              <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Non-Custodial</Text>
-                <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>You control your keys, your coins</Text>
-              </View>
-            </View>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="shield-checkmark" size={24} color={colors.gold.pure} />
-              </View>
-              <View style={styles.featureText}>
-                <Text variant="titleSmall" color={colors.text.primary} numberOfLines={1}>Biometric Security</Text>
-                <Text variant="bodySmall" color={colors.text.secondary} numberOfLines={2}>Protected by native device authentication</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Actions */}
-          <View style={styles.actionsSection}>
-            <Button
-              title="Create New Wallet"
-              onPress={() => router.push('/onboarding/create')}
-              variant="primary"
-              size="lg"
-            />
-            <Button
-              title="Import Existing Wallet"
-              onPress={() => router.push('/onboarding/import')}
-              variant="secondary"
-              size="lg"
-            />
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text variant="bodySmall" color={colors.text.muted} align="center">
-              By continuing, you agree to our Terms of Service
-            </Text>
-          </View>
+          </ContentColumn>
         </SafeAreaView>
       </LinearGradient>
     </View>

@@ -18,10 +18,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { Text, Input } from '@/components/ui';
+import { ContentColumn } from '@/components';
 import type { BitcoinUnit, FiatCurrency, MaxDepositClaimFeeSetting } from '@/types/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTheme, useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { useResponsive } from '@/hooks';
 import type { ColorTheme } from '@/theme/colors';
 
 // Currency options
@@ -77,6 +79,7 @@ function getMaxDepositClaimFeeSubtitle(setting: MaxDepositClaimFeeSetting): stri
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { isTabletWidth } = useResponsive();
   const { settings, updateSettings } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const colors = useColors();
@@ -141,117 +144,119 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="headlineMedium" color={colors.text.primary}>
-            Settings
-          </Text>
-        </View>
+        <ContentColumn style={{ flex: 1 }} maxWidth={isTabletWidth ? 980 : undefined}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text variant="headlineMedium" color={colors.text.primary}>
+              Settings
+            </Text>
+          </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Display Section */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Display Section */}
+            <View style={styles.section}>
+              <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
               Display
-            </Text>
-
-            <SettingsItem
-              icon="logo-bitcoin"
-              title="Bitcoin Unit"
-              subtitle={BITCOIN_UNITS.find(u => u.value === settings.bitcoinUnit)?.label ?? settings.bitcoinUnit}
-              onPress={() => setShowBitcoinUnitModal(true)}
-            />
-
-            <SettingsItem
-              icon="cash"
-              title="Fiat Currency"
-              subtitle={FIAT_CURRENCIES.find(c => c.value === settings.fiatCurrency)?.label ?? settings.fiatCurrency}
-              onPress={() => setShowFiatCurrencyModal(true)}
-            />
-
-            <SettingsItem
-              icon={isDark ? 'moon' : 'sunny'}
-              title="Theme"
-              subtitle={themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}
-              onPress={() => setShowThemeModal(true)}
-            />
-          </View>
-
-          {/* Deposits / On-chain Section */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-              Deposits
-            </Text>
-            <SettingsItem
-              icon="cash-outline"
-              title="Max fee for auto-claim"
-              subtitle={getMaxDepositClaimFeeSubtitle(settings.maxDepositClaimFee)}
-              onPress={() => setShowMaxDepositClaimFeeModal(true)}
-            />
-          </View>
-
-          {/* Developer Section */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-              Developer
-            </Text>
-
-          </View>
-
-          {/* About Section */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
-              About
-            </Text>
-
-            <SettingsItem
-              icon="information-circle"
-              title="About Starr"
-              subtitle={`Version ${APP_VERSION}`}
-              onPress={handleAbout}
-            />
-
-            <SettingsItem
-              icon="document-text"
-              title="Terms of Service"
-              onPress={() => openExternalLink(EXTERNAL_LINKS.TERMS)}
-            />
-
-            <SettingsItem
-              icon="shield"
-              title="Privacy Policy"
-              onPress={() => openExternalLink(EXTERNAL_LINKS.PRIVACY)}
-            />
-
-            <SettingsItem
-              icon="help-circle"
-              title="Support"
-              subtitle="Get help with Starr"
-              onPress={handleSupport}
-            />
-          </View>
-
-          {/* Danger Zone */}
-          <View style={styles.section}>
-            <Text variant="labelMedium" color={colors.status.error} style={styles.sectionLabel}>
-              Danger zone
-            </Text>
-
-            <TouchableOpacity
-              style={styles.dangerButton}
-              onPress={() => router.push('/delete-wallet')}
-            >
-              <Ionicons name="trash" size={20} color={colors.status.error} />
-              <Text variant="titleSmall" color={colors.status.error}>
-                Delete Wallet
               </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+
+              <SettingsItem
+                icon="logo-bitcoin"
+                title="Bitcoin Unit"
+                subtitle={BITCOIN_UNITS.find(u => u.value === settings.bitcoinUnit)?.label ?? settings.bitcoinUnit}
+                onPress={() => setShowBitcoinUnitModal(true)}
+              />
+
+              <SettingsItem
+                icon="cash"
+                title="Fiat Currency"
+                subtitle={FIAT_CURRENCIES.find(c => c.value === settings.fiatCurrency)?.label ?? settings.fiatCurrency}
+                onPress={() => setShowFiatCurrencyModal(true)}
+              />
+
+              <SettingsItem
+                icon={isDark ? 'moon' : 'sunny'}
+                title="Theme"
+                subtitle={themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}
+                onPress={() => setShowThemeModal(true)}
+              />
+            </View>
+
+            {/* Deposits / On-chain Section */}
+            <View style={styles.section}>
+              <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+              Deposits
+              </Text>
+              <SettingsItem
+                icon="cash-outline"
+                title="Max fee for auto-claim"
+                subtitle={getMaxDepositClaimFeeSubtitle(settings.maxDepositClaimFee)}
+                onPress={() => setShowMaxDepositClaimFeeModal(true)}
+              />
+            </View>
+
+            {/* Developer Section */}
+            <View style={styles.section}>
+              <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+              Developer
+              </Text>
+
+            </View>
+
+            {/* About Section */}
+            <View style={styles.section}>
+              <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+              About
+              </Text>
+
+              <SettingsItem
+                icon="information-circle"
+                title="About Starr"
+                subtitle={`Version ${APP_VERSION}`}
+                onPress={handleAbout}
+              />
+
+              <SettingsItem
+                icon="document-text"
+                title="Terms of Service"
+                onPress={() => openExternalLink(EXTERNAL_LINKS.TERMS)}
+              />
+
+              <SettingsItem
+                icon="shield"
+                title="Privacy Policy"
+                onPress={() => openExternalLink(EXTERNAL_LINKS.PRIVACY)}
+              />
+
+              <SettingsItem
+                icon="help-circle"
+                title="Support"
+                subtitle="Get help with Starr"
+                onPress={handleSupport}
+              />
+            </View>
+
+            {/* Danger Zone */}
+            <View style={styles.section}>
+              <Text variant="labelMedium" color={colors.status.error} style={styles.sectionLabel}>
+              Danger zone
+              </Text>
+
+              <TouchableOpacity
+                style={styles.dangerButton}
+                onPress={() => router.push('/delete-wallet')}
+              >
+                <Ionicons name="trash" size={20} color={colors.status.error} />
+                <Text variant="titleSmall" color={colors.status.error}>
+                Delete Wallet
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </ContentColumn>
       </SafeAreaView>
 
       {/* Bitcoin Unit Selection Modal */}

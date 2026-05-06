@@ -21,6 +21,8 @@ interface TextProps {
   align?: 'left' | 'center' | 'right';
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  adjustsFontSizeToFit?: boolean;
+  minimumFontScale?: number;
 }
 
 export const Text: React.FC<TextProps> = ({
@@ -30,6 +32,8 @@ export const Text: React.FC<TextProps> = ({
   align = 'left',
   style,
   numberOfLines,
+  adjustsFontSizeToFit,
+  minimumFontScale,
 }) => {
   const colors = useColors();
   const textColor = color || colors.text.primary;
@@ -43,6 +47,8 @@ export const Text: React.FC<TextProps> = ({
         style,
       ]}
       numberOfLines={numberOfLines}
+      adjustsFontSizeToFit={adjustsFontSizeToFit}
+      minimumFontScale={minimumFontScale}
     >
       {children}
     </RNText>

@@ -11,7 +11,9 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
+// eslint-disable-next-line import/no-unresolved
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '@/contexts';
 import { AuthGate } from '@/components';
 import { IncomingPaymentOverlay } from '@/components/wallet';
@@ -90,9 +92,11 @@ function RootLayoutInner() {
 export default function RootLayout() {
   return (
     <KeyboardProvider>
-      <ThemeProvider>
-        <RootLayoutInner />
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <RootLayoutInner />
+        </ThemeProvider>
+      </SafeAreaProvider>
     </KeyboardProvider>
   );
 }

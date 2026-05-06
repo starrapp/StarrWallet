@@ -18,11 +18,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { formatDistanceToNow } from 'date-fns';
 import { Text, FiatAmount } from '@/components/ui';
+import { ContentColumn } from '@/components';
 import { KeychainService } from '@/services/keychain';
 import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { useResponsive } from '@/hooks';
 import { formatSignedAmountStr } from '@/utils/format';
 import type { ColorTheme } from '@/theme/colors';
 import type { LightningPayment, BitcoinUnit } from '@/types/wallet';
@@ -137,6 +139,7 @@ const getStyles = (colors: ColorTheme) => StyleSheet.create({
 export default function HomeScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { isTabletWidth } = useResponsive();
   const {
     balance,
     recentPayments,
@@ -186,7 +189,7 @@ export default function HomeScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.errorContainer}>
+          <ContentColumn style={styles.errorContainer}>
             <Ionicons name="warning" size={64} color={colors.status.error} />
             <Text variant="headlineSmall" color={colors.text.primary} align="center">
               Failed to Initialize Wallet
@@ -212,7 +215,7 @@ export default function HomeScreen() {
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
+          </ContentColumn>
         </SafeAreaView>
       </View>
     );
@@ -223,12 +226,12 @@ export default function HomeScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContainer}>
+          <ContentColumn style={styles.loadingContainer}>
             <Ionicons name="logo-bitcoin" size={48} color={colors.gold.pure} />
             <Text variant="titleMedium" color={colors.text.primary}>
               Connecting to Lightning Network...
             </Text>
-          </View>
+          </ContentColumn>
         </SafeAreaView>
       </View>
     );
@@ -237,94 +240,96 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="logo-bitcoin" size={28} color={colors.gold.pure} />
-            <Text variant="headlineSmall" color={colors.text.primary}>
-              Starr
-            </Text>
-          </View>
-        </View>
-
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={colors.gold.pure}
-            />
-          }
-        >
-          {/* Balance Card */}
-          <BalanceCard
-            balance={balance}
-            onRefresh={refreshBalance}
-            isLoading={isLoadingBalance}
-          />
-
-          {/* Quick Actions */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
-              <View style={[styles.actionCard, { backgroundColor: colors.background.secondary }]}>
-                <View style={[styles.actionIcon, { backgroundColor: colors.background.tertiary }]}>
-                  <Ionicons name="arrow-up" size={24} color={colors.text.primary} />
-                </View>
-                <Text variant="titleMedium" color={colors.text.primary}>
-                  Send
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={handleReceive}>
-              <View style={[styles.actionCard, { backgroundColor: colors.gold.pure }]}>
-                <View style={[styles.actionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <Ionicons name="arrow-down" size={24} color="#FFFFFF" />
-                </View>
-                <Text variant="titleMedium" color="#FFFFFF">
-                  Receive
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Recent Activity */}
-          <View style={styles.recentSection}>
-            <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" color={colors.text.primary}>
-                Recent Activity
+        <ContentColumn style={{ flex: 1 }} maxWidth={isTabletWidth ? 980 : undefined}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Ionicons name="logo-bitcoin" size={28} color={colors.gold.pure} />
+              <Text variant="headlineSmall" color={colors.text.primary}>
+                Starr
               </Text>
-              {recentPayments.length > 0 && (
-                <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
-                  <Text variant="labelMedium" color={colors.gold.pure}>
-                    See All
+            </View>
+          </View>
+
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={colors.gold.pure}
+              />
+            }
+          >
+            {/* Balance Card */}
+            <BalanceCard
+              balance={balance}
+              onRefresh={refreshBalance}
+              isLoading={isLoadingBalance}
+            />
+
+            {/* Quick Actions */}
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
+                <View style={[styles.actionCard, { backgroundColor: colors.background.secondary }]}>
+                  <View style={[styles.actionIcon, { backgroundColor: colors.background.tertiary }]}>
+                    <Ionicons name="arrow-up" size={24} color={colors.text.primary} />
+                  </View>
+                  <Text variant="titleMedium" color={colors.text.primary}>
+                    Send
                   </Text>
-                </TouchableOpacity>
-              )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionButton} onPress={handleReceive}>
+                <View style={[styles.actionCard, { backgroundColor: colors.gold.pure }]}>
+                  <View style={[styles.actionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <Ionicons name="arrow-down" size={24} color="#FFFFFF" />
+                  </View>
+                  <Text variant="titleMedium" color="#FFFFFF">
+                    Receive
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
 
-            {recentPayments.length > 0 ? (
-              <View style={styles.paymentsList}>
-                {recentPayments.map((payment) => (
-                  <PaymentItem key={payment.id} payment={payment} currency={settings.bitcoinUnit} />
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="flash-outline" size={48} color={colors.text.muted} />
-                <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-                  No payments yet
+            {/* Recent Activity */}
+            <View style={styles.recentSection}>
+              <View style={styles.sectionHeader}>
+                <Text variant="titleMedium" color={colors.text.primary}>
+                  Recent Activity
                 </Text>
-                <Text variant="bodySmall" color={colors.text.muted} align="center">
-                  Send or receive your first Lightning payment
-                </Text>
+                {recentPayments.length > 0 && (
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
+                    <Text variant="labelMedium" color={colors.gold.pure}>
+                      See All
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            )}
-          </View>
-        </ScrollView>
+
+              {recentPayments.length > 0 ? (
+                <View style={styles.paymentsList}>
+                  {recentPayments.map((payment) => (
+                    <PaymentItem key={payment.id} payment={payment} currency={settings.bitcoinUnit} />
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="flash-outline" size={48} color={colors.text.muted} />
+                  <Text variant="bodyMedium" color={colors.text.secondary} align="center">
+                    No payments yet
+                  </Text>
+                  <Text variant="bodySmall" color={colors.text.muted} align="center">
+                    Send or receive your first Lightning payment
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </ContentColumn>
       </SafeAreaView>
     </View>
   );

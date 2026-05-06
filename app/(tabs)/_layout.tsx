@@ -12,21 +12,23 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useColors, useTheme } from '@/contexts';
 import { layout, spacing } from '@/theme';
+import { useResponsive } from '@/hooks';
 
 export default function TabLayout() {
   const router = useRouter();
   const colors = useColors();
   const { isDark } = useTheme();
+  const { isTabletWidth } = useResponsive();
   const styles = useMemo(
     () =>
       StyleSheet.create({
         tabBar: {
           position: 'absolute',
-          height: layout.tabBarHeight,
+          height: isTabletWidth ? layout.tabBarHeight + spacing.sm : layout.tabBarHeight,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,
-          paddingTop: spacing.xs,
+          paddingTop: isTabletWidth ? spacing.sm : spacing.xs,
           paddingBottom: spacing.lg,
         },
         tabBarBackground: {
@@ -46,13 +48,13 @@ export default function TabLayout() {
           justifyContent: 'center',
         },
         scanButton: {
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          width: isTabletWidth ? 62 : 56,
+          height: isTabletWidth ? 62 : 56,
+          borderRadius: isTabletWidth ? 31 : 28,
           backgroundColor: colors.gold.pure,
           alignItems: 'center',
           justifyContent: 'center',
-          marginTop: -20,
+          marginTop: isTabletWidth ? -14 : -20,
           shadowColor: colors.gold.pure,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
@@ -60,7 +62,7 @@ export default function TabLayout() {
           elevation: 8,
         },
       }),
-    [colors]
+    [colors, isTabletWidth]
   );
 
   return (

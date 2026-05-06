@@ -11,22 +11,23 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { ContentColumn } from '@/components';
 import { Button, Text, Card } from '@/components/ui';
 import { KeychainService } from '@/services/keychain';
 import { setMnemonic as setOnboardingMnemonic } from '@/stores/onboardingStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
+import { useResponsive } from '@/hooks';
 
 export default function CreateWalletScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { width } = useWindowDimensions();
-  const isCompactScreen = width < 390;
+  const { isCompactWidth } = useResponsive();
+  const isCompactScreen = isCompactWidth;
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [revealed, setRevealed] = useState(false);
@@ -153,119 +154,121 @@ export default function CreateWalletScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="key" size={32} color={colors.gold.pure} />
-          </View>
-          <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
+      <ContentColumn style={{ flex: 1 }} maxWidth={760}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="key" size={32} color={colors.gold.pure} />
+            </View>
+            <Text variant="headlineMedium" color={colors.text.primary} align="center" numberOfLines={2} style={styles.headerText}>
             Your Recovery Phrase
-          </Text>
-          <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.secondary} align="center" numberOfLines={3} style={styles.headerText}>
             Write down these 24 words in order. This is the ONLY way to recover your wallet.
-          </Text>
-        </View>
-
-        {/* Warning */}
-        <Card variant="outlined" style={styles.warningCard}>
-          <View style={styles.warningContent}>
-            <Ionicons name="warning" size={24} color={colors.status.warning} />
-            <View style={styles.warningText}>
-              <Text variant="titleSmall" color={colors.status.warning}>
-                Important Security Warning
-              </Text>
-              <Text variant="bodySmall" color={colors.text.secondary}>
-                Never share your recovery phrase. Anyone with these words can steal your Bitcoin.
-              </Text>
-            </View>
+            </Text>
           </View>
-        </Card>
 
-        {/* Mnemonic grid */}
-        <View style={styles.mnemonicContainer}>
-          {!revealed ? (
-            <View style={styles.blurOverlay}>
-              <Ionicons name="eye-off" size={48} color={colors.text.muted} />
-              <Text variant="titleMedium" color={colors.text.secondary} align="center">
-                Tap &quot;Reveal&quot; to show your recovery phrase
-              </Text>
-              <Text variant="bodySmall" color={colors.text.muted} align="center">
-                Make sure no one is watching your screen
-              </Text>
+          {/* Warning */}
+          <Card variant="outlined" style={styles.warningCard}>
+            <View style={styles.warningContent}>
+              <Ionicons name="warning" size={24} color={colors.status.warning} />
+              <View style={styles.warningText}>
+                <Text variant="titleSmall" color={colors.status.warning}>
+                Important Security Warning
+                </Text>
+                <Text variant="bodySmall" color={colors.text.secondary}>
+                Never share your recovery phrase. Anyone with these words can steal your Bitcoin.
+                </Text>
+              </View>
             </View>
-          ) : (
-            <View style={styles.mnemonicGrid}>
-              {mnemonic.map((word, index) => (
-                <View key={index} style={styles.wordItem}>
-                  <Text variant="labelSmall" color={colors.text.muted}>
-                    {index + 1}
-                  </Text>
-                  <Text variant="titleSmall" color={colors.text.primary}>
-                    {word}
-                  </Text>
-                </View>
-              ))}
+          </Card>
+
+          {/* Mnemonic grid */}
+          <View style={styles.mnemonicContainer}>
+            {!revealed ? (
+              <View style={styles.blurOverlay}>
+                <Ionicons name="eye-off" size={48} color={colors.text.muted} />
+                <Text variant="titleMedium" color={colors.text.secondary} align="center">
+                Tap &quot;Reveal&quot; to show your recovery phrase
+                </Text>
+                <Text variant="bodySmall" color={colors.text.muted} align="center">
+                Make sure no one is watching your screen
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.mnemonicGrid}>
+                {mnemonic.map((word, index) => (
+                  <View key={index} style={styles.wordItem}>
+                    <Text variant="labelSmall" color={colors.text.muted}>
+                      {index + 1}
+                    </Text>
+                    <Text variant="titleSmall" color={colors.text.primary}>
+                      {word}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Checkboxes */}
+          {revealed && (
+            <View style={styles.checkboxContainer}>
+              <TouchableOpacity
+                style={styles.checkItem}
+                onPress={() => setHasAcknowledgedLoss((current) => !current)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: hasAcknowledgedLoss }}
+              >
+                <Ionicons
+                  name={hasAcknowledgedLoss ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={hasAcknowledgedLoss ? colors.status.success : colors.text.muted}
+                />
+                <Text variant="bodySmall" color={colors.text.secondary} style={styles.checkItemText}>
+                I understand that if I lose this phrase, I lose access to my Bitcoin
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.checkItem}
+                onPress={() => setHasAcknowledgedStorage((current) => !current)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: hasAcknowledgedStorage }}
+              >
+                <Ionicons
+                  name={hasAcknowledgedStorage ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={hasAcknowledgedStorage ? colors.status.success : colors.text.muted}
+                />
+                <Text variant="bodySmall" color={colors.text.secondary} style={styles.checkItemText}>
+                I will store this phrase securely and never share it
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
+        </ScrollView>
+
+        {/* Actions */}
+        <View style={styles.actions}>
+          <Button
+            title={revealed ? "I've Written It Down" : "Reveal Recovery Phrase"}
+            onPress={handleContinue}
+            variant="primary"
+            size="lg"
+            disabled={revealed && (!hasAcknowledgedLoss || !hasAcknowledgedStorage)}
+          />
+          <Button
+            title="Go Back"
+            onPress={() => router.back()}
+            variant="ghost"
+            size="md"
+          />
         </View>
-
-        {/* Checkboxes */}
-        {revealed && (
-          <View style={styles.checkboxContainer}>
-            <TouchableOpacity
-              style={styles.checkItem}
-              onPress={() => setHasAcknowledgedLoss((current) => !current)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: hasAcknowledgedLoss }}
-            >
-              <Ionicons
-                name={hasAcknowledgedLoss ? 'checkmark-circle' : 'ellipse-outline'}
-                size={20}
-                color={hasAcknowledgedLoss ? colors.status.success : colors.text.muted}
-              />
-              <Text variant="bodySmall" color={colors.text.secondary} style={styles.checkItemText}>
-                I understand that if I lose this phrase, I lose access to my Bitcoin
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.checkItem}
-              onPress={() => setHasAcknowledgedStorage((current) => !current)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: hasAcknowledgedStorage }}
-            >
-              <Ionicons
-                name={hasAcknowledgedStorage ? 'checkmark-circle' : 'ellipse-outline'}
-                size={20}
-                color={hasAcknowledgedStorage ? colors.status.success : colors.text.muted}
-              />
-              <Text variant="bodySmall" color={colors.text.secondary} style={styles.checkItemText}>
-                I will store this phrase securely and never share it
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Actions */}
-      <View style={styles.actions}>
-        <Button
-          title={revealed ? "I've Written It Down" : "Reveal Recovery Phrase"}
-          onPress={handleContinue}
-          variant="primary"
-          size="lg"
-          disabled={revealed && (!hasAcknowledgedLoss || !hasAcknowledgedStorage)}
-        />
-        <Button
-          title="Go Back"
-          onPress={() => router.back()}
-          variant="ghost"
-          size="md"
-        />
-      </View>
+      </ContentColumn>
     </SafeAreaView>
   );
 }
