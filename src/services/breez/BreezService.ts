@@ -217,7 +217,7 @@ class BreezServiceImpl {
   async getOnchainReceiveAddress(): Promise<string> {
     const sdk = this.requireSdk();
     const response = await sdk.receivePayment({
-      paymentMethod: ReceivePaymentMethod.BitcoinAddress.new(),
+      paymentMethod: ReceivePaymentMethod.BitcoinAddress.new({ newAddress: undefined }),
     });
     return response.paymentRequest;
   }
@@ -248,7 +248,7 @@ class BreezServiceImpl {
       }
 
       const prepareResponse = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
-        amountSats,
+        amount: amountSats,
         comment: comment || undefined,
         payRequest,
       }));
@@ -336,7 +336,7 @@ class BreezServiceImpl {
       }
 
       const response = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
-        amountSats,
+        amount: amountSats,
         comment: comment || undefined,
         payRequest,
       }));
@@ -471,7 +471,7 @@ class BreezServiceImpl {
       case DepositClaimError_Tags.MissingUtxo:
         return 'UTXO not found';
       case DepositClaimError_Tags.Generic:
-        return error.inner.err;
+        return error.inner.message;
       default:
         return 'Unknown claim error';
     }
