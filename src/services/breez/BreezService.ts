@@ -30,6 +30,7 @@ import {
   MaxFee,
   Network,
   PaymentDetails_Tags,
+  PaymentRequest,
   PaymentStatus,
   PaymentType,
   PrepareLnurlPayRequest,
@@ -596,7 +597,7 @@ class BreezServiceImpl {
     const sdk = this.requireSdk();
 
     return sdk.prepareSendPayment({
-      paymentRequest,
+      paymentRequest: PaymentRequest.Input.new({ input: paymentRequest }),
       amount: amountSats != null ? amountSats : undefined,
       tokenIdentifier: undefined,
       conversionOptions: undefined,

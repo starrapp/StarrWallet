@@ -6,8 +6,7 @@
 
 import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ContentColumn, SplitLayout } from '@/components';
 import { Text, Card } from '@/components/ui';
