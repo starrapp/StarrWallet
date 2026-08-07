@@ -116,19 +116,18 @@ export default function CreateWalletScreen() {
   );
 
   useEffect(() => {
+    const generateMnemonic = async () => {
+      try {
+        const phrase = await KeychainService.generateMnemonic();
+        setMnemonic(phrase.split(' '));
+      } catch (error) {
+        console.error('Failed to generate mnemonic:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     generateMnemonic();
   }, []);
-
-  const generateMnemonic = async () => {
-    try {
-      const phrase = await KeychainService.generateMnemonic();
-      setMnemonic(phrase.split(' '));
-    } catch (error) {
-      console.error('Failed to generate mnemonic:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleContinue = () => {
     if (!revealed) {

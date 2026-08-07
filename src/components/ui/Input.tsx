@@ -131,9 +131,9 @@ export const AmountInput: React.FC<AmountInputProps> = ({
 
   // Sync btcDisplay when value (sats) changes externally (e.g. reset to '')
   const satsValue = BigInt(value || '0');
-  const prevSatsRef = React.useRef(satsValue);
-  if (satsValue !== prevSatsRef.current) {
-    prevSatsRef.current = satsValue;
+  const [prevSats, setPrevSats] = useState(satsValue);
+  if (satsValue !== prevSats) {
+    setPrevSats(satsValue);
     if (isBtc) {
       const expected = satsValue === 0n ? '' : satsToBtc(satsValue);
       // Only update if the external sats don't match what user typed

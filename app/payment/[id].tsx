@@ -30,39 +30,37 @@ export default function PaymentDetailScreen() {
   const getPayment = useWalletStore((s) => s.getPayment);
   const bitcoinUnit = useWalletStore((s) => s.settings.bitcoinUnit);
   const [payment, setPayment] = useState<LightningPayment | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const id = params.id;
+  // Loading until the fetch for the current id settles.
+  const loading = !!id && loadedId !== id;
+  const error = id ? fetchError : 'Missing payment id';
 
   useEffect(() => {
-    const id = params.id;
-    if (!id) {
-      setError('Missing payment id');
-      setLoading(false);
-      return;
-    }
+    if (!id) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     getPayment(id)
       .then((p) => {
         if (!cancelled) {
           setPayment(p ?? null);
-          if (!p) setError('Payment not found');
+          setFetchError(p ? null : 'Payment not found');
         }
       })
       .catch((err) => {
         console.error('[Payment] Failed to load payment:', err);
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load payment');
+          setFetchError(err instanceof Error ? err.message : 'Failed to load payment');
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadedId(id);
       });
     return () => {
       cancelled = true;
     };
-  }, [params.id, getPayment]);
+  }, [id, getPayment]);
 
   const styles = useMemo(
     () =>

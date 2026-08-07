@@ -31,21 +31,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Load saved theme on mount
   useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedMode && ['dark', 'light', 'system'].includes(savedMode)) {
+          setModeState(savedMode as ThemeMode);
+        }
+      } catch (error) {
+        console.error('[ThemeContext] Failed to load theme:', error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
     loadTheme();
   }, []);
-
-  const loadTheme = async () => {
-    try {
-      const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedMode && ['dark', 'light', 'system'].includes(savedMode)) {
-        setModeState(savedMode as ThemeMode);
-      }
-    } catch (error) {
-      console.error('[ThemeContext] Failed to load theme:', error);
-    } finally {
-      setIsLoaded(true);
-    }
-  };
 
   const setMode = useCallback(async (newMode: ThemeMode) => {
     try {

@@ -51,7 +51,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
           gap: spacing.lg,
           padding: spacing.xl,
         },
-        overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+        overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'transparent' },
         topSection: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
         header: {
           flexDirection: 'row',

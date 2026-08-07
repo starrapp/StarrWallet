@@ -30,10 +30,13 @@ const STATUS_OPTIONS: { value: 'all' | 'completed' | 'pending' | 'failed'; label
   { value: 'failed', label: 'Failed' },
 ];
 
+const SEVEN_DAYS_AGO = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+const THIRTY_DAYS_AGO = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
+
 const DATE_OPTIONS: { value: 'all' | '7' | '30'; label: string; fromTimestamp?: number }[] = [
   { value: 'all', label: 'All time' },
-  { value: '7', label: 'Last 7 days', fromTimestamp: Math.floor(Date.now() / 1000) - 7 * 24 * 3600 },
-  { value: '30', label: 'Last 30 days', fromTimestamp: Math.floor(Date.now() / 1000) - 30 * 24 * 3600 },
+  { value: '7', label: 'Last 7 days', fromTimestamp: SEVEN_DAYS_AGO },
+  { value: '30', label: 'Last 30 days', fromTimestamp: THIRTY_DAYS_AGO },
 ];
 
 export default function HistoryScreen() {
@@ -52,8 +55,11 @@ export default function HistoryScreen() {
   } = useWalletStore();
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<LightningPayment | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [loadedPaymentId, setLoadedPaymentId] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  // The detail pane is loading until the fetch for the selected payment settles.
+  const detailLoading = selectedPaymentId != null && loadedPaymentId !== selectedPaymentId;
 
   useFocusEffect(
     useCallback(() => {
@@ -72,30 +78,26 @@ export default function HistoryScreen() {
     [isSplitWidth, router]
   );
 
-  useEffect(() => {
-    if (!isSplitWidth) {
-      setSelectedPaymentId(null);
-      setSelectedPayment(null);
-      setDetailError(null);
-      return;
-    }
-
-    if (!selectedPaymentId && payments.length > 0) {
-      setSelectedPaymentId(payments[0].id);
-    }
-  }, [isSplitWidth, payments, selectedPaymentId]);
+  // Selection is derived from the layout: cleared when the split pane is gone,
+  // defaulted to the first payment when it appears.
+  if (!isSplitWidth && (selectedPaymentId !== null || selectedPayment !== null || detailError !== null)) {
+    setSelectedPaymentId(null);
+    setSelectedPayment(null);
+    setDetailError(null);
+  }
+  if (isSplitWidth && !selectedPaymentId && payments.length > 0) {
+    setSelectedPaymentId(payments[0].id);
+  }
 
   useEffect(() => {
     if (!isSplitWidth || !selectedPaymentId) return;
 
     let cancelled = false;
-    setDetailLoading(true);
-    setDetailError(null);
     getPayment(selectedPaymentId)
       .then((payment) => {
         if (!cancelled) {
           setSelectedPayment(payment ?? null);
-          if (!payment) setDetailError('Payment not found');
+          setDetailError(payment ? null : 'Payment not found');
         }
       })
       .catch((err) => {
@@ -105,7 +107,7 @@ export default function HistoryScreen() {
         }
       })
       .finally(() => {
-        if (!cancelled) setDetailLoading(false);
+        if (!cancelled) setLoadedPaymentId(selectedPaymentId);
       });
 
     return () => {
@@ -136,11 +138,8 @@ export default function HistoryScreen() {
   const currentDateRange = useMemo((): 'all' | '7' | '30' => {
     const from = paymentFilter.fromTimestamp;
     if (from == null) return 'all';
-    const now = Math.floor(Date.now() / 1000);
-    const sevenAgo = now - 7 * 24 * 3600;
-    const thirtyAgo = now - 30 * 24 * 3600;
-    if (from >= sevenAgo - 86400) return '7';
-    if (from >= thirtyAgo - 86400) return '30';
+    if (from >= SEVEN_DAYS_AGO - 86400) return '7';
+    if (from >= THIRTY_DAYS_AGO - 86400) return '30';
     return 'all';
   }, [paymentFilter.fromTimestamp]);
 

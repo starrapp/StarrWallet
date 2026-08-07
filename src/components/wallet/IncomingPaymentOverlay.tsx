@@ -18,7 +18,7 @@ interface IncomingPaymentOverlayProps {
 const createStyles = (colors: ColorTheme) =>
   StyleSheet.create({
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.overlay.heavy,
       alignItems: 'center',
       justifyContent: 'center',

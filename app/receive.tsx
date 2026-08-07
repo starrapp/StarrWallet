@@ -4,7 +4,7 @@
  * Create Lightning invoices and claim unclaimed on-chain deposits.
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -97,23 +97,21 @@ export default function ReceiveScreen() {
     }
   }, [getSparkReceiveAddress]);
 
-  useEffect(() => {
-    if (receiveMode === 'onchain') {
-      fetchOnchainAddress();
-    } else {
+  const handleModeChange = useCallback(
+    (mode: ReceiveMode) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setReceiveMode(mode);
+
       setOnchainAddress(null);
       setOnchainError(null);
-    }
-  }, [receiveMode, fetchOnchainAddress]);
-
-  useEffect(() => {
-    if (receiveMode === 'spark') {
-      fetchSparkAddress();
-    } else {
       setSparkAddress(null);
       setSparkError(null);
-    }
-  }, [receiveMode, fetchSparkAddress]);
+
+      if (mode === 'onchain') fetchOnchainAddress();
+      if (mode === 'spark') fetchSparkAddress();
+    },
+    [fetchOnchainAddress, fetchSparkAddress]
+  );
 
   const handleCopyOnchainAddress = useCallback(async () => {
     if (!onchainAddress) return;
@@ -360,10 +358,7 @@ export default function ReceiveScreen() {
                   styles.segmentButton,
                   receiveMode === 'lightning' ? styles.segmentButtonActive : styles.segmentButtonInactive,
                 ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReceiveMode('lightning');
-                }}
+                onPress={() => handleModeChange('lightning')}
               >
                 <Ionicons
                   name="flash"
@@ -385,10 +380,7 @@ export default function ReceiveScreen() {
                   styles.segmentButton,
                   receiveMode === 'onchain' ? styles.segmentButtonActive : styles.segmentButtonInactive,
                 ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReceiveMode('onchain');
-                }}
+                onPress={() => handleModeChange('onchain')}
               >
                 <Ionicons
                   name="link"
@@ -410,10 +402,7 @@ export default function ReceiveScreen() {
                   styles.segmentButton,
                   receiveMode === 'spark' ? styles.segmentButtonActive : styles.segmentButtonInactive,
                 ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setReceiveMode('spark');
-                }}
+                onPress={() => handleModeChange('spark')}
               >
                 <Ionicons
                   name="flash-outline"

@@ -32,7 +32,7 @@ export default function TabLayout() {
           paddingBottom: spacing.lg,
         },
         tabBarBackground: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           backgroundColor: colors.background.primary + 'E6',
           borderTopWidth: 1,
           borderTopColor: colors.border.subtle,

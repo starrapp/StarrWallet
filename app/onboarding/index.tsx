@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, type DimensionValue } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,19 @@ import { Button, Text } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
+
+// Decorative only. Generated once so the stars keep their position between renders.
+const STAR_DECORATIONS: {
+  size: number;
+  top: DimensionValue;
+  left: DimensionValue;
+  opacity: number;
+}[] = Array.from({ length: 12 }, () => ({
+  size: 8 + Math.random() * 8,
+  top: `${Math.random() * 100}%`,
+  left: `${Math.random() * 100}%`,
+  opacity: 0.2 + Math.random() * 0.5,
+}));
 
 export default function OnboardingWelcome() {
   const router = useRouter();
@@ -92,18 +105,18 @@ export default function OnboardingWelcome() {
             <View style={styles.heroSection}>
               {/* Animated stars background */}
               <View style={styles.starsContainer}>
-                {[...Array(12)].map((_, i) => (
+                {STAR_DECORATIONS.map((star, i) => (
                   <Ionicons
                     key={i}
                     name="star"
-                    size={8 + Math.random() * 8}
+                    size={star.size}
                     color={colors.gold.pure}
                     style={[
                       styles.starDecor,
                       {
-                        top: `${Math.random() * 100}%`,
-                        left: `${Math.random() * 100}%`,
-                        opacity: 0.2 + Math.random() * 0.5,
+                        top: star.top,
+                        left: star.left,
+                        opacity: star.opacity,
                       },
                     ]}
                   />

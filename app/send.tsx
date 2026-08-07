@@ -44,42 +44,48 @@ export default function SendScreen() {
   const colors = useColors();
   const { isTabletWidth } = useResponsive();
   const { balance, sendPayment, settings } = useWalletStore();
-  const [invoice, setInvoice] = useState('');
+  const [invoice, setInvoice] = useState(() => params.invoice?.trim() ?? '');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [parsed, setParsed] = useState<ParsedInput | null>(null);
-  const [isParsing, setIsParsing] = useState(false);
+  // The input text `parsed` belongs to. Differs from the current input while a parse is pending.
+  const [parsedInput, setParsedInput] = useState('');
   const [prepareResult, setPrepareResult] = useState<PrepareSendResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial invoice from scan / deep link
-  useEffect(() => {
-    const initial = params.invoice?.trim();
-    if (initial) {
-      setInvoice(initial);
-    }
-  }, [params.invoice]);
+  const trimmedInvoice = invoice.trim();
+  const isParsing = trimmedInvoice !== '' && parsedInput !== trimmedInvoice;
+
+  // Later invoice from scan / deep link, while the screen stays mounted.
+  const [prevInvoiceParam, setPrevInvoiceParam] = useState(params.invoice);
+  if (params.invoice !== prevInvoiceParam) {
+    setPrevInvoiceParam(params.invoice);
+    const next = params.invoice?.trim();
+    if (next) setInvoice(next);
+  }
+
+  if (trimmedInvoice === '' && parsed !== null) {
+    setParsed(null);
+    setParsedInput('');
+  }
 
   // Parse when input changes (debounced)
   useEffect(() => {
-    if (!invoice.trim()) {
-      setParsed(null);
-      return;
-    }
+    const trimmed = invoice.trim();
+    if (!trimmed) return;
     let cancelled = false;
-    setIsParsing(true);
     const t = setTimeout(async () => {
       try {
-        const result = await BreezService.parse(invoice.trim());
+        const result = await BreezService.parse(trimmed);
         if (!cancelled) {
           setParsed(result);
         }
       } catch {
-        if (!cancelled) setParsed({ type: 'unknown', raw: invoice });
+        if (!cancelled) setParsed({ type: 'unknown', raw: trimmed });
       } finally {
-        if (!cancelled) setIsParsing(false);
+        if (!cancelled) setParsedInput(trimmed);
       }
     }, 400);
     return () => {
