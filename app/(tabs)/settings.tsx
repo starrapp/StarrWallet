@@ -51,7 +51,7 @@ const FIAT_CURRENCIES = [
 const EXTERNAL_LINKS = {
   TERMS: 'https://starr.app/terms',
   PRIVACY: 'https://starr.app/privacy',
-  SUPPORT: 'https://starr.app/support',
+  SUPPORT: 'https://support.starr.app/',
   ABOUT: 'https://starr.app/about',
   CAREERS: 'mailto:careers@starr.app',
   GITHUB: 'https://github.com/starrapp/StarrWallet',
@@ -101,14 +101,11 @@ export default function SettingsScreen() {
     setShowFiatCurrencyModal(false);
   };
 
+  // canOpenURL is not used as a gate: on Android 11+ it returns false for any scheme
+  // missing from the manifest <queries> block, and mailto is not declared there.
   const openExternalLink = async (url: string) => {
     try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Unable to open this link.');
-      }
+      await Linking.openURL(url);
     } catch (error) {
       console.error('Failed to open link:', error);
       Alert.alert('Error', 'Failed to open link.');
