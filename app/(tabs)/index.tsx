@@ -144,10 +144,9 @@ export default function HomeScreen() {
     balance,
     recentPayments,
     settings,
-    isLoadingBalance,
     isInitializing,
     initError,
-    refreshBalance,
+    syncNode,
     refreshRecentPayments,
     fetchBtcPrice,
     initializeWallet,
@@ -164,12 +163,21 @@ export default function HomeScreen() {
     }
   }, [isInitialized, isInitializing, initError, tryInitialize]);
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Which control started the refresh. The pull-to-refresh spinner must only
+  // show for the gesture, not when the button starts the same work.
+  const [refreshSource, setRefreshSource] = useState<'pull' | 'button' | null>(null);
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await Promise.all([refreshBalance(), refreshRecentPayments(), fetchBtcPrice()]);
-    setIsRefreshing(false);
+  const runRefresh = async (source: 'pull' | 'button') => {
+    if (refreshSource) return;
+    setRefreshSource(source);
+    try {
+      // syncNode syncs with the network and updates the balance. A plain
+      // refreshBalance only re-reads local state, so nothing would change.
+      await syncNode();
+      await Promise.all([refreshRecentPayments(), fetchBtcPrice()]);
+    } finally {
+      setRefreshSource(null);
+    }
   };
 
   const handleSend = () => {
@@ -257,8 +265,8 @@ export default function HomeScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
+                refreshing={refreshSource === 'pull'}
+                onRefresh={() => runRefresh('pull')}
                 tintColor={colors.gold.pure}
               />
             }
@@ -266,8 +274,8 @@ export default function HomeScreen() {
             {/* Balance Card */}
             <BalanceCard
               balance={balance}
-              onRefresh={refreshBalance}
-              isLoading={isLoadingBalance}
+              onRefresh={() => runRefresh('button')}
+              isLoading={refreshSource !== null}
             />
 
             {/* Quick Actions */}

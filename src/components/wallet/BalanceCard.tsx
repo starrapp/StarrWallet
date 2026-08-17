@@ -4,8 +4,8 @@
  * Displays the wallet balance with a clean, modern design.
  */
 
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Amount, FiatAmount } from '@/components/ui';
 import { layout, spacing } from '@/theme';
@@ -13,6 +13,8 @@ import { useColors } from '@/contexts';
 import type { Balance } from '@/types/wallet';
 import { formatAmountStr } from '@/utils/format';
 import { useWalletStore } from '@/stores/walletStore';
+
+const REFRESH_ICON_SIZE = 18;
 
 interface BalanceCardProps {
   balance: Balance | null;
@@ -31,6 +33,30 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   const totalBalance = lightning;
   const formattedLightning = formatAmountStr(lightning, bitcoinUnit);
 
+  const [spin] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (!isLoading) {
+      spin.stopAnimation(() => spin.setValue(0));
+      return;
+    }
+    const animation = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [isLoading, spin]);
+
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
       {/* Balance label */}
@@ -39,13 +65,15 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           Total Balance
         </Text>
         {onRefresh && (
-          <TouchableOpacity onPress={onRefresh} disabled={isLoading}>
-            <Ionicons
-              name="refresh"
-              size={18}
-              color={colors.text.secondary}
-              style={isLoading ? styles.spinning : undefined}
-            />
+          <TouchableOpacity onPress={onRefresh} disabled={isLoading} hitSlop={12}>
+            <Animated.View style={[styles.refreshIcon, { transform: [{ rotate }] }]}>
+              <Ionicons
+                name="sync"
+                size={REFRESH_ICON_SIZE}
+                color={colors.text.secondary}
+                style={styles.refreshGlyph}
+              />
+            </Animated.View>
           </TouchableOpacity>
         )}
       </View>
@@ -117,7 +145,17 @@ const styles = StyleSheet.create({
     height: 40,
     marginHorizontal: spacing.md,
   },
-  spinning: {
-    opacity: 0.5,
+  // A square box that hugs the glyph, so rotation happens around its centre.
+  refreshIcon: {
+    width: REFRESH_ICON_SIZE,
+    height: REFRESH_ICON_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Font metrics add leading above and below the glyph and push it off centre.
+  refreshGlyph: {
+    lineHeight: REFRESH_ICON_SIZE,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
