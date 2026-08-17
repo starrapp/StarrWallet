@@ -121,7 +121,10 @@ export default function SettingsScreen() {
         { text: 'Careers', onPress: () => openExternalLink(EXTERNAL_LINKS.CAREERS) },
         { text: 'View on GitHub', onPress: () => openExternalLink(EXTERNAL_LINKS.GITHUB) },
         { text: 'OK' },
-      ]
+      ],
+      // Android keeps only the first three buttons and defaults to cancelable:
+      // false, so 'OK' is dropped and the dialog cannot be dismissed without it.
+      { cancelable: true }
     );
   };
 
@@ -134,7 +137,9 @@ export default function SettingsScreen() {
         { text: 'Email Support', onPress: () => Linking.openURL('mailto:support@starr.app') },
         { text: 'Careers', onPress: () => openExternalLink(EXTERNAL_LINKS.CAREERS) },
         { text: 'Cancel', style: 'cancel' },
-      ]
+      ],
+      // Same as above: on Android 'Cancel' is the dropped fourth button.
+      { cancelable: true }
     );
   };
 
