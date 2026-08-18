@@ -20,8 +20,14 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Text, Button } from '@/components/ui';
 import { useColors } from '@/contexts';
+import { darkColors } from '@/theme/colors';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
+
+// The camera scrim is always dark, whatever the app theme is, so text drawn on it
+// has to stay light. Taking it from the theme makes it black in the light theme,
+// which leaves it unreadable over the scrim.
+const OVERLAY_TEXT = darkColors.text.primary;
 
 interface ScannerProps {
   bottomInset?: number;
@@ -274,9 +280,9 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
         <SafeAreaView style={styles.topSection}>
           <View style={styles.header}>
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Ionicons name="close" size={28} color={colors.text.primary} />
+              <Ionicons name="close" size={28} color={OVERLAY_TEXT} />
             </TouchableOpacity>
-            <Text variant="titleLarge" color={colors.text.primary}>
+            <Text variant="titleLarge" color={OVERLAY_TEXT}>
               Scan QR Code
             </Text>
             <TouchableOpacity
@@ -286,7 +292,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
               <Ionicons
                 name={torch ? 'flash' : 'flash-outline'}
                 size={24}
-                color={torch ? colors.gold.pure : colors.text.primary}
+                color={torch ? colors.gold.pure : OVERLAY_TEXT}
               />
             </TouchableOpacity>
           </View>
@@ -307,7 +313,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
         <View style={styles.bottomSection}>
           <View style={styles.hint}>
             <Ionicons name="flash" size={20} color={colors.gold.pure} />
-            <Text variant="bodyMedium" color={colors.text.primary} align="center">
+            <Text variant="bodyMedium" color={OVERLAY_TEXT} align="center">
               Point your camera at a Lightning invoice QR code
             </Text>
           </View>
@@ -327,8 +333,8 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
               style={styles.rescanButton}
               onPress={() => setScanned(false)}
             >
-              <Ionicons name="refresh" size={20} color={colors.text.primary} />
-              <Text variant="titleSmall" color={colors.text.primary}>
+              <Ionicons name="refresh" size={20} color={OVERLAY_TEXT} />
+              <Text variant="titleSmall" color={OVERLAY_TEXT}>
                 Scan Again
               </Text>
             </TouchableOpacity>
