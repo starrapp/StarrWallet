@@ -1,5 +1,3 @@
-export { BreezService } from './breez';
-export { KeychainService } from './keychain';
 export {
   BtcMapService,
   BtcMapServiceError,
@@ -7,4 +5,4 @@ export {
   formatDistance,
   getPaymentMethods,
   isBoosted,
-} from './btcmap';
+} from './BtcMapService';
