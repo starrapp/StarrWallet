@@ -6,8 +6,9 @@
  */
 
 import type {
-  BtcMapPlace,
+  BtcMapPlaceDetails,
   BtcMapSearchParams,
+  BtcMapSearchedPlace,
   NearbyPlacesResult,
   PaymentMethod,
 } from '@/types/btcmap';
@@ -124,7 +125,8 @@ export function formatDistance(km: number): string {
   return `${Math.round(km)} km`;
 }
 
-export function getPaymentMethods(place: BtcMapPlace): PaymentMethod[] {
+/** Only `/places/{id}` returns the `osm:*` tags this reads. */
+export function getPaymentMethods(place: BtcMapPlaceDetails): PaymentMethod[] {
   const methods: PaymentMethod[] = [];
   const onchain =
     place['osm:payment:bitcoin'] === 'yes' || place['osm:currency:XBT'] === 'yes';
@@ -137,7 +139,10 @@ export function getPaymentMethods(place: BtcMapPlace): PaymentMethod[] {
   return methods;
 }
 
-export function isBoosted(place: BtcMapPlace, now = new Date()): boolean {
+export function isBoosted(
+  place: { boosted_until?: string },
+  now = new Date()
+): boolean {
   if (!place.boosted_until) return false;
   return new Date(place.boosted_until).getTime() > now.getTime();
 }
@@ -145,9 +150,11 @@ export function isBoosted(place: BtcMapPlace, now = new Date()): boolean {
 export class BtcMapService {
   /**
    * Search places by area, name, and/or OSM tag.
-   * Search returns a rich default payload; we still normalize coordinates.
+   * The payload is fixed, so `fields` is not sent; we only drop malformed rows.
    */
-  static async searchPlaces(params: BtcMapSearchParams): Promise<BtcMapPlace[]> {
+  static async searchPlaces(
+    params: BtcMapSearchParams
+  ): Promise<BtcMapSearchedPlace[]> {
     const query: Record<string, string> = {};
 
     if (params.lat != null && params.lon != null && params.radiusKm != null) {
@@ -171,7 +178,10 @@ export class BtcMapService {
       );
     }
 
-    const places = await fetchJson<BtcMapPlace[]>('/places/search/', query);
+    const places = await fetchJson<BtcMapSearchedPlace[]>(
+      '/places/search/',
+      query
+    );
     return places.filter(
       (place) =>
         typeof place.id === 'number' &&
@@ -198,8 +208,8 @@ export class BtcMapService {
   /**
    * Fetch a single place with payment method tags and contact fields.
    */
-  static async getPlace(id: number | string): Promise<BtcMapPlace> {
-    return fetchJson<BtcMapPlace>(`/places/${encodeURIComponent(String(id))}`, {
+  static async getPlace(id: number | string): Promise<BtcMapPlaceDetails> {
+    return fetchJson<BtcMapPlaceDetails>(`/places/${encodeURIComponent(String(id))}`, {
       fields: PLACE_FIELDS,
     });
   }

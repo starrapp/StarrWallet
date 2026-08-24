@@ -8,13 +8,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
-import { formatDistance, getPaymentMethods, isBoosted } from '@/services/btcmap';
+import { formatDistance, isBoosted } from '@/services/btcmap';
 import { placeIconName } from '@/utils/btcmapIcons';
-import type { BtcMapPlace } from '@/types/btcmap';
+import type { BtcMapSearchedPlace } from '@/types/btcmap';
 import type { ColorTheme } from '@/theme/colors';
 
 interface PlaceListItemProps {
-  place: BtcMapPlace;
+  place: BtcMapSearchedPlace;
   distanceKmValue?: number;
   selected?: boolean;
   onPress: () => void;
@@ -28,7 +28,6 @@ export function PlaceListItem({
 }: PlaceListItemProps) {
   const colors = useColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const methods = getPaymentMethods(place);
   const boosted = isBoosted(place);
 
   return (
@@ -63,34 +62,15 @@ export function PlaceListItem({
           </Text>
         )}
 
-        <View style={styles.tags}>
-          {methods.length === 0 ? (
-            <View style={styles.tag}>
-              <Text variant="labelSmall" color={colors.gold.pure}>
-                Bitcoin
-              </Text>
-            </View>
-          ) : (
-            methods.map((method) => (
-              <View key={method} style={styles.tag}>
-                <Text variant="labelSmall" color={colors.gold.pure}>
-                  {method === 'onchain'
-                    ? 'On-chain'
-                    : method === 'lightning'
-                      ? 'Lightning'
-                      : 'Contactless LN'}
-                </Text>
-              </View>
-            ))
-          )}
-          {boosted && (
+        {boosted && (
+          <View style={styles.tags}>
             <View style={[styles.tag, styles.boostTag]}>
               <Text variant="labelSmall" color={colors.background.primary}>
                 Boosted
               </Text>
             </View>
-          )}
-        </View>
+          </View>
+        )}
       </View>
 
       <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />

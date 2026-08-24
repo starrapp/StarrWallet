@@ -25,17 +25,21 @@ import {
   isBoosted,
 } from '@/services/btcmap';
 import { placeIconName } from '@/utils/btcmapIcons';
-import type { BtcMapPlace } from '@/types/btcmap';
+import type {
+  BtcMapPlaceDetails,
+  BtcMapSearchedPlace,
+  PaymentMethod,
+} from '@/types/btcmap';
 import type { ColorTheme } from '@/theme/colors';
 
 interface PlaceDetailSheetProps {
-  place: BtcMapPlace | null;
+  place: BtcMapSearchedPlace | null;
   distanceKmValue?: number;
   visible: boolean;
   onClose: () => void;
 }
 
-function openExternalMaps(place: BtcMapPlace) {
+function openExternalMaps(place: BtcMapSearchedPlace) {
   const label = encodeURIComponent(place.name || 'Bitcoin merchant');
   const { lat, lon } = place;
   const url =
@@ -53,7 +57,7 @@ export function PlaceDetailSheet({
 }: PlaceDetailSheetProps) {
   const colors = useColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const [enriched, setEnriched] = useState<BtcMapPlace | null>(null);
+  const [tags, setTags] = useState<BtcMapPlaceDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const placeId = place?.id;
@@ -68,10 +72,10 @@ export function PlaceDetailSheet({
     void (async () => {
       setLoading(true);
       setError(null);
-      setEnriched(null);
+      setTags(null);
       try {
         const full = await BtcMapService.getPlace(placeId);
-        if (!cancelled) setEnriched(full);
+        if (!cancelled) setTags(full);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load details');
@@ -88,9 +92,13 @@ export function PlaceDetailSheet({
 
   if (!place) return null;
 
-  const shown = enriched?.id === place.id ? enriched : place;
-  const methods = getPaymentMethods(shown);
-  const boosted = isBoosted(shown);
+  // The search payload has every field shown here except the payment tags,
+  // which only /places/{id} returns. Until they arrive there is nothing to show;
+  // a place with no tag at all still accepts bitcoin, hence the fallback.
+  const methods = tags?.id === place.id ? getPaymentMethods(tags) : null;
+  const paymentChips: (PaymentMethod | 'bitcoin')[] =
+    methods === null ? [] : methods.length > 0 ? methods : ['bitcoin'];
+  const boosted = isBoosted(place);
 
   return (
     <Modal
@@ -107,14 +115,14 @@ export function PlaceDetailSheet({
           <View style={styles.header}>
             <View style={[styles.iconWrap, boosted && styles.iconBoosted]}>
               <Ionicons
-                name={placeIconName(shown.icon)}
+                name={placeIconName(place.icon)}
                 size={28}
                 color={boosted ? colors.background.primary : colors.gold.pure}
               />
             </View>
             <View style={styles.headerText}>
               <Text variant="headlineSmall" numberOfLines={2}>
-                {shown.name || 'Unnamed place'}
+                {place.name || 'Unnamed place'}
               </Text>
               {distanceKmValue != null && (
                 <Text variant="bodySmall" color={colors.text.muted}>
@@ -147,67 +155,66 @@ export function PlaceDetailSheet({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.tags}>
-              {(methods.length === 0
-                ? (['bitcoin'] as const)
-                : methods
-              ).map((method) => (
-                <View key={method} style={styles.tag}>
-                  <Text variant="labelMedium" color={colors.gold.pure}>
-                    {method === 'bitcoin'
-                      ? 'Bitcoin'
-                      : method === 'onchain'
-                        ? 'On-chain'
-                        : method === 'lightning'
-                          ? 'Lightning'
-                          : 'Contactless LN'}
-                  </Text>
-                </View>
-              ))}
-              {boosted && (
-                <View style={[styles.tag, styles.boostTag]}>
-                  <Text variant="labelMedium" color={colors.background.primary}>
-                    Boosted
-                  </Text>
-                </View>
-              )}
-            </View>
+            {(paymentChips.length > 0 || boosted) && (
+              <View style={styles.tags}>
+                {paymentChips.map((method) => (
+                  <View key={method} style={styles.tag}>
+                    <Text variant="labelMedium" color={colors.gold.pure}>
+                      {method === 'bitcoin'
+                        ? 'Bitcoin'
+                        : method === 'onchain'
+                          ? 'On-chain'
+                          : method === 'lightning'
+                            ? 'Lightning'
+                            : 'Contactless LN'}
+                    </Text>
+                  </View>
+                ))}
+                {boosted && (
+                  <View style={[styles.tag, styles.boostTag]}>
+                    <Text variant="labelMedium" color={colors.background.primary}>
+                      Boosted
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
 
-            {!!shown.address && (
-              <DetailRow icon="location-outline" label={shown.address} colors={colors} />
+            {!!place.address && (
+              <DetailRow icon="location-outline" label={place.address} colors={colors} />
             )}
-            {!!shown.opening_hours && (
-              <DetailRow icon="time-outline" label={shown.opening_hours} colors={colors} />
+            {!!place.opening_hours && (
+              <DetailRow icon="time-outline" label={place.opening_hours} colors={colors} />
             )}
-            {!!shown.phone && (
+            {!!place.phone && (
               <DetailRow
                 icon="call-outline"
-                label={shown.phone}
+                label={place.phone}
                 colors={colors}
-                onPress={() => Linking.openURL(`tel:${shown.phone}`)}
+                onPress={() => Linking.openURL(`tel:${place.phone}`)}
               />
             )}
-            {!!shown.website && (
+            {!!place.website && (
               <DetailRow
                 icon="globe-outline"
-                label={shown.website.replace(/^https?:\/\//, '')}
+                label={place.website.replace(/^https?:\/\//, '')}
                 colors={colors}
-                onPress={() => Linking.openURL(shown.website!)}
+                onPress={() => Linking.openURL(place.website!)}
               />
             )}
-            {!!shown.verified_at && (
+            {!!place.verified_at && (
               <DetailRow
                 icon="shield-checkmark-outline"
-                label={`Verified ${shown.verified_at.slice(0, 10)}`}
+                label={`Verified ${place.verified_at.slice(0, 10)}`}
                 colors={colors}
               />
             )}
-            {!!shown.description && (
+            {!!place.description && (
               <Text variant="bodyMedium" color={colors.text.secondary} style={styles.description}>
-                {shown.description}
+                {place.description}
               </Text>
             )}
-            {!!shown.required_app_url && (
+            {!!place.required_app_url && (
               <Text variant="bodySmall" color={colors.status.warning} style={styles.description}>
                 This location may require a companion app to pay.
               </Text>
@@ -219,7 +226,7 @@ export function PlaceDetailSheet({
               title="Directions"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                openExternalMaps(shown);
+                openExternalMaps(place);
               }}
               style={styles.actionBtn}
             />
@@ -227,7 +234,7 @@ export function PlaceDetailSheet({
               title="BTC Map"
               variant="secondary"
               onPress={() => {
-                Linking.openURL(`https://btcmap.org/map?lat=${shown.lat}&long=${shown.lon}#18/${shown.lat}/${shown.lon}`);
+                Linking.openURL(`https://btcmap.org/map?lat=${place.lat}&long=${place.lon}#18/${place.lat}/${place.lon}`);
               }}
               style={styles.actionBtn}
             />

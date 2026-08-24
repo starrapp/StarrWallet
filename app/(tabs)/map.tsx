@@ -29,7 +29,7 @@ import {
   BtcMapServiceError,
   distanceKm,
 } from '@/services/btcmap';
-import type { BtcMapPlace } from '@/types/btcmap';
+import type { BtcMapSearchedPlace } from '@/types/btcmap';
 import type { ColorTheme } from '@/theme/colors';
 
 const DEFAULT_RADIUS_KM = 15;
@@ -64,12 +64,12 @@ export default function MapScreen() {
   );
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
-  const [places, setPlaces] = useState<BtcMapPlace[]>([]);
+  const [places, setPlaces] = useState<BtcMapSearchedPlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<BtcMapPlace | null>(null);
+  const [selected, setSelected] = useState<BtcMapSearchedPlace | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
 
   const loadNearby = useCallback(
@@ -199,7 +199,7 @@ export default function MapScreen() {
     }
   }, [query, userCoord, center, radiusKm]);
 
-  const openPlace = useCallback((place: BtcMapPlace) => {
+  const openPlace = useCallback((place: BtcMapSearchedPlace) => {
     Haptics.selectionAsync();
     setSelected(place);
     setDetailVisible(true);
