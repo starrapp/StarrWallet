@@ -106,14 +106,18 @@ export default function MapScreen() {
       setPermissionStatus(status);
 
       if (status !== Location.PermissionStatus.GRANTED) {
-        setError('Location permission is needed to find nearby merchants.');
-        setLoading(false);
         // Still show a default city map so the tab is usable.
         setCenter({ lat: FALLBACK_REGION.latitude, lon: FALLBACK_REGION.longitude });
         await loadNearby(
           FALLBACK_REGION.latitude,
           FALLBACK_REGION.longitude,
           radiusKm
+        );
+        // loadNearby clears the error, so this must run after it. A failure of
+        // the fallback load itself is more specific, so it wins.
+        setError(
+          (current) =>
+            current ?? 'Location permission is needed to find nearby merchants.'
         );
         return;
       }
