@@ -11,6 +11,13 @@
  * We only trigger auth when the app was fully backgrounded, not merely inactive.
  * The overlay still shows on inactive (privacy screen) but auth only runs on
  * background → active transitions.
+ *
+ * Android has no `inactive` state at all (AppStateModule reports only `active`
+ * and `background`, and `onHostPause` maps to `background`), so the biometric
+ * dialog lands in the `background` branch there. That branch skips itself while
+ * authenticating, which is safe only because the overlay is already up by then.
+ * Any other system dialog (permissions, camera) must NOT be excused this way:
+ * a real background during it would go unnoticed and leave the wallet unlocked.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -65,6 +72,10 @@ export function AuthGate({ children }: AuthGateProps) {
 
       // App going to background — show overlay & mark for auth on return
       if (nextState === 'background') {
+        // On Android the biometric dialog arrives here as well. The overlay is
+        // already up at that point, so skipping avoids re-arming the lock and
+        // asking a second time.
+        if (isAuthenticatingRef.current) return;
         await checkWallet();
         if (hasWalletRef.current) {
           wentToBackgroundRef.current = true;

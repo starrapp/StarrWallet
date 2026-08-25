@@ -18,6 +18,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Starr needs camera access to scan QR codes for Lightning payments",
         "NSFaceIDUsageDescription": "Allow Starr to use Face ID for secure authentication",
+        "NSLocationWhenInUseUsageDescription": "Starr uses your location to show nearby places that accept Bitcoin",
         "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "3M4KWD4BUU"
@@ -34,10 +35,14 @@
         "USE_FINGERPRINT",
         "INTERNET",
         "ACCESS_NETWORK_STATE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -66,6 +71,12 @@
         "expo-camera",
         {
           "cameraPermission": "Allow Starr to access your camera to scan QR codes"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Starr to use your location to find nearby Bitcoin merchants"
         }
       ],
       [
