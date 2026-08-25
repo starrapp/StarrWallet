@@ -151,6 +151,50 @@ export function getPaymentMethods(place: BtcMapPlaceDetails): PaymentMethod[] {
   return methods;
 }
 
+/**
+ * http(s) URL for a community-supplied website value, or null when unusable.
+ *
+ * OSM values are not guaranteed to be URLs and BTC Map does not filter schemes,
+ * so anything else is dropped instead of handed to Linking.openURL: a planted
+ * listing could otherwise deep-link this wallet or launch another app.
+ */
+export function websiteUrl(value?: string): string | null {
+  const raw = value?.trim();
+  if (!raw) return null;
+
+  const scheme = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(raw)?.[1]?.toLowerCase();
+  if (scheme) {
+    return scheme === 'http' || scheme === 'https' ? raw : null;
+  }
+  // Bare hosts are common in the dataset and are otherwise not openable. The
+  // class excludes the separators only, so non-ASCII domains still pass while
+  // e-mail addresses and social handles do not.
+  return /^[^\s/?#@:]+\.[^\s/?#@:]+([/?#]\S*)?$/.test(raw)
+    ? `https://${raw}`
+    : null;
+}
+
+/**
+ * `tel:` URI for a community-supplied phone value, or null when unusable.
+ *
+ * Listings carry several numbers, extensions, full-width plus signs and
+ * non-breaking spaces. Cutting at the first character that cannot be part of a
+ * number keeps the first one and also drops USSD/MMI codes.
+ */
+export function telUri(value?: string): string | null {
+  // Listings carry bidi marks and stray quotes, sometimes mid-string. Those are
+  // removed, but `*` and `#` are not, so USSD/MMI codes still fail to match.
+  const cleaned = (value ?? '')
+    .replace('\uFF0B', '+')
+    .replace(/['"\u200e\u200f\u202a-\u202e]/g, '');
+  const first = /^[\s(]*\+?[\s(]*\d[\d\s().+-]*/.exec(cleaned)?.[0];
+  if (!first) return null;
+
+  const digits = first.replace(/\D/g, '');
+  if (digits.length < 3) return null;
+  return `tel:${/^[\s(]*\+/.test(first) ? '+' : ''}${digits}`;
+}
+
 export function isBoosted(
   place: { boosted_until?: string },
   now = new Date()

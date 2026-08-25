@@ -23,7 +23,9 @@ import {
   formatDistance,
   getPaymentMethods,
   isBoosted,
+  telUri,
   userMessage,
+  websiteUrl,
 } from '@/services/btcmap';
 import { placeIconName } from '@/utils/btcmapIcons';
 import type {
@@ -100,6 +102,10 @@ export function PlaceDetailSheet({
   const paymentChips: (PaymentMethod | 'bitcoin')[] =
     methods === null ? [] : methods.length > 0 ? methods : ['bitcoin'];
   const boosted = isBoosted(place);
+  // Both come from a community-editable dataset, so they are checked before
+  // they can reach Linking.openURL.
+  const website = websiteUrl(place.website);
+  const tel = telUri(place.phone);
 
   return (
     <Modal
@@ -192,15 +198,15 @@ export function PlaceDetailSheet({
                 icon="call-outline"
                 label={place.phone}
                 colors={colors}
-                onPress={() => Linking.openURL(`tel:${place.phone}`)}
+                onPress={tel ? () => Linking.openURL(tel) : undefined}
               />
             )}
-            {!!place.website && (
+            {!!website && (
               <DetailRow
                 icon="globe-outline"
-                label={place.website.replace(/^https?:\/\//, '')}
+                label={website.replace(/^https?:\/\//, '')}
                 colors={colors}
-                onPress={() => Linking.openURL(place.website!)}
+                onPress={() => Linking.openURL(website)}
               />
             )}
             {!!place.verified_at && (

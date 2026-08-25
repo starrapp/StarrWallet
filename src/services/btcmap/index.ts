@@ -5,5 +5,7 @@ export {
   formatDistance,
   getPaymentMethods,
   isBoosted,
+  telUri,
+  websiteUrl,
   userMessage,
 } from './BtcMapService';
