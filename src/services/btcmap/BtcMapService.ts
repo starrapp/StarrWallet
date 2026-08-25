@@ -65,7 +65,13 @@ async function fetchJson<T>(path: string, params?: Record<string, string>): Prom
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  // The abort cannot be recognised from the thrown error: the native fetch
+  // reports it as a FetchError carrying Swift text, not as an AbortError.
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(url.toString(), {
@@ -76,7 +82,7 @@ async function fetchJson<T>(path: string, params?: Record<string, string>): Prom
 
     if (!response.ok) {
       throw new BtcMapServiceError(
-        `BTC Map request failed (${response.status})`,
+        `BTC Map is unavailable (${response.status})`,
         response.status
       );
     }
@@ -86,15 +92,21 @@ async function fetchJson<T>(path: string, params?: Record<string, string>): Prom
     if (error instanceof BtcMapServiceError) {
       throw error;
     }
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new BtcMapServiceError('BTC Map request timed out');
-    }
+    console.warn('[BtcMap] Request failed:', url.toString(), error);
     throw new BtcMapServiceError(
-      error instanceof Error ? error.message : 'BTC Map request failed'
+      timedOut ? 'BTC Map is not responding. Try again.' : 'Could not reach BTC Map.'
     );
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * Text that is safe to show in the UI. Only messages built here are meant for
+ * users; a raw error can carry a native stack trace.
+ */
+export function userMessage(error: unknown, fallback: string): string {
+  return error instanceof BtcMapServiceError ? error.message : fallback;
 }
 
 /**

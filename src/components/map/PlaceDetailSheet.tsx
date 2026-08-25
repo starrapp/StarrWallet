@@ -23,6 +23,7 @@ import {
   formatDistance,
   getPaymentMethods,
   isBoosted,
+  userMessage,
 } from '@/services/btcmap';
 import { placeIconName } from '@/utils/btcmapIcons';
 import type {
@@ -78,7 +79,7 @@ export function PlaceDetailSheet({
         if (!cancelled) setTags(full);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load details');
+          setError(userMessage(err, 'Failed to load details'));
         }
       } finally {
         if (!cancelled) setLoading(false);

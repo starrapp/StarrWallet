@@ -26,8 +26,8 @@ import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import {
   BtcMapService,
-  BtcMapServiceError,
   distanceKm,
+  userMessage,
 } from '@/services/btcmap';
 import type { BtcMapSearchedPlace } from '@/types/btcmap';
 import type { ColorTheme } from '@/theme/colors';
@@ -41,6 +41,11 @@ const FALLBACK_REGION: Region = {
   longitudeDelta: 0.08,
 };
 
+/** Points a map pin covers on screen. */
+const PIN_FOOTPRINT_PT = 30;
+/** Extra fraction of the region to keep, so a pan does not enter an empty map. */
+const MARKER_MARGIN = 0.5;
+
 function regionForRadius(lat: number, lon: number, radiusKm: number): Region {
   const latitudeDelta = Math.max(0.02, (radiusKm * 2) / 111);
   const longitudeDelta = latitudeDelta;
@@ -50,6 +55,62 @@ function regionForRadius(lat: number, lon: number, radiusKm: number): Region {
     latitudeDelta,
     longitudeDelta,
   };
+}
+
+/**
+ * Keeps one place per pin-sized cell of the visible region. Denser pins are
+ * drawn on top of each other anyway, so nothing is lost on screen, and a zoom
+ * shrinks the cells and brings the dropped places back.
+ *
+ * Places are already sorted by distance from the search center, so the first
+ * one to claim a cell is the nearest.
+ */
+function thinForRegion(
+  places: BtcMapSearchedPlace[],
+  region: Region,
+  size: { width: number; height: number },
+  keepId?: number
+): BtcMapSearchedPlace[] {
+  const cols = Math.max(1, Math.round(size.width / PIN_FOOTPRINT_PT));
+  const rows = Math.max(1, Math.round(size.height / PIN_FOOTPRINT_PT));
+  const latSpan = region.latitudeDelta * (0.5 + MARKER_MARGIN);
+  const lonSpan = region.longitudeDelta * (0.5 + MARKER_MARGIN);
+
+  const cellKey = (place: BtcMapSearchedPlace) => {
+    const row = Math.floor(
+      ((place.lat - region.latitude) / region.latitudeDelta) * rows
+    );
+    const col = Math.floor(
+      ((place.lon - region.longitude) / region.longitudeDelta) * cols
+    );
+    return `${row}:${col}`;
+  };
+
+  const taken = new Set<string>();
+  const shown: BtcMapSearchedPlace[] = [];
+
+  // The selected place must keep its pin even when a nearer one shares the cell.
+  const keep = keepId == null ? undefined : places.find((it) => it.id === keepId);
+  if (keep) {
+    taken.add(cellKey(keep));
+    shown.push(keep);
+  }
+
+  for (const place of places) {
+    if (place === keep) continue;
+    if (
+      Math.abs(place.lat - region.latitude) > latSpan ||
+      Math.abs(place.lon - region.longitude) > lonSpan
+    ) {
+      continue;
+    }
+    const cell = cellKey(place);
+    if (taken.has(cell)) continue;
+    taken.add(cell);
+    shown.push(place);
+  }
+
+  return shown;
 }
 
 export default function MapScreen() {
@@ -71,6 +132,33 @@ export default function MapScreen() {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<BtcMapSearchedPlace | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
+  const [mapSize, setMapSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [region, setRegion] = useState<Region | null>(null);
+
+  // animateToRegion is dropped when the native map is not laid out yet, so the
+  // first move has to wait for onMapReady.
+  const mapReady = useRef(false);
+  const pendingRegion = useRef<Region | null>(null);
+
+  const moveTo = useCallback((next: Region) => {
+    if (mapReady.current) {
+      mapRef.current?.animateToRegion(next, 400);
+    } else {
+      pendingRegion.current = next;
+    }
+  }, []);
+
+  const handleMapReady = useCallback(() => {
+    mapReady.current = true;
+    const pending = pendingRegion.current;
+    if (pending) {
+      pendingRegion.current = null;
+      mapRef.current?.animateToRegion(pending, 0);
+    }
+  }, []);
 
   const loadNearby = useCallback(
     async (lat: number, lon: number, radius: number, isRefresh = false) => {
@@ -82,19 +170,31 @@ export default function MapScreen() {
         const result = await BtcMapService.searchNearby(lat, lon, radius);
         setPlaces(result.places);
         setCenter(result.center);
-        mapRef.current?.animateToRegion(regionForRadius(lat, lon, radius), 400);
+        moveTo(regionForRadius(lat, lon, radius));
       } catch (err) {
-        const message =
-          err instanceof BtcMapServiceError
-            ? err.message
-            : 'Could not load nearby places';
-        setError(message);
+        setError(userMessage(err, 'Could not load nearby places'));
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    []
+    [moveTo]
+  );
+
+  /** Shows a default city so the tab stays usable without a location. */
+  const loadFallbackCity = useCallback(
+    async (message: string) => {
+      setCenter({ lat: FALLBACK_REGION.latitude, lon: FALLBACK_REGION.longitude });
+      await loadNearby(
+        FALLBACK_REGION.latitude,
+        FALLBACK_REGION.longitude,
+        radiusKm
+      );
+      // loadNearby clears the error, so this must run after it. A failure of
+      // the fallback load itself is more specific, so it wins.
+      setError((current) => current ?? message);
+    },
+    [loadNearby, radiusKm]
   );
 
   const requestLocationAndLoad = useCallback(async () => {
@@ -106,34 +206,41 @@ export default function MapScreen() {
       setPermissionStatus(status);
 
       if (status !== Location.PermissionStatus.GRANTED) {
-        // Still show a default city map so the tab is usable.
-        setCenter({ lat: FALLBACK_REGION.latitude, lon: FALLBACK_REGION.longitude });
-        await loadNearby(
-          FALLBACK_REGION.latitude,
-          FALLBACK_REGION.longitude,
-          radiusKm
-        );
-        // loadNearby clears the error, so this must run after it. A failure of
-        // the fallback load itself is more specific, so it wins.
-        setError(
-          (current) =>
-            current ?? 'Location permission is needed to find nearby merchants.'
+        await loadFallbackCity(
+          'Location permission is needed to find nearby merchants.'
         );
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-      setUserCoord({ lat, lon });
-      await loadNearby(lat, lon, radiusKm);
+      let coord: { lat: number; lon: number } | null = null;
+      try {
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        coord = { lat: position.coords.latitude, lon: position.coords.longitude };
+      } catch (err) {
+        // A fresh fix is not always available: a simulator with no location set,
+        // or a device that has not seen GPS or Wi-Fi yet.
+        console.warn('[Map] Current position unavailable, trying last known:', err);
+        const last = await Location.getLastKnownPositionAsync();
+        if (last) {
+          coord = { lat: last.coords.latitude, lon: last.coords.longitude };
+        }
+      }
+
+      if (!coord) {
+        await loadFallbackCity('Could not determine your location.');
+        return;
+      }
+
+      setUserCoord(coord);
+      await loadNearby(coord.lat, coord.lon, radiusKm);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get location');
+      console.error('[Map] Failed to get location:', err);
+      setError('Could not determine your location.');
       setLoading(false);
     }
-  }, [loadNearby, radiusKm]);
+  }, [loadNearby, loadFallbackCity, radiusKm]);
 
   const didInitialLoad = useRef(false);
   useFocusEffect(
@@ -186,42 +293,44 @@ export default function MapScreen() {
       setPlaces(sorted);
 
       if (sorted.length > 0) {
-        mapRef.current?.animateToRegion(
-          {
-            latitude: sorted[0].lat,
-            longitude: sorted[0].lon,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          },
-          400
-        );
+        moveTo({
+          latitude: sorted[0].lat,
+          longitude: sorted[0].lon,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
+      setError(userMessage(err, 'Search failed'));
     } finally {
       setLoading(false);
     }
-  }, [query, userCoord, center, radiusKm]);
+  }, [query, userCoord, center, radiusKm, moveTo]);
 
-  const openPlace = useCallback((place: BtcMapSearchedPlace) => {
-    Haptics.selectionAsync();
-    setSelected(place);
-    setDetailVisible(true);
-    mapRef.current?.animateToRegion(
-      {
+  const openPlace = useCallback(
+    (place: BtcMapSearchedPlace) => {
+      Haptics.selectionAsync();
+      setSelected(place);
+      setDetailVisible(true);
+      moveTo({
         latitude: place.lat,
         longitude: place.lon,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
-      },
-      350
-    );
-  }, []);
+      });
+    },
+    [moveTo]
+  );
 
   const mapRegion = useMemo(() => {
     if (center) return regionForRadius(center.lat, center.lon, radiusKm);
     return FALLBACK_REGION;
   }, [center, radiusKm]);
+
+  const markers = useMemo(() => {
+    if (!mapSize) return [];
+    return thinForRegion(places, region ?? mapRegion, mapSize, selected?.id);
+  }, [places, region, mapRegion, mapSize, selected?.id]);
 
   const selectedDistance =
     selected && (userCoord || center)
@@ -240,18 +349,29 @@ export default function MapScreen() {
         style={styles.map}
         provider={PROVIDER_DEFAULT}
         initialRegion={mapRegion}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setMapSize((prev) =>
+            prev && prev.width === width && prev.height === height
+              ? prev
+              : { width, height }
+          );
+        }}
+        onMapReady={handleMapReady}
+        onRegionChangeComplete={setRegion}
         showsUserLocation={permissionStatus === Location.PermissionStatus.GRANTED}
         showsMyLocationButton={false}
         toolbarEnabled={false}
         rotateEnabled={false}
         pitchEnabled={false}
       >
-        {places.map((place) => (
+        {markers.map((place) => (
           <Marker
             key={place.id}
             coordinate={{ latitude: place.lat, longitude: place.lon }}
             title={place.name}
             description={place.address}
+            tracksViewChanges={false}
             pinColor={selected?.id === place.id ? colors.gold.pure : undefined}
             onPress={() => openPlace(place)}
           />
