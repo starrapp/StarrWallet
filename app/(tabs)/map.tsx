@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Text } from '@/components/ui';
 import { PlaceListItem, PlaceDetailSheet } from '@/components/map';
+import { withSystemDialog } from '@/components/AuthGate';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import {
@@ -43,6 +44,12 @@ const FALLBACK_REGION: Region = {
 
 /** Points a map pin covers on screen. */
 const PIN_FOOTPRINT_PT = 30;
+/**
+ * Unselected pins need an explicit color. react-native-maps crashes on Android
+ * when pinColor goes back to null: MarkerManager.setPinColor unboxes it into
+ * Color.colorToHSV, which takes a primitive int (MarkerManager.java:224).
+ */
+const DEFAULT_PIN_COLOR = '#FF3B30';
 /** Extra fraction of the region to keep, so a pan does not enter an empty map. */
 const MARKER_MARGIN = 0.5;
 
@@ -197,58 +204,74 @@ export default function MapScreen() {
     [loadNearby, radiusKm]
   );
 
-  const requestLocationAndLoad = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  /**
+   * `askPermission` is false on tab entry: the Android permission dialog pauses
+   * the activity, which AuthGate reads as a background, so the user would be
+   * asked to unlock the wallet just for opening the tab.
+   */
+  const locateAndLoad = useCallback(
+    async (askPermission: boolean) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setPermissionStatus(status);
-
-      if (status !== Location.PermissionStatus.GRANTED) {
-        await loadFallbackCity(
-          'Location permission is needed to find nearby merchants.'
-        );
-        return;
-      }
-
-      let coord: { lat: number; lon: number } | null = null;
       try {
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        coord = { lat: position.coords.latitude, lon: position.coords.longitude };
-      } catch (err) {
-        // A fresh fix is not always available: a simulator with no location set,
-        // or a device that has not seen GPS or Wi-Fi yet.
-        console.warn('[Map] Current position unavailable, trying last known:', err);
-        const last = await Location.getLastKnownPositionAsync();
-        if (last) {
-          coord = { lat: last.coords.latitude, lon: last.coords.longitude };
+        let { status } = await Location.getForegroundPermissionsAsync();
+
+        if (status !== Location.PermissionStatus.GRANTED && askPermission) {
+          ({ status } = await withSystemDialog(() =>
+            Location.requestForegroundPermissionsAsync()
+          ));
         }
-      }
+        setPermissionStatus(status);
 
-      if (!coord) {
-        await loadFallbackCity('Could not determine your location.');
-        return;
-      }
+        if (status !== Location.PermissionStatus.GRANTED) {
+          await loadFallbackCity(
+            askPermission
+              ? 'Location permission is needed to find nearby merchants.'
+              : 'Tap the arrow to show merchants near you.'
+          );
+          return;
+        }
 
-      setUserCoord(coord);
-      await loadNearby(coord.lat, coord.lon, radiusKm);
-    } catch (err) {
-      console.error('[Map] Failed to get location:', err);
-      setError('Could not determine your location.');
-      setLoading(false);
-    }
-  }, [loadNearby, loadFallbackCity, radiusKm]);
+        let coord: { lat: number; lon: number } | null = null;
+        try {
+          const position = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          coord = { lat: position.coords.latitude, lon: position.coords.longitude };
+        } catch (err) {
+          // A fresh fix is not always available: a simulator with no location
+          // set, or a device that has not seen GPS or Wi-Fi yet.
+          console.warn('[Map] Current position unavailable, trying last known:', err);
+          const last = await Location.getLastKnownPositionAsync();
+          if (last) {
+            coord = { lat: last.coords.latitude, lon: last.coords.longitude };
+          }
+        }
+
+        if (!coord) {
+          await loadFallbackCity('Could not determine your location.');
+          return;
+        }
+
+        setUserCoord(coord);
+        await loadNearby(coord.lat, coord.lon, radiusKm);
+      } catch (err) {
+        console.error('[Map] Failed to get location:', err);
+        setError('Could not determine your location.');
+        setLoading(false);
+      }
+    },
+    [loadNearby, loadFallbackCity, radiusKm]
+  );
 
   const didInitialLoad = useRef(false);
   useFocusEffect(
     useCallback(() => {
       if (didInitialLoad.current) return;
       didInitialLoad.current = true;
-      void requestLocationAndLoad();
-    }, [requestLocationAndLoad])
+      void locateAndLoad(false);
+    }, [locateAndLoad])
   );
 
   const handleRadiusChange = useCallback(
@@ -372,7 +395,9 @@ export default function MapScreen() {
             title={place.name}
             description={place.address}
             tracksViewChanges={false}
-            pinColor={selected?.id === place.id ? colors.gold.pure : undefined}
+            pinColor={
+              selected?.id === place.id ? colors.gold.pure : DEFAULT_PIN_COLOR
+            }
             onPress={() => openPlace(place)}
           />
         ))}
@@ -430,7 +455,7 @@ export default function MapScreen() {
             style={styles.locateBtn}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              requestLocationAndLoad();
+              locateAndLoad(true);
             }}
           >
             <Ionicons name="navigate" size={16} color={colors.gold.pure} />
