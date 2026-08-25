@@ -22,7 +22,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Text } from '@/components/ui';
 import { PlaceListItem, PlaceDetailSheet } from '@/components/map';
-import { withSystemDialog } from '@/components/AuthGate';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import {
@@ -218,9 +217,7 @@ export default function MapScreen() {
         let { status } = await Location.getForegroundPermissionsAsync();
 
         if (status !== Location.PermissionStatus.GRANTED && askPermission) {
-          ({ status } = await withSystemDialog(() =>
-            Location.requestForegroundPermissionsAsync()
-          ));
+          ({ status } = await Location.requestForegroundPermissionsAsync());
         }
         setPermissionStatus(status);
 

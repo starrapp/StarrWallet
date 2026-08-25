@@ -13,9 +13,11 @@
  * background → active transitions.
  *
  * Android has no `inactive` state at all (AppStateModule reports only `active`
- * and `background`, and `onHostPause` maps to `background`), so every system
- * dialog looks like the app leaving the foreground. Callers must wrap those in
- * `withSystemDialog`.
+ * and `background`, and `onHostPause` maps to `background`), so the biometric
+ * dialog lands in the `background` branch there. That branch skips itself while
+ * authenticating, which is safe only because the overlay is already up by then.
+ * Any other system dialog (permissions, camera) must NOT be excused this way:
+ * a real background during it would go unnoticed and leave the wallet unlocked.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -29,24 +31,6 @@ import { spacing } from '@/theme';
 
 interface AuthGateProps {
   children: React.ReactNode;
-}
-
-let systemDialogDepth = 0;
-
-/**
- * Marks an action that shows a system dialog, so the pause it causes on Android
- * is not treated as the app being backgrounded.
- *
- * Trade-off: a real backgrounding during such a dialog is not noticed either.
- * The window is short and only covers our own dialogs.
- */
-export async function withSystemDialog<T>(action: () => Promise<T>): Promise<T> {
-  systemDialogDepth += 1;
-  try {
-    return await action();
-  } finally {
-    systemDialogDepth -= 1;
-  }
 }
 
 export function AuthGate({ children }: AuthGateProps) {
@@ -71,9 +55,7 @@ export function AuthGate({ children }: AuthGateProps) {
     isAuthenticatingRef.current = true;
     setIsAuthenticating(true);
     try {
-      const success = await withSystemDialog(() =>
-        KeychainService.authenticateUser('Unlock Starr Wallet')
-      );
+      const success = await KeychainService.authenticateUser('Unlock Starr Wallet');
       if (success) {
         setIsLocked(false);
       }
@@ -90,8 +72,10 @@ export function AuthGate({ children }: AuthGateProps) {
 
       // App going to background — show overlay & mark for auth on return
       if (nextState === 'background') {
-        // On Android a system dialog arrives here too; that is not a background.
-        if (systemDialogDepth > 0) return;
+        // On Android the biometric dialog arrives here as well. The overlay is
+        // already up at that point, so skipping avoids re-arming the lock and
+        // asking a second time.
+        if (isAuthenticatingRef.current) return;
         await checkWallet();
         if (hasWalletRef.current) {
           wentToBackgroundRef.current = true;
