@@ -8,6 +8,10 @@
  * The mnemonic is stored with `requireAuthentication: true` — every read
  * triggers a native OS biometric / device-passcode prompt.
  *
+ * Every call that opens such a prompt runs inside `runOsPrompt`, so AuthGate
+ * does not read the prompt as the user leaving the app. Wrapping happens here
+ * and not in the callers, so every caller is covered.
+ *
  * CRITICAL SECURITY NOTES:
  * - The mnemonic is the ONLY way to recover funds
  * - Never log, transmit, or store mnemonics in plain text
@@ -17,6 +21,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
 import * as bip39 from 'bip39';
+import { runOsPrompt } from '@/utils/osPrompt';
 
 // Storage keys
 const KEYS = {
@@ -109,7 +114,9 @@ class KeychainServiceImpl {
     await this.requireAuthentication();
 
     try {
-      await SecureStore.setItemAsync(KEYS.MNEMONIC, mnemonic, AUTH_OPTIONS);
+      await runOsPrompt(() =>
+        SecureStore.setItemAsync(KEYS.MNEMONIC, mnemonic, AUTH_OPTIONS)
+      );
     } catch (err) {
       throw humanizeSecureStoreError(err);
     }
@@ -128,7 +135,9 @@ class KeychainServiceImpl {
 
     let mnemonic: string | null;
     try {
-      mnemonic = await SecureStore.getItemAsync(KEYS.MNEMONIC, options);
+      mnemonic = await runOsPrompt(() =>
+        SecureStore.getItemAsync(KEYS.MNEMONIC, options)
+      );
     } catch (err) {
       throw humanizeSecureStoreError(err);
     }
@@ -142,11 +151,13 @@ class KeychainServiceImpl {
    * Authenticate user via biometric or device passcode.
    */
   async authenticateUser(promptMessage?: string): Promise<boolean> {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: promptMessage || 'Authenticate to continue',
-      cancelLabel: 'Cancel',
-      disableDeviceFallback: false,
-    });
+    const result = await runOsPrompt(() =>
+      LocalAuthentication.authenticateAsync({
+        promptMessage: promptMessage || 'Authenticate to continue',
+        cancelLabel: 'Cancel',
+        disableDeviceFallback: false,
+      })
+    );
 
     return result.success;
   }

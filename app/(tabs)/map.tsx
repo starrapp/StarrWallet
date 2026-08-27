@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { Text } from '@/components/ui';
 import { PlaceListItem, PlaceDetailSheet } from '@/components/map';
 import { useColors } from '@/contexts';
+import { runOsPrompt } from '@/utils/osPrompt';
 import { spacing, layout } from '@/theme';
 import {
   BtcMapService,
@@ -150,6 +151,11 @@ export default function MapScreen() {
   const pendingRegion = useRef<Region | null>(null);
 
   const moveTo = useCallback((next: Region) => {
+    // The thinning region must follow our own camera moves at once.
+    // onRegionChangeComplete does not fire for animateToRegion, so waiting for
+    // it would keep thinning the markers against the region we just left and
+    // drop every pin outside it.
+    setRegion(next);
     if (mapReady.current) {
       mapRef.current?.animateToRegion(next, 400);
     } else {
@@ -203,29 +209,27 @@ export default function MapScreen() {
     [loadNearby, radiusKm]
   );
 
-  /**
-   * `askPermission` is false on tab entry: the Android permission dialog pauses
-   * the activity, which AuthGate reads as a background, so the user would be
-   * asked to unlock the wallet just for opening the tab.
-   */
   const locateAndLoad = useCallback(
-    async (askPermission: boolean) => {
+    async () => {
       setLoading(true);
       setError(null);
 
       try {
         let { status } = await Location.getForegroundPermissionsAsync();
 
-        if (status !== Location.PermissionStatus.GRANTED && askPermission) {
-          ({ status } = await Location.requestForegroundPermissionsAsync());
+        if (status !== Location.PermissionStatus.GRANTED) {
+          // runOsPrompt keeps AuthGate from reading the permission dialog as
+          // the user leaving the app. Once the user denies for good, this
+          // returns the denied status without showing a dialog.
+          ({ status } = await runOsPrompt(() =>
+            Location.requestForegroundPermissionsAsync()
+          ));
         }
         setPermissionStatus(status);
 
         if (status !== Location.PermissionStatus.GRANTED) {
           await loadFallbackCity(
-            askPermission
-              ? 'Location permission is needed to find nearby merchants.'
-              : 'Tap the arrow to show merchants near you.'
+            'Location permission is needed to find nearby merchants.'
           );
           return;
         }
@@ -267,7 +271,7 @@ export default function MapScreen() {
     useCallback(() => {
       if (didInitialLoad.current) return;
       didInitialLoad.current = true;
-      void locateAndLoad(false);
+      void locateAndLoad();
     }, [locateAndLoad])
   );
 
@@ -452,7 +456,7 @@ export default function MapScreen() {
             style={styles.locateBtn}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              locateAndLoad(true);
+              locateAndLoad();
             }}
           >
             <Ionicons name="navigate" size={16} color={colors.gold.pure} />
