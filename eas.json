@@ -5,10 +5,7 @@
   },
   "build": {
     "base": {
-      "node": "20.19.5",
-      "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
-      }
+      "node": "20.19.5"
     },
     "development": {
       "extends": "base",
@@ -53,7 +50,8 @@
         "appleTeamId": "3M4KWD4BUU"
       },
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "releaseStatus": "draft"
       }
     }
   }
