@@ -7,24 +7,34 @@
  * - Does NOT lock on initial launch (getMnemonic already triggers biometric)
  * - Skips lock entirely when no wallet exists (onboarding flow)
  *
- * IMPORTANT: The biometric dialog itself causes iOS to fire inactive → active.
- * We only trigger auth when the app was fully backgrounded, not merely inactive.
- * The overlay still shows on inactive (privacy screen) but auth only runs on
- * background → active transitions.
+ * IMPORTANT: A system dialog makes the app leave the `active` state, so it looks
+ * the same as the user leaving. Both platforms report it differently:
+ * - iOS gives `inactive` only. A real background also gives `background`, so the
+ *   two are distinguishable, and auth runs only on background → active.
+ * - Android has no `inactive` state at all (AppStateModule reports only `active`
+ *   and `background`, and `onHostPause` maps to `background`), so a dialog is
+ *   indistinguishable from a real background.
  *
- * Android has no `inactive` state at all (AppStateModule reports only `active`
- * and `background`, and `onHostPause` maps to `background`), so the biometric
- * dialog lands in the `background` branch there. That branch skips itself while
- * authenticating, which is safe only because the overlay is already up by then.
- * Any other system dialog (permissions, camera) must NOT be excused this way:
- * a real background during it would go unnoticed and leave the wallet unlocked.
+ * Because of Android, the app must declare its own dialogs: every call that
+ * opens one runs inside `runOsPrompt` (see @/utils/osPrompt), and this gate
+ * skips the lock while `isOsPromptActive()` holds.
+ *
+ * KNOWN COST, Android only: if the user really backgrounds the app while a
+ * dialog the app opened is on screen, the lock does not arm. JS cannot tell the
+ * two cases apart there — `LifecycleEventListener` has no `onHostStop`, and
+ * `onUserLeaveHint` never reaches JS. A native module that exposes one of those
+ * is the only strict fix. `osPrompt` bounds the window with a timeout.
+ *
+ * iOS has no such cost: a dialog never produces `background`, so that branch
+ * ignores the guard and always locks.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { AppState, View, StyleSheet } from 'react-native';
+import { AppState, Platform, View, StyleSheet } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeychainService } from '@/services/keychain';
+import { isOsPromptActive } from '@/utils/osPrompt';
 import { useColors } from '@/contexts';
 import { Text, Button } from '@/components/ui';
 import { spacing } from '@/theme';
@@ -72,10 +82,11 @@ export function AuthGate({ children }: AuthGateProps) {
 
       // App going to background — show overlay & mark for auth on return
       if (nextState === 'background') {
-        // On Android the biometric dialog arrives here as well. The overlay is
-        // already up at that point, so skipping avoids re-arming the lock and
-        // asking a second time.
-        if (isAuthenticatingRef.current) return;
+        // On Android every dialog the app opens arrives here, and locking would
+        // ask the user to unlock the wallet just for granting a permission. On
+        // iOS a dialog never reaches this branch, so `background` always means
+        // the user left and must always lock.
+        if (Platform.OS === 'android' && isOsPromptActive()) return;
         await checkWallet();
         if (hasWalletRef.current) {
           wentToBackgroundRef.current = true;
@@ -84,10 +95,12 @@ export function AuthGate({ children }: AuthGateProps) {
         return;
       }
 
-      // App going inactive (task switcher, incoming call, biometric dialog)
-      // Show overlay as privacy screen but do NOT mark for auth
+      // App going inactive (task switcher, incoming call, system dialog)
+      // Show overlay as privacy screen but do NOT mark for auth. A dialog the
+      // app opened needs no privacy screen — the overlay would only flash
+      // behind it.
       if (nextState === 'inactive') {
-        if (hasWalletRef.current && !isAuthenticatingRef.current) {
+        if (hasWalletRef.current && !isOsPromptActive()) {
           setIsLocked(true);
         }
         return;

@@ -20,6 +20,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Text, Button } from '@/components/ui';
 import { useColors } from '@/contexts';
+import { runOsPrompt } from '@/utils/osPrompt';
 import { darkColors } from '@/theme/colors';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -233,6 +234,9 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
   // Permission denied
   if (!permission.granted) {
     const canAskAgain = permission.canAskAgain;
+    // runOsPrompt keeps AuthGate from reading the permission dialog as the user
+    // leaving the app.
+    const askForCamera = () => runOsPrompt(requestPermission);
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.centerContent}>
@@ -249,7 +253,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
             <Button
               title={canAskAgain ? 'Continue' : 'Open Settings'}
               variant="primary"
-              onPress={canAskAgain ? requestPermission : () => Linking.openSettings()}
+              onPress={canAskAgain ? askForCamera : () => Linking.openSettings()}
             />
             <Button
               title="Go Back"
