@@ -247,14 +247,16 @@ export class BtcMapService {
   }
 
   /**
-   * Nearby merchants sorted by distance from the search center.
+   * Nearby merchants sorted by distance from the search center, optionally
+   * narrowed to a name.
    */
   static async searchNearby(
     lat: number,
     lon: number,
-    radiusKm: number = DEFAULT_RADIUS_KM
+    radiusKm: number = DEFAULT_RADIUS_KM,
+    name?: string
   ): Promise<NearbyPlacesResult> {
-    const places = await this.searchPlaces({ lat, lon, radiusKm });
+    const places = await this.searchPlaces({ lat, lon, radiusKm, name });
     const sorted = [...places].sort(
       (a, b) => distanceKm(lat, lon, a.lat, a.lon) - distanceKm(lat, lon, b.lat, b.lon)
     );
