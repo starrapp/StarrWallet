@@ -13,7 +13,9 @@ export function useResponsive() {
     const isTabletWidth = width >= breakpoints.medium;
     const isSplitWidth = width >= breakpoints.expanded;
 
-    let maxContentWidth = contentMaxWidth.compact;
+    // Annotated because `contentMaxWidth` is `as const`, so without it the type
+    // narrows to the literal 520 and the wider values below do not fit.
+    let maxContentWidth: number = contentMaxWidth.compact;
     if (isSplitWidth) {
       maxContentWidth = contentMaxWidth.expanded;
     } else if (isTabletWidth) {
