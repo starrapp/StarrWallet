@@ -19,8 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
-import { KeychainService } from '@/services/keychain';
-import { BreezService } from '@/services/breez';
+import { useWalletSession } from '@/stores/walletSession';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 
@@ -92,17 +91,9 @@ export default function DeleteWalletScreen() {
     [colors]
   );
 
-  const handleProceedToConfirm = async () => {
-    // Require authentication (biometric with device passcode fallback)
-    const authenticated = await KeychainService.authenticateUser(
-      'Authenticate to delete wallet'
-    );
-    
-    if (!authenticated) {
-      Alert.alert('Authentication Failed', 'You must authenticate to delete your wallet.');
-      return;
-    }
-    
+  // The session asks for authentication as part of removing the wallet, so this
+  // step only collects the typed confirmation.
+  const handleProceedToConfirm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStep('confirm');
   };
@@ -118,15 +109,9 @@ export default function DeleteWalletScreen() {
       setIsDeleting(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
-      try {
-        await BreezService.shutdown();
-        console.log('[DeleteWallet] Lightning service shutdown');
-      } catch (err) {
-        console.warn('[DeleteWallet] Lightning service shutdown (may already be stopped):', err);
-      }
-
-      // Clear all keychain data
-      await KeychainService.clearAllData();
+      // One owner: authentication, stopping Breez, clearing the keychain and
+      // resetting the wallet store all happen in src/stores/walletSession.ts.
+      await useWalletSession.getState().removeWallet();
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       

@@ -41,6 +41,27 @@ const AUTH_OPTIONS: SecureStore.SecureStoreOptions = {
   authenticationPrompt: 'Authenticate to access your wallet',
 };
 
+/** No wallet has ever been created on this device. Onboarding is the answer. */
+export class NoWalletError extends Error {
+  constructor() {
+    super('No wallet on this device');
+    this.name = 'NoWalletError';
+  }
+}
+
+/**
+ * A wallet exists but its key can no longer be read.
+ *
+ * `requireAuthentication` puts the entry under `.biometryCurrentSet` on iOS, so
+ * re-enrolling Face ID destroys it. The seed phrase is the only way back.
+ */
+export class WalletKeyLostError extends Error {
+  constructor() {
+    super('The stored key can no longer be read. Restore your wallet from its seed phrase.');
+    this.name = 'WalletKeyLostError';
+  }
+}
+
 /** Convert SecureStore / auth errors into user-friendly Error. */
 function humanizeSecureStoreError(err: unknown): Error {
   const msg = err instanceof Error ? err.message : String(err);
@@ -51,7 +72,9 @@ function humanizeSecureStoreError(err: unknown): Error {
     return new Error('This device does not support biometric authentication.');
   }
   if (msg.includes('permanently invalidated')) {
-    return new Error('Your biometric data has changed. Please remove and re-add biometrics in device settings.');
+    // Re-adding biometrics does not bring the entry back: it is stored under
+    // `.biometryCurrentSet`, so re-enrolling destroyed it. Only the seed can.
+    return new Error('Your biometric data has changed, so the stored key can no longer be read. Restore your wallet from its seed phrase.');
   }
   if (msg.includes('Authenticate') || msg.includes('authentication')) {
     return new Error('Authentication failed. Please try again.');
@@ -142,7 +165,12 @@ class KeychainServiceImpl {
       throw humanizeSecureStoreError(err);
     }
     if (!mnemonic) {
-      throw new Error('No mnemonic found');
+      // getItemAsync answers null both for a key that never existed and for one
+      // the OS invalidated, so WALLET_CREATED is what tells them apart. Reading
+      // the second as "no wallet" would open a running wallet unauthorised.
+      throw (await this.isWalletCreated())
+        ? new WalletKeyLostError()
+        : new NoWalletError();
     }
     return mnemonic;
   }

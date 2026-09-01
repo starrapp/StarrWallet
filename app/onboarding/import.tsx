@@ -20,8 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { ContentColumn } from '@/components';
 import { Button, Text } from '@/components/ui';
-import { KeychainService } from '@/services/keychain';
-import { useWalletStore } from '@/stores/walletStore';
+import { useWalletSession } from '@/stores/walletSession';
 import { useColors } from '@/contexts';
 import { spacing, layout, typography } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -66,15 +65,11 @@ export default function ImportWalletScreen() {
       return;
     }
 
-    if (!KeychainService.validateMnemonic(mnemonic)) {
-      setError('Invalid recovery phrase. Please check your words and try again.');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      await KeychainService.storeMnemonic(mnemonic);
-      await useWalletStore.getState().initializeWallet(mnemonic);
+      // The session validates the phrase, stops whatever wallet was running and
+      // stores the new seed — see src/stores/walletSession.ts.
+      await useWalletSession.getState().importWallet(mnemonic);
       // Clear clipboard in case the mnemonic was pasted earlier
       await Clipboard.setStringAsync('');
       router.replace('/(tabs)');

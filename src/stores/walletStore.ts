@@ -81,6 +81,9 @@ interface WalletState {
   fetchBtcPrice: () => Promise<void>;
 
   syncNode: () => Promise<void>;
+
+  /** Drops everything tied to the wallet that was open. Settings survive. */
+  resetWallet: () => void;
 }
 
 // Default settings
@@ -92,33 +95,43 @@ const defaultSettings: WalletSettings = {
   },
 };
 
+/**
+ * Everything tied to the wallet that is open, and nothing else.
+ *
+ * Named so `resetWallet` spreads the very same object the store starts from. A
+ * field listed there by hand instead is a field that can be forgotten.
+ */
+const initialWalletState = {
+  isInitializing: false,
+  isInitialized: false,
+  initError: null,
+
+  balance: null,
+  isLoadingBalance: false,
+
+  recentPayments: [],
+  incomingPayment: null,
+  lastPresentedIncomingPaymentId: null,
+  isLoadingRecentPayments: false,
+  payments: [],
+  isLoadingPayments: false,
+  isLoadingMorePayments: false,
+  hasMorePayments: false,
+  paymentFilter: DEFAULT_PAYMENT_FILTER,
+
+  isCreatingInvoice: false,
+
+  unclaimedDeposits: [],
+  isLoadingUnclaimed: false,
+
+  btcFiatPrice: null,
+} satisfies Partial<WalletState>;
+
 export const useWalletStore = create<WalletState>()(persist(
   (set, get) => ({
-  // Initial state
-    isInitializing: false,
-    isInitialized: false,
-    initError: null,
+    ...initialWalletState,
 
-    balance: null,
-    isLoadingBalance: false,
-
-    recentPayments: [],
-    incomingPayment: null,
-    lastPresentedIncomingPaymentId: null,
-    isLoadingRecentPayments: false,
-    payments: [],
-    isLoadingPayments: false,
-    isLoadingMorePayments: false,
-    hasMorePayments: false,
-    paymentFilter: DEFAULT_PAYMENT_FILTER,
-
-    isCreatingInvoice: false,
-
-    unclaimedDeposits: [],
-    isLoadingUnclaimed: false,
-
-    btcFiatPrice: null,
-
+    // The one thing a wallet swap keeps, so it lives outside the reset.
     settings: defaultSettings,
 
     // Initialize wallet with Breez SDK
@@ -368,6 +381,20 @@ export const useWalletStore = create<WalletState>()(persist(
     },
 
     // Sync node with network
+    /**
+     * Called when the wallet on this device is replaced. Settings survive.
+     *
+     * Callers shut the SDK down first, so BreezService rejects results computed
+     * for the wallet that is gone — see `withSdk` there.
+     */
+    resetWallet: () => {
+      if (paymentListener) {
+        BreezService.off('payment', paymentListener);
+        paymentListener = null;
+      }
+      set({ ...initialWalletState });
+    },
+
     syncNode: async () => {
       try {
         await BreezService.syncNode();

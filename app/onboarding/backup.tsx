@@ -12,8 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ContentColumn } from '@/components';
 import { Button, Text, Card } from '@/components/ui';
-import { KeychainService } from '@/services/keychain';
-import { useWalletStore } from '@/stores/walletStore';
+import { useWalletSession } from '@/stores/walletSession';
 import { consumeMnemonic } from '@/stores/onboardingStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
@@ -66,8 +65,7 @@ export default function BackupVerificationScreen() {
     if (isCorrect) {
       try {
         const phrase = mnemonic.join(' ');
-        await KeychainService.storeMnemonic(phrase);
-        await useWalletStore.getState().initializeWallet(phrase);
+        await useWalletSession.getState().createWallet(phrase);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(tabs)');
       } catch (err) {
