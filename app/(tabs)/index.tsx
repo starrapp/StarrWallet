@@ -4,7 +4,7 @@
  * Main wallet view with balance and quick actions.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,9 +19,9 @@ import * as Haptics from 'expo-haptics';
 import { formatDistanceToNow } from 'date-fns';
 import { Text, FiatAmount } from '@/components/ui';
 import { ContentColumn } from '@/components';
-import { KeychainService } from '@/services/keychain';
 import { BalanceCard } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
+import { useWalletSession } from '@/stores/walletSession';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -149,19 +149,12 @@ export default function HomeScreen() {
     syncNode,
     refreshRecentPayments,
     fetchBtcPrice,
-    initializeWallet,
-    isInitialized,
   } = useWalletStore();
 
-  const tryInitialize = useCallback(() =>
-    KeychainService.getMnemonic().then(initializeWallet),
-  [initializeWallet]);
-
-  useEffect(() => {
-    if (!isInitialized && !isInitializing && !initError) {
-      tryInitialize();
-    }
-  }, [isInitialized, isInitializing, initError, tryInitialize]);
+  // The session owns the seed and the initialisation it feeds, so Retry asks it
+  // rather than reading the keychain here. Nothing runs on mount: AuthGate has
+  // already unlocked by the time this screen exists.
+  const retry = useWalletSession((state) => state.unlock);
 
   // Which control started the refresh. The pull-to-refresh spinner must only
   // show for the gesture, not when the button starts the same work.
@@ -207,7 +200,7 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={[styles.retryButton, { backgroundColor: colors.gold.glow, borderColor: colors.gold.pure }]}
-              onPress={tryInitialize}
+              onPress={retry}
             >
               <Text variant="titleSmall" color={colors.gold.pure}>
                 Retry

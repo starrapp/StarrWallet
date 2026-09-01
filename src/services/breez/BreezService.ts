@@ -83,8 +83,32 @@ class BreezServiceImpl {
   private isInitialized = false;
 
   private eventListeners: Map<string, Set<(...args: any[]) => void>> = new Map();
+  /**
+   * Tail of the lifecycle queue. `initialize` and `shutdown` run one after the
+   * other, never overlapping: two connects would orphan an SDK, and a shutdown
+   * starting mid-connect would let the old connection install itself afterwards.
+   */
+  private lifecycle: Promise<unknown> = Promise.resolve();
 
-  async initialize(mnemonic: string, config: BreezServiceConfig): Promise<void> {
+  /** Queues a lifecycle step behind the previous one, however that one ended. */
+  private sequence<T>(step: () => Promise<T>): Promise<T> {
+    const result = this.lifecycle.then(step, step);
+    this.lifecycle = result.catch(() => undefined);
+    return result;
+  }
+
+  initialize(mnemonic: string, config: BreezServiceConfig): Promise<void> {
+    return this.sequence(() => this.connectSdk(mnemonic, config));
+  }
+
+  shutdown(): Promise<void> {
+    return this.sequence(() => this.disconnectSdk());
+  }
+
+  private async connectSdk(
+    mnemonic: string,
+    config: BreezServiceConfig
+  ): Promise<void> {
     if (this.isInitialized) return;
 
     const { apiKey, network, workingDir, syncIntervalSecs, maxDepositClaimFee } = config;
@@ -145,7 +169,7 @@ class BreezServiceImpl {
     this.isInitialized = true;
   }
 
-  async shutdown(): Promise<void> {
+  private async disconnectSdk(): Promise<void> {
     if (!this.sdk) return;
 
     const sdk = this.sdk;
@@ -168,12 +192,14 @@ class BreezServiceImpl {
   async syncNode(): Promise<void> {
     const sdk = this.requireSdk();
     await sdk.syncWallet({});
+    this.assertCurrent(sdk);
     this.emit('sync');
   }
 
   async getBalance(): Promise<Balance> {
     const sdk = this.requireSdk();
     const info = await sdk.getInfo({ ensureSynced: false });
+    this.assertCurrent(sdk);
 
     return {
       lightning: info.balanceSats,
@@ -401,6 +427,7 @@ class BreezServiceImpl {
     const sdk = this.requireSdk();
 
     const response = await sdk.listPayments(this.toSdkListPaymentsRequest(filter));
+    this.assertCurrent(sdk);
     return response.payments.map((payment) => this.mapPayment(payment));
   }
 
@@ -421,6 +448,7 @@ class BreezServiceImpl {
   async listUnclaimedDeposits(): Promise<UnclaimedDeposit[]> {
     const sdk = this.requireSdk();
     const response = await sdk.listUnclaimedDeposits({});
+    this.assertCurrent(sdk);
     return response.deposits.map((d) => ({
       txid: d.txid,
       vout: d.vout,
@@ -503,6 +531,20 @@ class BreezServiceImpl {
       throw new Error('Breez SDK not initialized');
     }
     return this.sdk;
+  }
+
+  /**
+   * Refuses a result computed by an SDK that has since been replaced.
+   *
+   * `requireSdk` only guards the start of a call; one already awaiting the native
+   * SDK when the wallet is removed or swapped still resolves. Turning that into
+   * an error keeps it out of the store, whose existing `catch` branches already
+   * clear the loading flags. Applied to the calls whose answers the store keeps.
+   */
+  private assertCurrent(sdk: BreezSdkInterface): void {
+    if (this.sdk !== sdk) {
+      throw new Error('Wallet was replaced');
+    }
   }
 
   private handleSdkEvent(event: SdkEvent): void {

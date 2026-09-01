@@ -1,2 +1,5 @@
-export { KeychainService } from './KeychainService';
-
+export {
+  KeychainService,
+  NoWalletError,
+  WalletKeyLostError,
+} from './KeychainService';
