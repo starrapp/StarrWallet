@@ -72,18 +72,19 @@ We welcome feature suggestions! Please open an issue with:
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
-- Expo CLI
-- iOS Simulator (Mac) or Android Emulator
+- Node.js 20+
+- Xcode (iOS) or Android Studio (Android)
 - Git
+
+The Breez SDK is a native module, so **Expo Go cannot run this app**. You need
+a development client build. See the README for the details.
 
 ### Getting Started
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/starr.git
-   cd starr
+   git clone https://github.com/starrapp/StarrWallet.git
+   cd StarrWallet
    ```
 
 2. **Install dependencies**
@@ -93,22 +94,23 @@ We welcome feature suggestions! Please open an issue with:
 
 3. **Set up environment variables**
    - Create a `.env` file in the root directory
-   - Add your Lightning Network configuration:
+   - Add the Breez SDK configuration:
      ```
-     EXPO_PUBLIC_LND_REST_URL=https://your-lnd-node:8080
-     EXPO_PUBLIC_LND_MACAROON=your_macaroon_hex
-     EXPO_PUBLIC_NETWORK=testnet  # Use testnet for development
+     EXPO_PUBLIC_BREEZ_API_KEY=your_breez_api_key
+     EXPO_PUBLIC_BREEZ_NETWORK=regtest  # Use regtest for development
+     GOOGLE_MAPS_API_KEY=your_google_maps_api_key  # Android map tiles
      ```
+   - All wallet variables are read in `src/config/breez.ts`
 
-4. **Start the development server**
+4. **Build and run**
    ```bash
-   npm start
+   npm run ios      # expo run:ios: builds the native project, then runs it
+   npm run android  # expo run:android
    ```
 
-5. **Run on device/simulator**
+5. **Start Metro for a device that already has the dev client**
    ```bash
-   npm run ios    # iOS
-   npm run android  # Android
+   npm start
    ```
 
 ## Code Style Guidelines
@@ -160,11 +162,18 @@ We welcome feature suggestions! Please open an issue with:
 - Test with different network conditions
 - Test edge cases (empty states, errors, etc.)
 
-### Automated Testing
+### Checks
 
-- Write unit tests for utility functions
-- Write integration tests for services
-- Ensure tests pass before submitting PRs
+The repository has no test setup: `npm test` calls `jest`, but there is no jest
+configuration and no test files. Run these before you submit a PR:
+
+```bash
+npx tsc --noEmit
+npm run lint
+```
+
+Use [docs/QA_REGRESSION_CHECKLIST.md](./docs/QA_REGRESSION_CHECKLIST.md) for
+manual device testing.
 
 ## Security Considerations
 
@@ -185,13 +194,14 @@ starr/
 │   ├── onboarding/        # Onboarding flow
 │   └── ...                # Modal screens
 ├── src/
-│   ├── components/        # Reusable components
-│   │   ├── ui/           # Base UI components
-│   │   └── wallet/       # Wallet-specific components
+│   ├── components/        # layout/, map/, ui/, wallet/
+│   ├── config/            # breez.ts: all wallet env vars
+│   ├── contexts/          # Theme and colors
+│   ├── hooks/             # Shared hooks
 │   ├── services/          # Core services
-│   │   ├── breez/        # Breez SDK integration
-│   │   ├── keychain/     # Secure key storage
-│   │   └── backup/       # Backup management
+│   │   ├── breez/        # BreezService: the only SDK consumer
+│   │   ├── btcmap/       # BTC Map API client
+│   │   └── keychain/     # Seed phrase storage
 │   ├── stores/            # Zustand state stores
 │   ├── theme/             # Design system
 │   ├── types/             # TypeScript types

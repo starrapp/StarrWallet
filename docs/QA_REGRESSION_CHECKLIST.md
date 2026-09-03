@@ -37,6 +37,18 @@ Use this checklist with the original QA sheet to validate each bug on iOS and An
 - [ ] Verify scanner framing box resizes correctly after orientation changes.
 - [ ] Verify scanner controls remain reachable in split view and landscape.
 
+## Map Tab
+
+### M01 - Merchant map
+- [ ] Open the Map tab and confirm map tiles render (a black or grey map on
+      Android means the Google Maps API key is rejected, see README).
+- [ ] Confirm nearby places appear as pins and in the list below the map.
+- [ ] Change the radius (5/15/30 km) and confirm the list updates.
+- [ ] Search a merchant name and confirm the results replace the nearby list.
+- [ ] Tap a pin and a list row, and confirm the place detail sheet opens.
+- [ ] Deny location permission and confirm the screen explains the state
+      instead of showing a wrong distance.
+
 ## Bug Validation
 
 ### B01 - Wallet currency set to Bitcoin still shows sats
@@ -44,15 +56,17 @@ Use this checklist with the original QA sheet to validate each bug on iOS and An
 - [ ] Return to Wallet.
 - [ ] Confirm total and activity amounts are displayed in BTC format.
 
-### B02 - Privacy Policy Product links broken
+### B02 - Privacy Policy link broken
+The in-app Privacy Policy screen was removed. Settings now opens the policy in
+the browser.
 - [ ] Open Settings -> Privacy Policy.
-- [ ] In Product section, tap each link.
-- [ ] Confirm each destination opens successfully.
+- [ ] Confirm `https://starr.app/privacy` opens in the browser.
 
-### B03 - Careers link in Privacy Policy wrong
-- [ ] Open Settings -> Privacy Policy -> Company section.
-- [ ] Tap `Careers`.
-- [ ] Confirm mail compose opens for careers contact (no dead link behavior).
+### B03 - Careers link wrong
+`Careers` moved to the About and Support dialogs.
+- [ ] Open Settings -> About, tap `Careers`.
+- [ ] Open Settings -> Support, tap `Careers`.
+- [ ] Confirm mail compose opens for the careers contact in both cases.
 
 ### B04 - Selected currency not reflected in wallet
 - [ ] Change currency to a fiat option (for example `USD`).
@@ -60,8 +74,8 @@ Use this checklist with the original QA sheet to validate each bug on iOS and An
 - [ ] Confirm wallet amount labels reflect selected currency mode (fiat selection + BTC fallback indicator).
 
 ### B05 - Notification icon on Wallet not functioning
-- [ ] Tap bell icon on Wallet header.
-- [ ] Confirm Notifications screen opens.
+Not applicable: the bell icon and the Notifications screen were removed.
+- [ ] Confirm the Wallet header has no bell icon.
 
 ### B06 - Support page 404
 - [ ] Open Settings -> Support.
@@ -78,13 +92,14 @@ Use this checklist with the original QA sheet to validate each bug on iOS and An
 
 ### B08 - Light mode icon contrast
 - [ ] Enable Light mode.
-- [ ] Verify tab icons (`Wallet`, `History`, `Settings`) are clearly visible in active and inactive states.
+- [ ] Verify tab icons (`Wallet`, `History`, scan button, `Map`, `Settings`) are clearly visible in active and inactive states.
 - [ ] Verify Settings list icons are clearly visible in light mode.
 
-### B09 - About/Blog links incorrect in Privacy context
-- [ ] Open Settings -> Privacy Policy -> Company section.
-- [ ] Tap `About` and confirm it opens About page at top.
-- [ ] Tap `Blog` and confirm it opens the configured blog destination.
+### B09 - About link incorrect
+`About` moved to the Settings -> About dialog. There is no `Blog` link any more.
+- [ ] Open Settings -> About.
+- [ ] Tap `About` and confirm `https://starr.app/about` opens at the top of the page.
+- [ ] Tap `View on GitHub` and confirm the repository opens.
 
 ### B10 - On-chain send does not proceed
 - [ ] Open Send -> enter a valid on-chain address.
