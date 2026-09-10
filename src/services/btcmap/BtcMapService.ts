@@ -219,8 +219,10 @@ export class BtcMapService {
       query.radius_km = String(params.radiusKm);
     }
 
+    // The API lowercases the place name but not the query, so a capital letter
+    // makes an area search match nothing.
     if (params.name && params.name.trim().length >= 3) {
-      query.name = params.name.trim();
+      query.name = params.name.trim().toLowerCase();
     }
 
     if (params.tagName && params.tagValue) {
