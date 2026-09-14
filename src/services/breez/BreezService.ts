@@ -225,6 +225,7 @@ class BreezServiceImpl {
         amountSats,
         expirySecs: expireSeconds,
         paymentHash: undefined,
+        receiverIdentityPublicKey: undefined,
       }),
     });
 
