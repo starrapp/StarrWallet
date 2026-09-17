@@ -16,7 +16,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '@/contexts';
 import { AuthGate } from '@/components';
 import { IncomingPaymentOverlay } from '@/components/wallet';
+import { initSentry, wrapRoot } from '@/services/logging';
 import { useWalletStore } from '@/stores/walletStore';
+
+initSentry();
+
 // Keep splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
 
@@ -88,7 +92,7 @@ function RootLayoutInner() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <KeyboardProvider>
       <SafeAreaProvider>
@@ -99,6 +103,8 @@ export default function RootLayout() {
     </KeyboardProvider>
   );
 }
+
+export default wrapRoot(RootLayout);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

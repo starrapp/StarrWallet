@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
 
+import { captureException } from '@/services/logging';
 import type {
   Balance,
   LightningPayment,
@@ -77,6 +78,14 @@ export interface BreezServiceConfig {
 
 const DEFAULT_STORAGE_DIR_NAME = 'breez-sdk-spark';
 
+const SDK_LOG_METHODS: Record<string, 'error' | 'warn' | 'info' | 'debug' | 'trace'> = {
+  ERROR: 'error',
+  WARN: 'warn',
+  INFO: 'info',
+  DEBUG: 'debug',
+  TRACE: 'trace',
+};
+
 class BreezServiceImpl {
   private sdk: BreezSdkInterface | null = null;
   private sdkEventListenerId: string | null = null;
@@ -137,15 +146,13 @@ class BreezServiceImpl {
 
     sdkConfig.maxDepositClaimFee = this.buildMaxDepositClaimFee(maxDepositClaimFee);
 
-    if (__DEV__) {
-      try {
-        initLogging(undefined, {
-          log: (l: LogEntry) => console.log(`[BreezSDK][${l.level}] ${l.line}`),
-        }, undefined);
-      } catch {
-        // initLogging can only be called once
-      }
-    }
+    try {
+      initLogging(undefined, {
+        log: (l: LogEntry) => {
+          console[SDK_LOG_METHODS[l.level] ?? 'log'](`[BreezSDK][${l.level}] ${l.line}`);
+        },
+      }, undefined);
+    } catch { }
 
     const seed = Seed.Mnemonic.new({ mnemonic, passphrase: undefined });
     const sdk = await connect({
@@ -472,6 +479,7 @@ class BreezServiceImpl {
       });
     } catch (error: any) {
       console.error('[BreezService] claimDeposit failed:', error);
+      captureException(error);
       const message = error?.inner?.[0] ?? error?.message ?? 'Unknown error';
       throw new Error(message);
     }

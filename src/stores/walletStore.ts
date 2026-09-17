@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BreezService } from '@/services/breez';
+import { captureException } from '@/services/logging';
 import { BREEZ_CONFIG } from '@/config';
 import type {
   Balance,
@@ -195,6 +196,7 @@ export const useWalletStore = create<WalletState>()(persist(
 
       } catch (error) {
         console.error('[WalletStore] Initialization failed:', error);
+        captureException(error);
         set({
           isInitializing: false,
           initError: error instanceof Error ? error.message : 'Unknown error',

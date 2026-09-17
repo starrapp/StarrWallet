@@ -22,6 +22,7 @@ import { ContentColumn } from '@/components';
 import { Button, Text, Input, AmountInput, Card, FiatAmount } from '@/components/ui';
 import { useWalletStore } from '@/stores/walletStore';
 import { BreezService, formatSdkError } from '@/services/breez';
+import { captureException } from '@/services/logging';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -150,6 +151,7 @@ export default function SendScreen() {
       setPrepareResult(result);
       setShowConfirm(true);
     } catch (err) {
+      console.error('[Send] Failed to prepare payment:', err);
       setError(formatSdkError(err));
     }
   };
@@ -189,6 +191,8 @@ export default function SendScreen() {
         { text: 'OK', onPress: handleCancel },
       ]);
     } catch (err) {
+      console.error('[Send] Failed to send payment:', err);
+      captureException(err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(formatSdkError(err));
     } finally {

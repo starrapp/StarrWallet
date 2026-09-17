@@ -92,7 +92,7 @@ async function fetchJson<T>(path: string, params?: Record<string, string>): Prom
     if (error instanceof BtcMapServiceError) {
       throw error;
     }
-    console.warn('[BtcMap] Request failed:', url.toString(), error);
+    console.warn('[BtcMap] Request failed:', error);
     throw new BtcMapServiceError(
       timedOut ? 'BTC Map is not responding. Try again.' : 'Could not reach BTC Map.'
     );
