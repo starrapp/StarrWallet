@@ -17,6 +17,7 @@ All payment flows use the real SDK through
 | send-4 | Send: support Bitcoin address and Spark address, not only BOLT11 |
 | receive-1 | Receive: receive via Bitcoin address (`onchain` mode) |
 | receive-2 | Receive: receive via Spark address (`spark` mode) |
+| receive-3 | Receive: Lightning Address (LNURL-Pay receive): claim, change, remove, sender comment in payment details |
 | list-1 | List payments: filters (type, status, date range) |
 | list-2 | List payments: pagination |
 | list-3 | List payments: payment detail screen (`getPayment` by id) |

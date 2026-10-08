@@ -31,6 +31,8 @@ export interface LightningPayment {
   invoice?: string;
   paymentHash: string;
   preimage?: string;
+  // LUD-12 comment from the sender of an LNURL-pay
+  comment?: string;
   timestamp: Date;
   completedAt?: Date;
 }
@@ -43,6 +45,14 @@ export interface Invoice {
   description?: string;
   expiresAt: Date;
   createdAt: Date;
+}
+
+// Lightning Address registered for this wallet
+export interface LightningAddress {
+  address: string;
+  username: string;
+  // bech32 LNURL of the address
+  lnurl: string;
 }
 
 // Unclaimed on-chain deposit (from Breez listUnclaimedDeposits)

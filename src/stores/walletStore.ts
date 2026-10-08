@@ -15,6 +15,7 @@ import type {
   Balance,
   LightningPayment,
   Invoice,
+  LightningAddress,
   WalletSettings,
   ListPaymentsFilter,
   UnclaimedDeposit,
@@ -26,6 +27,7 @@ const DEFAULT_PAYMENT_FILTER: ListPaymentsFilter = {
 };
 
 let paymentListener: ((payment: LightningPayment) => void) | null = null;
+let lightningAddressListener: ((address: LightningAddress | null) => void) | null = null;
 
 // Wallet state interface
 interface WalletState {
@@ -59,6 +61,8 @@ interface WalletState {
   // Price
   btcFiatPrice: number | null;
 
+  lightningAddress: LightningAddress | null;
+
   // Settings
   settings: WalletSettings;
 
@@ -77,6 +81,10 @@ interface WalletState {
   getSparkReceiveAddress: () => Promise<string>;
   sendPayment: (input: string, amountSats?: bigint, comment?: string) => Promise<LightningPayment>;
   dismissIncomingPayment: () => void;
+
+  loadLightningAddress: () => Promise<void>;
+  registerLightningAddress: (username: string) => Promise<void>;
+  deleteLightningAddress: () => Promise<void>;
 
   updateSettings: (settings: Partial<WalletSettings>) => void;
   fetchBtcPrice: () => Promise<void>;
@@ -126,6 +134,8 @@ const initialWalletState = {
   isLoadingUnclaimed: false,
 
   btcFiatPrice: null,
+
+  lightningAddress: null,
 } satisfies Partial<WalletState>;
 
 export const useWalletStore = create<WalletState>()(persist(
@@ -146,6 +156,7 @@ export const useWalletStore = create<WalletState>()(persist(
           network: BREEZ_CONFIG.NETWORK,
           syncIntervalSecs: BREEZ_CONFIG.SYNC_INTERVAL_SECS,
           maxDepositClaimFee: get().settings.maxDepositClaimFee,
+          lnurlDomain: BREEZ_CONFIG.LNURL_DOMAIN,
         });
 
         const [balance, recentPayments] = await Promise.all([
@@ -159,6 +170,15 @@ export const useWalletStore = create<WalletState>()(persist(
 
         // Fetch BTC price in background (non-blocking)
         get().fetchBtcPrice();
+        if (BREEZ_CONFIG.LNURL_DOMAIN) {
+          get().loadLightningAddress();
+        }
+
+        if (lightningAddressListener) {
+          BreezService.off('lightningAddress', lightningAddressListener);
+        }
+        lightningAddressListener = (lightningAddress) => set({ lightningAddress });
+        BreezService.on('lightningAddress', lightningAddressListener);
 
         if (paymentListener) {
           BreezService.off('payment', paymentListener);
@@ -354,6 +374,28 @@ export const useWalletStore = create<WalletState>()(persist(
       }));
     },
 
+    loadLightningAddress: async () => {
+      try {
+        const lightningAddress = await BreezService.getLightningAddress();
+        set({ lightningAddress });
+      } catch (error) {
+        console.error('[WalletStore] Failed to load lightning address:', error);
+      }
+    },
+
+    registerLightningAddress: async (username: string) => {
+      const lightningAddress = await BreezService.registerLightningAddress(
+        username,
+        `Pay to ${username}@${BREEZ_CONFIG.LNURL_DOMAIN} · Starr Wallet`
+      );
+      set({ lightningAddress });
+    },
+
+    deleteLightningAddress: async () => {
+      await BreezService.deleteLightningAddress();
+      set({ lightningAddress: null });
+    },
+
     // Update settings
     updateSettings: (newSettings: Partial<WalletSettings>) => {
       const fiatChanged = newSettings.fiatCurrency && newSettings.fiatCurrency !== get().settings.fiatCurrency;
@@ -393,6 +435,10 @@ export const useWalletStore = create<WalletState>()(persist(
       if (paymentListener) {
         BreezService.off('payment', paymentListener);
         paymentListener = null;
+      }
+      if (lightningAddressListener) {
+        BreezService.off('lightningAddress', lightningAddressListener);
+        lightningAddressListener = null;
       }
       set({ ...initialWalletState });
     },

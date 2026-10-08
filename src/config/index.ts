@@ -1,2 +1,2 @@
-export { BREEZ_CONFIG } from './breez';
+export { BREEZ_CONFIG, RESERVED_LIGHTNING_USERNAMES } from './breez';
 export { SENTRY_CONFIG } from './sentry';

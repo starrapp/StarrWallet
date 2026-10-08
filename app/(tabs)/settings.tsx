@@ -21,6 +21,7 @@ import { Text, Input } from '@/components/ui';
 import { ContentColumn } from '@/components';
 import type { BitcoinUnit, FiatCurrency, MaxDepositClaimFeeSetting } from '@/types/wallet';
 import { useWalletStore } from '@/stores/walletStore';
+import { BREEZ_CONFIG } from '@/config';
 import { useTheme, useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -80,7 +81,7 @@ function getMaxDepositClaimFeeSubtitle(setting: MaxDepositClaimFeeSetting): stri
 export default function SettingsScreen() {
   const router = useRouter();
   const { isTabletWidth } = useResponsive();
-  const { settings, updateSettings } = useWalletStore();
+  const { settings, updateSettings, lightningAddress } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const colors = useColors();
   const styles = useMemo(() => createSettingsStyles(colors), [colors]);
@@ -186,6 +187,20 @@ export default function SettingsScreen() {
                 onPress={() => setShowThemeModal(true)}
               />
             </View>
+
+            {!!BREEZ_CONFIG.LNURL_DOMAIN && (
+              <View style={styles.section}>
+                <Text variant="labelMedium" color={colors.text.muted} style={styles.sectionLabel}>
+                Receive
+                </Text>
+                <SettingsItem
+                  icon="at"
+                  title="Lightning Address"
+                  subtitle={lightningAddress?.address ?? 'Not set'}
+                  onPress={() => router.push('/lightning-address')}
+                />
+              </View>
+            )}
 
             {/* Deposits / On-chain Section */}
             <View style={styles.section}>

@@ -6,6 +6,7 @@ import type {
   Balance,
   LightningPayment,
   Invoice,
+  LightningAddress,
   TransactionStatus,
   ParsedInput,
   PrepareSendResult,
@@ -42,6 +43,7 @@ import {
   type BreezSdkInterface,
   type DepositClaimError,
   type InputType,
+  type LightningAddressInfo,
   type ListPaymentsRequest,
   type LnurlPayRequestDetails,
   type MaxFee as MaxFeeType,
@@ -66,6 +68,7 @@ export function formatSdkError(err: unknown): string {
 
 export type PaymentEventHandler = (payment: LightningPayment) => void;
 export type SyncEventHandler = () => void;
+export type LightningAddressEventHandler = (address: LightningAddress | null) => void;
 
 export interface BreezServiceConfig {
   apiKey: string;
@@ -74,6 +77,7 @@ export interface BreezServiceConfig {
   syncIntervalSecs?: number;
   /** Max fee for automatic on-chain deposit claiming. Applied at init. */
   maxDepositClaimFee?: MaxDepositClaimFeeSetting;
+  lnurlDomain?: string;
 }
 
 const DEFAULT_STORAGE_DIR_NAME = 'breez-sdk-spark';
@@ -120,7 +124,7 @@ class BreezServiceImpl {
   ): Promise<void> {
     if (this.isInitialized) return;
 
-    const { apiKey, network, workingDir, syncIntervalSecs, maxDepositClaimFee } = config;
+    const { apiKey, network, workingDir, syncIntervalSecs, maxDepositClaimFee, lnurlDomain } = config;
 
     if (!apiKey) {
       throw new Error('Breez API key is missing. Set EXPO_PUBLIC_BREEZ_API_KEY.');
@@ -145,6 +149,7 @@ class BreezServiceImpl {
     }
 
     sdkConfig.maxDepositClaimFee = this.buildMaxDepositClaimFee(maxDepositClaimFee);
+    sdkConfig.lnurlDomain = lnurlDomain || undefined;
 
     try {
       initLogging(undefined, {
@@ -263,6 +268,31 @@ class BreezServiceImpl {
       paymentMethod: ReceivePaymentMethod.SparkAddress.new(),
     });
     return response.paymentRequest;
+  }
+
+  async checkLightningAddressAvailable(username: string): Promise<boolean> {
+    const sdk = this.requireSdk();
+    return sdk.checkLightningAddressAvailable({ username });
+  }
+
+  async registerLightningAddress(username: string, description: string): Promise<LightningAddress> {
+    const sdk = this.requireSdk();
+    const info = await sdk.registerLightningAddress({ username, description });
+    this.assertCurrent(sdk);
+    return this.mapLightningAddress(info);
+  }
+
+  async getLightningAddress(): Promise<LightningAddress | null> {
+    const sdk = this.requireSdk();
+    const info = await sdk.getLightningAddress();
+    this.assertCurrent(sdk);
+    return info ? this.mapLightningAddress(info) : null;
+  }
+
+  async deleteLightningAddress(): Promise<void> {
+    const sdk = this.requireSdk();
+    await sdk.deleteLightningAddress();
+    this.assertCurrent(sdk);
   }
 
   async sendPayment(input: string, amountSats?: bigint, comment?: string): Promise<LightningPayment> {
@@ -487,6 +517,7 @@ class BreezServiceImpl {
 
   on(event: 'payment', handler: PaymentEventHandler): void;
   on(event: 'sync', handler: SyncEventHandler): void;
+  on(event: 'lightningAddress', handler: LightningAddressEventHandler): void;
   on(event: string, handler: (...args: any[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
@@ -572,9 +603,22 @@ class BreezServiceImpl {
         }
         return;
       }
+      case SdkEvent_Tags.LightningAddressChanged: {
+        const info = event.inner.lightningAddress;
+        this.emit('lightningAddress', info ? this.mapLightningAddress(info) : null);
+        return;
+      }
       default:
         return;
     }
+  }
+
+  private mapLightningAddress(info: LightningAddressInfo): LightningAddress {
+    return {
+      address: info.lightningAddress,
+      username: info.username,
+      lnurl: info.lnurl.bech32,
+    };
   }
 
   private resolveStorageDir(workingDir?: string): { storageDir: string; storageUri?: string } {
@@ -753,6 +797,7 @@ class BreezServiceImpl {
     let invoice: string | undefined;
     let paymentHash = payment.id;
     let preimage: string | undefined;
+    let comment: string | undefined;
 
     if (payment.details) {
       switch (payment.details.tag) {
@@ -761,6 +806,7 @@ class BreezServiceImpl {
           invoice = payment.details.inner.invoice;
           paymentHash = payment.details.inner.htlcDetails.paymentHash;
           preimage = payment.details.inner.htlcDetails.preimage ?? undefined;
+          comment = payment.details.inner.lnurlReceiveMetadata?.senderComment ?? undefined;
           break;
         case PaymentDetails_Tags.Spark:
           description = payment.details.inner.invoiceDetails?.description ?? undefined;
@@ -794,6 +840,7 @@ class BreezServiceImpl {
       invoice,
       paymentHash,
       preimage,
+      comment,
       timestamp,
       completedAt: status === 'completed' ? timestamp : undefined,
     };

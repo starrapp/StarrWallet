@@ -6,6 +6,7 @@
  * - EXPO_PUBLIC_BREEZ_NETWORK=mainnet|regtest
  * - EXPO_PUBLIC_BREEZ_WORKING_DIR=/optional/absolute/path
  * - EXPO_PUBLIC_BREEZ_SYNC_INTERVAL_SECS=60
+ * - EXPO_PUBLIC_BREEZ_LNURL_DOMAIN=breez.tips (empty disables Lightning Address)
  */
 
 export const BREEZ_CONFIG = {
@@ -15,4 +16,15 @@ export const BREEZ_CONFIG = {
   SYNC_INTERVAL_SECS: process.env.EXPO_PUBLIC_BREEZ_SYNC_INTERVAL_SECS
     ? parseInt(process.env.EXPO_PUBLIC_BREEZ_SYNC_INTERVAL_SECS, 10)
     : undefined,
+  LNURL_DOMAIN: process.env.EXPO_PUBLIC_BREEZ_LNURL_DOMAIN || '',
 };
+
+// The LNURL server has no list of blocked names, so the app refuses these.
+export const RESERVED_LIGHTNING_USERNAMES = new Set([
+  'admin',
+  'root',
+  'support',
+  'starr',
+  'starrapp',
+  'starrwallet',
+]);

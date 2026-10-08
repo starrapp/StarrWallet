@@ -23,6 +23,7 @@ interface QRDisplayProps {
   value: string;
   size?: number;
   label?: string;
+  shareTitle?: string;
   onCopy?: () => void;
 }
 
@@ -30,6 +31,7 @@ export const QRDisplay: React.FC<QRDisplayProps> = ({
   value,
   size = 240,
   label,
+  shareTitle = 'Lightning Invoice',
   onCopy,
 }) => {
   const colors = useColors();
@@ -122,7 +124,7 @@ export const QRDisplay: React.FC<QRDisplayProps> = ({
     try {
       await Share.share({
         message: value,
-        title: 'Lightning Invoice',
+        title: shareTitle,
       });
     } catch (error) {
       console.error('Share failed:', error);

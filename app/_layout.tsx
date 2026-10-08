@@ -69,6 +69,13 @@ function RootLayoutInner() {
             }}
           />
           <Stack.Screen
+            name="lightning-address"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
             name="delete-wallet"
             options={{
               animation: 'slide_from_bottom',

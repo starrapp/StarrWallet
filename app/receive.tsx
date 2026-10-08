@@ -23,6 +23,7 @@ import { ContentColumn } from '@/components';
 import { Button, Text, Input, AmountInput, Card, FiatAmount } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
+import { BREEZ_CONFIG } from '@/config';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -54,6 +55,7 @@ export default function ReceiveScreen() {
     isLoadingUnclaimed,
     listUnclaimedDeposits,
     claimDeposit,
+    lightningAddress,
   } = useWalletStore();
   const [receiveMode, setReceiveMode] = useState<ReceiveMode>('lightning');
   const [amount, setAmount] = useState('');
@@ -125,6 +127,13 @@ export default function ReceiveScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert('Copied', 'Spark address copied to clipboard.');
   }, [sparkAddress]);
+
+  const handleCopyLightningAddress = useCallback(async () => {
+    if (!lightningAddress) return;
+    await Clipboard.setStringAsync(lightningAddress.address);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Copied', 'Lightning Address copied to clipboard.');
+  }, [lightningAddress]);
 
   useFocusEffect(
     useCallback(() => {
@@ -520,12 +529,42 @@ export default function ReceiveScreen() {
             ) : !invoice ? (
             // Invoice creation form
               <>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="arrow-down-circle" size={64} color={colors.status.success} />
-                </View>
+                {lightningAddress ? (
+                  <View style={styles.onchainSection}>
+                    <QRDisplay
+                      value={lightningAddress.lnurl}
+                      label="Scan to pay to your Lightning Address"
+                      shareTitle="Lightning Address"
+                    />
+                    <View style={styles.addressText}>
+                      <Text variant="bodyMedium" color={colors.text.primary} align="center">
+                        {lightningAddress.address}
+                      </Text>
+                    </View>
+                    <Button
+                      title="Copy address"
+                      variant="secondary"
+                      size="md"
+                      onPress={handleCopyLightningAddress}
+                      icon={<Ionicons name="copy-outline" size={18} color={colors.gold.pure} />}
+                    />
+                    <Button
+                      title="Manage address"
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => router.push('/lightning-address')}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.iconContainer}>
+                    <Ionicons name="arrow-down-circle" size={64} color={colors.status.success} />
+                  </View>
+                )}
 
                 <Text variant="bodyMedium" color={colors.text.secondary} align="center">
-                  Create a Lightning invoice to receive Bitcoin
+                  {lightningAddress
+                    ? 'Or create an invoice for a specific amount'
+                    : 'Create a Lightning invoice to receive Bitcoin'}
                 </Text>
 
                 <AmountInput
@@ -550,6 +589,15 @@ export default function ReceiveScreen() {
                   loading={isCreatingInvoice}
                   disabled={!amount || isCreatingInvoice}
                 />
+
+                {!!BREEZ_CONFIG.LNURL_DOMAIN && !lightningAddress && (
+                  <Button
+                    title="Get a Lightning Address"
+                    variant="ghost"
+                    size="md"
+                    onPress={() => router.push('/lightning-address')}
+                  />
+                )}
               </>
             ) : (
             // Invoice display

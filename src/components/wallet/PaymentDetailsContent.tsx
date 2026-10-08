@@ -101,6 +101,16 @@ export function PaymentDetailsContent({
             </Text>
           </>
         )}
+        {payment.comment && (
+          <>
+            <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
+              Comment
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.primary}>
+              {payment.comment}
+            </Text>
+          </>
+        )}
         {payment.feeSats != null && payment.feeSats > 0n && (
           <>
             <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
