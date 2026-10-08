@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -182,14 +183,33 @@ export default function SendScreen() {
     try {
       const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
       const sendAmountSats = isFixedBolt11 ? undefined : amountSats;
-      await sendPayment(invoice.trim(), sendAmountSats, comment || undefined);
+      const payment = await sendPayment(invoice.trim(), sendAmountSats, comment || undefined);
       setShowConfirm(false);
       setPrepareResult(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const sentAmount = formatAmountStr(amountSats, settings.bitcoinUnit);
-      Alert.alert('Payment sent', `Successfully sent ${sentAmount}`, [
-        { text: 'OK', onPress: handleCancel },
-      ]);
+      const successAction = payment.successAction;
+      const successUrl = successAction?.url;
+      Alert.alert(
+        'Payment sent',
+        successAction
+          ? `Successfully sent ${sentAmount}\n\n${successAction.text}${successUrl ? `\n${successUrl}` : ''}`
+          : `Successfully sent ${sentAmount}`,
+        [
+          ...(successUrl
+            ? [{
+              text: 'Open link',
+              onPress: () => {
+                Linking.openURL(successUrl).catch((err) => {
+                  console.error('[Send] Failed to open success action URL:', err);
+                });
+                handleCancel();
+              },
+            }]
+            : []),
+          { text: 'OK', onPress: handleCancel },
+        ]
+      );
     } catch (err) {
       console.error('[Send] Failed to send payment:', err);
       captureException(err);
@@ -367,6 +387,14 @@ export default function SendScreen() {
                         <Text variant="labelMedium" color={colors.text.muted}>Address</Text>
                         <Text variant="bodyMedium" color={colors.text.primary}>
                           {(parsed as ParsedLnurlPay).address}
+                        </Text>
+                      </View>
+                    )}
+                    {(parsed as ParsedLnurlPay).description && (
+                      <View style={styles.invoiceRow}>
+                        <Text variant="labelMedium" color={colors.text.muted}>Description</Text>
+                        <Text variant="bodyMedium" color={colors.text.primary}>
+                          {(parsed as ParsedLnurlPay).description}
                         </Text>
                       </View>
                     )}

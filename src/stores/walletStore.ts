@@ -61,7 +61,9 @@ interface WalletState {
   // Price
   btcFiatPrice: number | null;
 
-  lightningAddress: LightningAddress | null;
+  // undefined: not loaded, or the load failed. null: the wallet has no address.
+  lightningAddress: LightningAddress | null | undefined;
+  isLoadingLightningAddress: boolean;
 
   // Settings
   settings: WalletSettings;
@@ -135,7 +137,8 @@ const initialWalletState = {
 
   btcFiatPrice: null,
 
-  lightningAddress: null,
+  lightningAddress: undefined,
+  isLoadingLightningAddress: false,
 } satisfies Partial<WalletState>;
 
 export const useWalletStore = create<WalletState>()(persist(
@@ -375,11 +378,13 @@ export const useWalletStore = create<WalletState>()(persist(
     },
 
     loadLightningAddress: async () => {
+      set({ isLoadingLightningAddress: true });
       try {
         const lightningAddress = await BreezService.getLightningAddress();
-        set({ lightningAddress });
+        set({ lightningAddress, isLoadingLightningAddress: false });
       } catch (error) {
         console.error('[WalletStore] Failed to load lightning address:', error);
+        set({ isLoadingLightningAddress: false });
       }
     },
 

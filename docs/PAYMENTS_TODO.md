@@ -23,7 +23,7 @@ All payment flows use the real SDK through
 | list-3 | List payments: payment detail screen (`getPayment` by id) |
 | claim-1 | On-chain: unclaimed deposits list, manual claim with fee approval |
 | claim-2 | On-chain: max deposit claim fee in settings |
-| lnurl-pay | LNURL-Pay: parse, min/max sendable, optional comment, `prepareLnurlPay` |
+| lnurl-pay | LNURL-Pay: parse, min/max sendable, optional comment, `prepareLnurlPay`, description, success action, recipient and comment in payment details |
 
 ## Open
 

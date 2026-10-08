@@ -166,7 +166,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
       {/* Details */}
       <View style={styles.transactionDetails}>
         <Text variant="titleSmall" numberOfLines={1} color={colors.text.primary}>
-          {transaction.description || (isReceive ? 'Received' : 'Sent')}
+          {transaction.comment || transaction.description || (isReceive ? 'Received' : 'Sent')}
         </Text>
         <View style={styles.transactionMeta}>
           <Text variant="bodySmall" color={colors.text.muted}>

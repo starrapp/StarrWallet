@@ -590,7 +590,7 @@ export default function ReceiveScreen() {
                   disabled={!amount || isCreatingInvoice}
                 />
 
-                {!!BREEZ_CONFIG.LNURL_DOMAIN && !lightningAddress && (
+                {!!BREEZ_CONFIG.LNURL_DOMAIN && lightningAddress === null && (
                   <Button
                     title="Get a Lightning Address"
                     variant="ghost"

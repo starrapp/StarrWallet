@@ -31,8 +31,11 @@ export interface LightningPayment {
   invoice?: string;
   paymentHash: string;
   preimage?: string;
-  // LUD-12 comment from the sender of an LNURL-pay
+  // LUD-12 comment of an LNURL-pay, sent or received
   comment?: string;
+  // Lightning Address paid by an LNURL-pay send
+  recipient?: string;
+  successAction?: LnurlSuccessAction;
   timestamp: Date;
   completedAt?: Date;
 }
@@ -45,6 +48,12 @@ export interface Invoice {
   description?: string;
   expiresAt: Date;
   createdAt: Date;
+}
+
+// LUD-09 success action of an LNURL-pay, reduced to what the UI shows
+export interface LnurlSuccessAction {
+  text: string;
+  url?: string;
 }
 
 // Lightning Address registered for this wallet
@@ -100,6 +109,7 @@ export interface ParsedLnurlPay {
   type: 'lnurl_pay';
   domain: string;
   address?: string; // Lightning address if resolved via LN address
+  description?: string; // text/plain entry of the LUD-06 metadata
   commentAllowed: number;
   minSendable: bigint; // millisats
   maxSendable: bigint; // millisats

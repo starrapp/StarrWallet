@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { Card, FiatAmount, Text } from '@/components/ui';
@@ -20,6 +20,7 @@ export function PaymentDetailsContent({
   contentContainerStyle,
 }: PaymentDetailsContentProps) {
   const colors = useColors();
+  const successUrl = payment.successAction?.url;
 
   const styles = useMemo(
     () =>
@@ -101,6 +102,16 @@ export function PaymentDetailsContent({
             </Text>
           </>
         )}
+        {payment.recipient && (
+          <>
+            <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
+              To
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.primary}>
+              {payment.recipient}
+            </Text>
+          </>
+        )}
         {payment.comment && (
           <>
             <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
@@ -109,6 +120,29 @@ export function PaymentDetailsContent({
             <Text variant="bodyMedium" color={colors.text.primary}>
               {payment.comment}
             </Text>
+          </>
+        )}
+        {payment.successAction && (
+          <>
+            <Text variant="labelMedium" color={colors.text.muted} style={[styles.label, { marginTop: spacing.sm }]}>
+              Message from recipient
+            </Text>
+            <Text variant="bodyMedium" color={colors.text.primary}>
+              {payment.successAction.text}
+            </Text>
+            {successUrl && (
+              <TouchableOpacity
+                onPress={() => {
+                  Linking.openURL(successUrl).catch((err) => {
+                    console.error('[PaymentDetails] Failed to open success action URL:', err);
+                  });
+                }}
+              >
+                <Text variant="bodyMedium" color={colors.gold.pure}>
+                  {successUrl}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
         {payment.feeSats != null && payment.feeSats > 0n && (

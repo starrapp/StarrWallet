@@ -81,7 +81,7 @@ function getMaxDepositClaimFeeSubtitle(setting: MaxDepositClaimFeeSetting): stri
 export default function SettingsScreen() {
   const router = useRouter();
   const { isTabletWidth } = useResponsive();
-  const { settings, updateSettings, lightningAddress } = useWalletStore();
+  const { settings, updateSettings, lightningAddress, isLoadingLightningAddress } = useWalletStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const colors = useColors();
   const styles = useMemo(() => createSettingsStyles(colors), [colors]);
@@ -196,7 +196,11 @@ export default function SettingsScreen() {
                 <SettingsItem
                   icon="at"
                   title="Lightning Address"
-                  subtitle={lightningAddress?.address ?? 'Not set'}
+                  subtitle={
+                    lightningAddress ? lightningAddress.address
+                      : lightningAddress === null ? 'Not set'
+                        : isLoadingLightningAddress ? 'Loading...' : 'Unavailable'
+                  }
                   onPress={() => router.push('/lightning-address')}
                 />
               </View>

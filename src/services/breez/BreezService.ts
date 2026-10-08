@@ -7,6 +7,7 @@ import type {
   LightningPayment,
   Invoice,
   LightningAddress,
+  LnurlSuccessAction,
   TransactionStatus,
   ParsedInput,
   PrepareSendResult,
@@ -22,6 +23,7 @@ import type {
 // - SilentPaymentAddress: not yet supported
 // - Url: generic URL, not a payment type
 import {
+  AesSuccessActionDataResult_Tags,
   connect,
   defaultConfig,
   DepositClaimError_Tags,
@@ -40,6 +42,7 @@ import {
   Seed,
   SendPaymentMethod_Tags,
   SdkEvent_Tags,
+  SuccessActionProcessed_Tags,
   type BreezSdkInterface,
   type DepositClaimError,
   type InputType,
@@ -51,6 +54,7 @@ import {
   type PrepareSendPaymentResponse,
   type LogEntry,
   type SdkEvent,
+  type SuccessActionProcessed,
 } from '@breeztech/breez-sdk-spark-react-native';
 
 /** Extract a readable message from Breez SDK errors (SdkError / UniffiError). */
@@ -323,7 +327,10 @@ class BreezServiceImpl {
         idempotencyKey: this.generateIdempotencyKey(),
       }));
 
-      return this.mapPayment(response.payment);
+      return {
+        ...this.mapPayment(response.payment),
+        successAction: this.mapSuccessAction(response.successAction),
+      };
     }
 
     // Standard flow: Bolt11, Bitcoin address, Spark address, Spark invoice
@@ -613,6 +620,37 @@ class BreezServiceImpl {
     }
   }
 
+  /** Returns the text/plain entry of LUD-06 metadata: [["text/plain", "..."], ...]. */
+  private lnurlDescription(metadataStr: string | undefined): string | undefined {
+    if (!metadataStr) return undefined;
+    try {
+      const entries: unknown = JSON.parse(metadataStr);
+      if (!Array.isArray(entries)) return undefined;
+      const entry = entries.find((e) => Array.isArray(e) && e[0] === 'text/plain');
+      return typeof entry?.[1] === 'string' ? entry[1] : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private mapSuccessAction(action: SuccessActionProcessed | undefined): LnurlSuccessAction | undefined {
+    if (!action) return undefined;
+    switch (action.tag) {
+      case SuccessActionProcessed_Tags.Message:
+        return { text: action.inner.data.message };
+      case SuccessActionProcessed_Tags.Url:
+        return { text: action.inner.data.description, url: action.inner.data.url };
+      case SuccessActionProcessed_Tags.Aes: {
+        const result = action.inner.result;
+        return result.tag === AesSuccessActionDataResult_Tags.Decrypted
+          ? { text: `${result.inner.data.description}\n${result.inner.data.plaintext}` }
+          : { text: result.inner.reason };
+      }
+      default:
+        return undefined;
+    }
+  }
+
   private mapLightningAddress(info: LightningAddressInfo): LightningAddress {
     return {
       address: info.lightningAddress,
@@ -757,6 +795,7 @@ class BreezServiceImpl {
         return {
           type: 'lnurl_pay',
           domain: details.domain,
+          description: this.lnurlDescription(details.metadataStr),
           commentAllowed: details.commentAllowed,
           minSendable: details.minSendable,
           maxSendable: details.maxSendable,
@@ -768,6 +807,7 @@ class BreezServiceImpl {
           type: 'lnurl_pay',
           domain: details.payRequest.domain,
           address: details.address,
+          description: this.lnurlDescription(details.payRequest.metadataStr),
           commentAllowed: details.payRequest.commentAllowed,
           minSendable: details.payRequest.minSendable,
           maxSendable: details.payRequest.maxSendable,
@@ -798,6 +838,8 @@ class BreezServiceImpl {
     let paymentHash = payment.id;
     let preimage: string | undefined;
     let comment: string | undefined;
+    let recipient: string | undefined;
+    let successAction: LnurlSuccessAction | undefined;
 
     if (payment.details) {
       switch (payment.details.tag) {
@@ -806,7 +848,18 @@ class BreezServiceImpl {
           invoice = payment.details.inner.invoice;
           paymentHash = payment.details.inner.htlcDetails.paymentHash;
           preimage = payment.details.inner.htlcDetails.preimage ?? undefined;
-          comment = payment.details.inner.lnurlReceiveMetadata?.senderComment ?? undefined;
+          if (payment.details.inner.lnurlPayInfo) {
+            const payInfo = payment.details.inner.lnurlPayInfo;
+            description ??= this.lnurlDescription(payInfo.metadata);
+            recipient = payInfo.lnAddress;
+            comment = payInfo.comment;
+            successAction = this.mapSuccessAction(payInfo.processedSuccessAction);
+          }
+          // The SDK sets this metadata on each receive with a description hash.
+          if (payment.details.inner.lnurlReceiveMetadata) {
+            description ??= 'Received via Lightning Address';
+            comment = payment.details.inner.lnurlReceiveMetadata.senderComment;
+          }
           break;
         case PaymentDetails_Tags.Spark:
           description = payment.details.inner.invoiceDetails?.description ?? undefined;
@@ -841,6 +894,8 @@ class BreezServiceImpl {
       paymentHash,
       preimage,
       comment,
+      recipient,
+      successAction,
       timestamp,
       completedAt: status === 'completed' ? timestamp : undefined,
     };
