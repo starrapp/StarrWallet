@@ -19,13 +19,17 @@ import { BREEZ_CONFIG, RESERVED_LIGHTNING_USERNAMES } from '@/config';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
 
-type Availability = 'idle' | 'current' | 'checking' | 'available' | 'unavailable' | 'error';
+type Availability = 'idle' | 'invalid' | 'current' | 'checking' | 'available' | 'unavailable' | 'error';
 
 interface CheckResult {
   name: string;
   available?: boolean;
   error?: string;
 }
+
+// LUD-16 characters, with the dot rule of the Breez server. The server accepts
+// more characters, but wallets (the Breez SDK too) do not parse such addresses.
+const USERNAME_FORMAT = /^[a-z0-9_-]+(\.[a-z0-9_-]+)*$/;
 
 // The SDK recommends a check when the user stops typing, not on each keystroke.
 const CHECK_DELAY_MS = 500;
@@ -47,20 +51,22 @@ export default function LightningAddressScreen() {
 
   // The same normalization as sanitize_username in the SDK.
   const name = username.trim().toLowerCase();
+  const isValid = USERNAME_FORMAT.test(name);
   const isReserved = RESERVED_LIGHTNING_USERNAMES.has(name);
   // Registering the current name again uses one of the registrations per day.
   const isCurrent = name === lightningAddress?.username;
 
   const availability: Availability =
     !name ? 'idle'
-      : isCurrent ? 'current'
-        : isReserved ? 'unavailable'
-          : checkResult?.name !== name ? 'checking'
-            : checkResult.error ? 'error'
-              : checkResult.available ? 'available' : 'unavailable';
+      : !isValid ? 'invalid'
+        : isCurrent ? 'current'
+          : isReserved ? 'unavailable'
+            : checkResult?.name !== name ? 'checking'
+              : checkResult.error ? 'error'
+                : checkResult.available ? 'available' : 'unavailable';
 
   useEffect(() => {
-    if (!name || isCurrent || isReserved) return;
+    if (!name || !isValid || isCurrent || isReserved) return;
 
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -76,7 +82,7 @@ export default function LightningAddressScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [name, isCurrent, isReserved]);
+  }, [name, isValid, isCurrent, isReserved]);
 
   const styles = useMemo(
     () =>
@@ -147,9 +153,10 @@ export default function LightningAddressScreen() {
   };
 
   const statusError =
-    availability === 'unavailable' ? 'Not available'
-      : availability === 'error' ? checkResult?.error
-        : undefined;
+    availability === 'invalid' ? "Use only a-z, 0-9, '-', '_' and '.'"
+      : availability === 'unavailable' ? 'Not available'
+        : availability === 'error' ? checkResult?.error
+          : undefined;
   const statusHint =
     availability === 'current' ? 'This is your current name'
       : availability === 'checking' ? 'Checking...'

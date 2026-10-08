@@ -125,6 +125,8 @@ export type ParsedInput =
 
 // --- Prepare send payment (Breez SDK prepareSendPayment / prepareLnurlPay)
 export interface PrepareSendResult {
+  // Identifies the prepared payment that sendPreparedPayment pays
+  id: string;
   paymentMethod: 'lightning' | 'spark_transfer' | 'onchain' | 'lnurl_pay';
   amountSats: bigint;
   feeSats: bigint;

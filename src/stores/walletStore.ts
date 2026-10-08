@@ -16,6 +16,7 @@ import type {
   LightningPayment,
   Invoice,
   LightningAddress,
+  PrepareSendResult,
   WalletSettings,
   ListPaymentsFilter,
   UnclaimedDeposit,
@@ -81,7 +82,7 @@ interface WalletState {
   createInvoice: (amountSats: bigint, description?: string) => Promise<Invoice>;
   getOnchainReceiveAddress: () => Promise<string>;
   getSparkReceiveAddress: () => Promise<string>;
-  sendPayment: (input: string, amountSats?: bigint, comment?: string) => Promise<LightningPayment>;
+  sendPayment: (prepared: PrepareSendResult) => Promise<LightningPayment>;
   dismissIncomingPayment: () => void;
 
   loadLightningAddress: () => Promise<void>;
@@ -364,8 +365,8 @@ export const useWalletStore = create<WalletState>()(persist(
       }
     },
 
-    sendPayment: async (input: string, amountSats?: bigint, comment?: string) => {
-      const payment = await BreezService.sendPayment(input, amountSats, comment);
+    sendPayment: async (prepared: PrepareSendResult) => {
+      const payment = await BreezService.sendPreparedPayment(prepared.id);
       get().refreshBalance();
       return payment;
     },

@@ -33,6 +33,7 @@ import {
   LnurlPayRequest,
   MaxFee,
   Network,
+  OnchainConfirmationSpeed,
   PaymentDetails_Tags,
   PaymentRequest,
   PaymentStatus,
@@ -41,6 +42,7 @@ import {
   ReceivePaymentMethod,
   Seed,
   SendPaymentMethod_Tags,
+  SendPaymentOptions,
   SdkEvent_Tags,
   SuccessActionProcessed_Tags,
   type BreezSdkInterface,
@@ -51,6 +53,7 @@ import {
   type LnurlPayRequestDetails,
   type MaxFee as MaxFeeType,
   type Payment,
+  type PrepareLnurlPayResponse,
   type PrepareSendPaymentResponse,
   type LogEntry,
   type SdkEvent,
@@ -84,6 +87,10 @@ export interface BreezServiceConfig {
   lnurlDomain?: string;
 }
 
+type PreparedSdkResponse =
+  | { lnurl: PrepareLnurlPayResponse }
+  | { standard: PrepareSendPaymentResponse };
+
 const DEFAULT_STORAGE_DIR_NAME = 'breez-sdk-spark';
 
 const SDK_LOG_METHODS: Record<string, 'error' | 'warn' | 'info' | 'debug' | 'trace'> = {
@@ -98,6 +105,14 @@ class BreezServiceImpl {
   private sdk: BreezSdkInterface | null = null;
   private sdkEventListenerId: string | null = null;
   private isInitialized = false;
+  /**
+   * The payment the user confirmed. Send pays with this response, not a new
+   * one, so the confirmed invoice and fee are the ones paid. The key stays the
+   * same on a retry, so the SDK returns the first payment and does not pay twice.
+   */
+  private preparedSend: (PreparedSdkResponse & { id: string; idempotencyKey: string }) | null = null;
+  /** Counts prepares, so a late response cannot replace the result of a newer one. */
+  private prepareSeq = 0;
 
   private eventListeners: Map<string, Set<(...args: any[]) => void>> = new Map();
   /**
@@ -191,6 +206,7 @@ class BreezServiceImpl {
     const sdk = this.sdk;
     this.sdk = null;
     this.isInitialized = false;
+    this.preparedSend = null;
 
     try {
       if (this.sdkEventListenerId) {
@@ -299,50 +315,39 @@ class BreezServiceImpl {
     this.assertCurrent(sdk);
   }
 
-  async sendPayment(input: string, amountSats?: bigint, comment?: string): Promise<LightningPayment> {
+  async sendPreparedPayment(id: string): Promise<LightningPayment> {
     const sdk = this.requireSdk();
-    const raw = input.trim();
-    const parsed = await sdk.parse(raw);
-    this.assertSendAmount(parsed, amountSats);
+    const prepared = this.preparedSend;
+    if (!prepared || prepared.id !== id) {
+      throw new Error('Payment details changed. Review the payment again.');
+    }
 
-    // LNURL-Pay / Lightning Address → separate SDK flow
-    if (parsed.tag === InputType_Tags.LnurlPay || parsed.tag === InputType_Tags.LightningAddress) {
-      const payRequest: LnurlPayRequestDetails =
-        parsed.tag === InputType_Tags.LightningAddress
-          ? parsed.inner[0].payRequest
-          : parsed.inner[0];
-
-      if (amountSats == null) {
-        throw new Error('Amount is required for LNURL-Pay');
-      }
-
-      const prepareResponse = await sdk.prepareLnurlPay(PrepareLnurlPayRequest.new({
-        amount: amountSats,
-        comment: comment || undefined,
-        payRequest,
-      }));
-
+    let payment: LightningPayment;
+    if ('lnurl' in prepared) {
       const response = await sdk.lnurlPay(LnurlPayRequest.new({
-        prepareResponse,
-        idempotencyKey: this.generateIdempotencyKey(),
+        prepareResponse: prepared.lnurl,
+        idempotencyKey: prepared.idempotencyKey,
       }));
-
-      return {
+      payment = {
         ...this.mapPayment(response.payment),
         successAction: this.mapSuccessAction(response.successAction),
       };
+    } else {
+      const response = await sdk.sendPayment({
+        prepareResponse: prepared.standard,
+        // Prepare shows the medium fee. Without options the SDK pays the fast one.
+        options: prepared.standard.paymentMethod.tag === SendPaymentMethod_Tags.BitcoinAddress
+          ? SendPaymentOptions.BitcoinAddress.new({ confirmationSpeed: OnchainConfirmationSpeed.Medium })
+          : undefined,
+        idempotencyKey: prepared.idempotencyKey,
+      });
+      payment = this.mapPayment(response.payment);
     }
 
-    // Standard flow: Bolt11, Bitcoin address, Spark address, Spark invoice
-    const prepareResponse = await this.prepareSendPaymentResponse(raw, amountSats);
-
-    const response = await sdk.sendPayment({
-      prepareResponse,
-      options: undefined,
-      idempotencyKey: this.generateIdempotencyKey(),
-    });
-
-    return this.mapPayment(response.payment);
+    if (this.preparedSend === prepared) {
+      this.preparedSend = null;
+    }
+    return payment;
   }
 
   async parseInvoice(bolt11: string): Promise<{
@@ -392,6 +397,7 @@ class BreezServiceImpl {
     comment?: string,
   ): Promise<PrepareSendResult> {
     const sdk = this.requireSdk();
+    const seq = ++this.prepareSeq;
     const raw = input.trim();
     const parsed = await sdk.parse(raw);
     this.assertSendAmount(parsed, amountSats);
@@ -413,12 +419,12 @@ class BreezServiceImpl {
         payRequest,
       }));
 
-      return {
+      return this.storePrepared(sdk, seq, { lnurl: response }, {
         paymentMethod: 'lnurl_pay',
         amountSats: response.amountSats,
         feeSats: response.feeSats,
         description: payRequest.domain,
-      };
+      });
     }
 
     // Standard flow
@@ -428,12 +434,12 @@ class BreezServiceImpl {
     if (method.tag === SendPaymentMethod_Tags.Bolt11Invoice) {
       const details = method.inner;
       const fee = (details.lightningFeeSats ?? 0n) + (details.sparkTransferFeeSats ?? 0n);
-      return {
+      return this.storePrepared(sdk, seq, { standard: prepareResponse }, {
         paymentMethod: 'lightning',
         amountSats: prepareResponse.amount,
         feeSats: fee,
         description: details.invoiceDetails.description,
-      };
+      });
     }
 
     if (method.tag === SendPaymentMethod_Tags.BitcoinAddress) {
@@ -441,28 +447,28 @@ class BreezServiceImpl {
       if (feeQuote == null) {
         throw new Error('Could not estimate on-chain fee. Please try again.');
       }
-      return {
+      return this.storePrepared(sdk, seq, { standard: prepareResponse }, {
         paymentMethod: 'onchain',
         amountSats: prepareResponse.amount,
         feeSats: feeQuote,
-      };
+      });
     }
 
     if (method.tag === SendPaymentMethod_Tags.SparkAddress) {
-      return {
+      return this.storePrepared(sdk, seq, { standard: prepareResponse }, {
         paymentMethod: 'spark_transfer',
         amountSats: prepareResponse.amount,
         feeSats: method.inner.fee,
-      };
+      });
     }
 
     if (method.tag === SendPaymentMethod_Tags.SparkInvoice) {
-      return {
+      return this.storePrepared(sdk, seq, { standard: prepareResponse }, {
         paymentMethod: 'spark_transfer',
         amountSats: prepareResponse.amount,
         feeSats: method.inner.fee,
         description: method.inner.sparkInvoiceDetails.description,
-      };
+      });
     }
 
     throw new Error('Unsupported payment method');
@@ -638,8 +644,11 @@ class BreezServiceImpl {
     switch (action.tag) {
       case SuccessActionProcessed_Tags.Message:
         return { text: action.inner.data.message };
-      case SuccessActionProcessed_Tags.Url:
-        return { text: action.inner.data.description, url: action.inner.data.url };
+      case SuccessActionProcessed_Tags.Url: {
+        const { description, url } = action.inner.data;
+        // The SDK checks only the host. Another scheme could open a different app.
+        return { text: description, url: /^https?:\/\//i.test(url) ? url : undefined };
+      }
       case SuccessActionProcessed_Tags.Aes: {
         const result = action.inner.result;
         return result.tag === AesSuccessActionDataResult_Tags.Decrypted
@@ -915,6 +924,21 @@ class BreezServiceImpl {
 
   private toDate(timestamp: bigint): Date {
     return new Date(Number(timestamp) * 1000);
+  }
+
+  private storePrepared(
+    sdk: BreezSdkInterface,
+    seq: number,
+    response: PreparedSdkResponse,
+    result: Omit<PrepareSendResult, 'id'>
+  ): PrepareSendResult {
+    this.assertCurrent(sdk);
+    if (seq !== this.prepareSeq) {
+      throw new Error('Payment details changed. Review the payment again.');
+    }
+    const id = Crypto.randomUUID();
+    this.preparedSend = { ...response, id, idempotencyKey: this.generateIdempotencyKey() };
+    return { id, ...result };
   }
 
   private generateIdempotencyKey(): string {

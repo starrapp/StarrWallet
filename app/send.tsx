@@ -51,9 +51,15 @@ export default function SendScreen() {
   const [parsed, setParsed] = useState<ParsedInput | null>(null);
   // The input text `parsed` belongs to. Differs from the current input while a parse is pending.
   const [parsedInput, setParsedInput] = useState('');
-  const [prepareResult, setPrepareResult] = useState<PrepareSendResult | null>(null);
-  const [showConfirm, setShowConfirm] = useState(false);
+  // The prepare result and the inputs it was made for.
+  const [prepared, setPrepared] = useState<{
+    result: PrepareSendResult;
+    input: string;
+    amount: string;
+    comment: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const trimmedInvoice = invoice.trim();
@@ -64,7 +70,10 @@ export default function SendScreen() {
   if (params.invoice !== prevInvoiceParam) {
     setPrevInvoiceParam(params.invoice);
     const next = params.invoice?.trim();
-    if (next) setInvoice(next);
+    if (next) {
+      setInvoice(next);
+      setComment('');
+    }
   }
 
   if (trimmedInvoice === '' && parsed !== null) {
@@ -98,8 +107,8 @@ export default function SendScreen() {
   const handleInvoiceChange = useCallback((text: string) => {
     setInvoice(text);
     setError(null);
-    setPrepareResult(null);
-    setShowConfirm(false);
+    setComment('');
+    setPrepared(null);
   }, []);
 
   const getAmountSats = useCallback((): bigint | undefined => {
@@ -114,6 +123,22 @@ export default function SendScreen() {
     return undefined;
   }, [amount]);
 
+  const commentAllowed = parsed?.type === 'lnurl_pay' ? parsed.commentAllowed : 0;
+  const sentComment = commentAllowed > 0 ? comment : '';
+  // The SDK limits the comment in UTF-8 bytes, not in characters.
+  const commentTooLong = new TextEncoder().encode(sentComment).length > commentAllowed;
+
+  // A confirmation is valid only for the inputs it was prepared for. A late
+  // response, or a new recipient from the scanner, never pays the wrong request.
+  const prepareResult =
+    prepared
+    && prepared.input === trimmedInvoice
+    && prepared.amount === amount
+    && prepared.comment === sentComment
+      ? prepared.result
+      : null;
+  const showConfirm = prepareResult != null;
+
   const needsAmount =
     parsed?.type === 'bitcoin_address'
     || parsed?.type === 'spark_address'
@@ -122,6 +147,7 @@ export default function SendScreen() {
     || (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null);
 
   const handlePrepareAndConfirm = async () => {
+    if (isPreparing) return;
     if (!invoice.trim()) {
       setError('Please enter an invoice or address');
       return;
@@ -140,20 +166,27 @@ export default function SendScreen() {
       setError('Insufficient balance');
       return;
     }
+    if (commentTooLong) {
+      setError('Comment is too long');
+      return;
+    }
 
     setError(null);
+    setIsPreparing(true);
     try {
-      const result = await BreezService.prepareSendPayment(invoice.trim(), amountSats, comment || undefined);
+      const request = { input: trimmedInvoice, amount, comment: sentComment };
+      const result = await BreezService.prepareSendPayment(request.input, amountSats, request.comment || undefined);
       const totalDebit = result.amountSats + result.feeSats;
       if (balance && totalDebit > balance.lightning) {
         setError('Insufficient balance to cover amount and network fee');
         return;
       }
-      setPrepareResult(result);
-      setShowConfirm(true);
+      setPrepared({ result, ...request });
     } catch (err) {
       console.error('[Send] Failed to prepare payment:', err);
       setError(formatSdkError(err));
+    } finally {
+      setIsPreparing(false);
     }
   };
 
@@ -168,7 +201,7 @@ export default function SendScreen() {
   }, [router]);
 
   const handleSend = async () => {
-    if (!prepareResult || !invoice.trim()) return;
+    if (!prepareResult) return;
     const amountSats = prepareResult.amountSats;
     const totalDebit = prepareResult.amountSats + prepareResult.feeSats;
     if (amountSats <= 0n) {
@@ -181,11 +214,8 @@ export default function SendScreen() {
     }
     setIsLoading(true);
     try {
-      const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
-      const sendAmountSats = isFixedBolt11 ? undefined : amountSats;
-      const payment = await sendPayment(invoice.trim(), sendAmountSats, comment || undefined);
-      setShowConfirm(false);
-      setPrepareResult(null);
+      const payment = await sendPayment(prepareResult);
+      setPrepared(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const sentAmount = formatAmountStr(amountSats, settings.bitcoinUnit);
       const successAction = payment.successAction;
@@ -435,6 +465,7 @@ export default function SendScreen() {
                 onChangeText={setComment}
                 maxLength={(parsed as ParsedLnurlPay).commentAllowed}
                 editable={!showConfirm}
+                error={commentTooLong ? 'Comment is too long' : undefined}
               />
             )}
 
@@ -465,7 +496,7 @@ export default function SendScreen() {
                   </View>
                 )}
                 <View style={styles.confirmActions}>
-                  <Button title="Back" variant="ghost" size="md" onPress={() => { setShowConfirm(false); setPrepareResult(null); }} />
+                  <Button title="Back" variant="ghost" size="md" onPress={() => setPrepared(null)} />
                   <Button title={isLoading ? 'Sending...' : 'Send'} variant="primary" size="md" onPress={handleSend} loading={isLoading} disabled={isLoading} />
                 </View>
               </Card>
@@ -486,7 +517,8 @@ export default function SendScreen() {
                   variant="primary"
                   size="lg"
                   onPress={handlePrepareAndConfirm}
-                  disabled={!invoice.trim() || isParsing}
+                  loading={isPreparing}
+                  disabled={!invoice.trim() || isParsing || commentTooLong || isPreparing}
                 />
               </View>
             ) : null}
