@@ -144,6 +144,7 @@ StarrWallet/
 │   ├── theme/             # colors, spacing, typography, layout
 │   ├── types/             # domain types
 │   └── utils/             # formatting and helpers
+├── modules/               # local Expo modules
 ├── docs/                  # payment status, QA checklist
 └── assets/                # icons and splash images
 ```

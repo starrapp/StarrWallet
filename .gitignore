@@ -5,6 +5,7 @@ node_modules/
 .expo/
 dist/
 web-build/
+build/
 
 # Native builds
 *.orig.*
@@ -15,11 +16,11 @@ web-build/
 *.mobileprovision
 
 # iOS
-ios/
+/ios/
 *.ipa
 
 # Android
-android/
+/android/
 *.apk
 *.aab
 
