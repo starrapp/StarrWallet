@@ -30,6 +30,7 @@ interface CheckResult {
 // LUD-16 characters, with the dot rule of the Breez server. The server accepts
 // more characters, but wallets (the Breez SDK too) do not parse such addresses.
 const USERNAME_FORMAT = /^[a-z0-9_-]+(\.[a-z0-9_-]+)*$/;
+const MIN_USERNAME_LENGTH = 3;
 
 // The SDK recommends a check when the user stops typing, not on each keystroke.
 const CHECK_DELAY_MS = 500;
@@ -51,7 +52,7 @@ export default function LightningAddressScreen() {
 
   // The same normalization as sanitize_username in the SDK.
   const name = username.trim().toLowerCase();
-  const isValid = USERNAME_FORMAT.test(name);
+  const isValid = name.length >= MIN_USERNAME_LENGTH && USERNAME_FORMAT.test(name);
   const isReserved = RESERVED_LIGHTNING_USERNAMES.has(name);
   // Registering the current name again uses one of the registrations per day.
   const isCurrent = name === lightningAddress?.username;
@@ -153,7 +154,7 @@ export default function LightningAddressScreen() {
   };
 
   const statusError =
-    availability === 'invalid' ? "Use only a-z, 0-9, '-', '_' and '.'"
+    availability === 'invalid' ? `Use ${MIN_USERNAME_LENGTH} or more of a-z, 0-9, '-', '_' and '.'`
       : availability === 'unavailable' ? 'Not available'
         : availability === 'error' ? checkResult?.error
           : undefined;
