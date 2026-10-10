@@ -28,6 +28,16 @@ export function safeReturnUrl(value?: string | null): string | null {
   return raw;
 }
 
+// A stray `%` in a pasted invoice must not drop the link on the floor; the
+// Send screen's parser reports anything that is not a valid payload.
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 /**
  * Rewrite a `lightning:` URL into the in-app Send route. Anything that is not
  * a lightning URL is returned unchanged so expo-router handles it normally
@@ -40,7 +50,7 @@ export function lightningUrlToSendPath(url: string): string {
   const params = new URLSearchParams(query);
   // Keep any returnUrl the caller added after the invoice.
   const returnUrl = params.get('returnUrl');
-  const out = new URLSearchParams({ invoice: decodeURIComponent(payload) });
+  const out = new URLSearchParams({ invoice: safeDecode(payload) });
   if (returnUrl) out.set('returnUrl', returnUrl);
   return `/send?${out.toString()}`;
 }
