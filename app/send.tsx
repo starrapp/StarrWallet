@@ -28,6 +28,7 @@ import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
 import { useResponsive } from '@/hooks';
 import { formatAmountStr, formatSats, msatToSatCeil } from '@/utils/format';
+import { safeReturnUrl } from '@/utils/deepLink';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -41,7 +42,10 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 
 export default function SendScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ invoice?: string }>();
+  const params = useLocalSearchParams<{ invoice?: string; returnUrl?: string }>();
+  // App that deep-linked us here and wants to be reopened once we've paid
+  // (e.g. a Nostr client waiting to confirm a zap). Validated, never trusted.
+  const returnUrl = safeReturnUrl(params.returnUrl);
   const colors = useColors();
   const { isTabletWidth } = useResponsive();
   const { balance, sendPayment, settings } = useWalletStore();
@@ -237,7 +241,17 @@ export default function SendScreen() {
               },
             }]
             : []),
-          { text: 'OK', onPress: handleCancel },
+          {
+            text: returnUrl ? 'Back to app' : 'OK',
+            onPress: () => {
+              handleCancel();
+              if (returnUrl) {
+                Linking.openURL(returnUrl).catch((err) => {
+                  console.error('[Send] Failed to open return URL:', err);
+                });
+              }
+            },
+          },
         ]
       );
     } catch (err) {
