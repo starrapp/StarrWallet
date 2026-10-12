@@ -7,7 +7,8 @@
 // Polyfills must be imported first
 import '@/polyfills';
 
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, StyleSheet } from 'react-native';
@@ -29,6 +30,13 @@ function RootLayoutInner() {
   const incomingPayment = useWalletStore((state) => state.incomingPayment);
   const bitcoinUnit = useWalletStore((state) => state.settings.bitcoinUnit);
   const dismissIncomingPayment = useWalletStore((state) => state.dismissIncomingPayment);
+  const pathname = usePathname();
+
+  // The entry screen (/) hides the splash once it knows where to route. A cold
+  // start from a deep link (e.g. starr://send) skips it, so hide it here.
+  useEffect(() => {
+    if (pathname !== '/') SplashScreen.hideAsync();
+  }, [pathname]);
 
   return (
     <AuthGate>
@@ -49,6 +57,9 @@ function RootLayoutInner() {
           />
           <Stack.Screen
             name="send"
+            // One Send screen: a deep link that arrives while Send is open
+            // updates its params instead of stacking a second copy.
+            dangerouslySingular={() => 'send'}
             options={{
               animation: 'slide_from_bottom',
               presentation: 'modal',

@@ -8,10 +8,19 @@
  */
 import { lightningUrlToSendPath } from '@/utils/deepLink';
 
+const SEND_WITH_QUERY = /^(starr:\/\/|\/)send\?/i;
+
+// Send is a single screen (see app/_layout.tsx), so a repeat of the same link
+// would arrive with unchanged params and be ignored. Tagging each link makes
+// the Send screen apply it again.
+let linkCount = 0;
+
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
+  let next = path;
   try {
-    return lightningUrlToSendPath(path);
+    next = lightningUrlToSendPath(path);
   } catch {
     return path;
   }
+  return SEND_WITH_QUERY.test(next) ? `${next}&link=${++linkCount}` : next;
 }

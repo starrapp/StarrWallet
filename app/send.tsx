@@ -42,7 +42,7 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 
 export default function SendScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ invoice?: string; returnUrl?: string }>();
+  const params = useLocalSearchParams<{ invoice?: string; returnUrl?: string; link?: string }>();
   // App that deep-linked us here and wants to be reopened once we've paid
   // (e.g. a Nostr client waiting to confirm a zap). Validated, never trusted.
   const returnUrl = safeReturnUrl(params.returnUrl);
@@ -70,9 +70,12 @@ export default function SendScreen() {
   const isParsing = trimmedInvoice !== '' && parsedInput !== trimmedInvoice;
 
   // Later invoice from scan / deep link, while the screen stays mounted.
-  const [prevInvoiceParam, setPrevInvoiceParam] = useState(params.invoice);
-  if (params.invoice !== prevInvoiceParam) {
-    setPrevInvoiceParam(params.invoice);
+  // `link` changes on every incoming deep link, so reopening the same link
+  // still replaces whatever was typed since.
+  const invoiceParamKey = `${params.link ?? ''}|${params.invoice ?? ''}`;
+  const [prevInvoiceParamKey, setPrevInvoiceParamKey] = useState(invoiceParamKey);
+  if (invoiceParamKey !== prevInvoiceParamKey) {
+    setPrevInvoiceParamKey(invoiceParamKey);
     const next = params.invoice?.trim();
     if (next) {
       setInvoice(next);
