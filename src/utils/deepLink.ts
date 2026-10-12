@@ -46,7 +46,12 @@ function safeDecode(value: string): string {
 export function lightningUrlToSendPath(url: string): string {
   const match = /^lightning:(?:\/\/)?(.*)$/i.exec(url.trim());
   if (!match) return url;
-  const [payload, query = ''] = match[1].split('?', 2);
+  // Split on the first `?` only: split('?', 2) would drop the rest of an
+  // unencoded returnUrl that has its own query string.
+  const rest = match[1];
+  const q = rest.indexOf('?');
+  const payload = q === -1 ? rest : rest.slice(0, q);
+  const query = q === -1 ? '' : rest.slice(q + 1);
   const params = new URLSearchParams(query);
   // Keep any returnUrl the caller added after the invoice.
   const returnUrl = params.get('returnUrl');
