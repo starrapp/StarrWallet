@@ -12,6 +12,7 @@ import { ContentColumn, SplitLayout } from '@/components';
 import { Text, Card } from '@/components/ui';
 import { PaymentDetailsContent, TransactionList } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
+import { formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -102,7 +103,7 @@ export default function HistoryScreen() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setDetailError(err instanceof Error ? err.message : 'Failed to load payment');
+          setDetailError(formatSdkError(err));
           setSelectedPayment(null);
         }
       })

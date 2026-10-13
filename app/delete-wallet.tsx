@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button, Text, Card } from '@/components/ui';
 import { useWalletSession } from '@/stores/walletSession';
+import { formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
 
@@ -123,7 +124,7 @@ export default function DeleteWalletScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Deletion Failed',
-        error instanceof Error ? error.message : 'Failed to delete wallet data. Please try again.',
+        formatSdkError(error),
         [{ text: 'OK' }]
       );
     } finally {

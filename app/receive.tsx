@@ -23,6 +23,7 @@ import { ContentColumn } from '@/components';
 import { Button, Text, Input, AmountInput, Card, FiatAmount } from '@/components/ui';
 import { QRDisplay } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
+import { formatSdkError } from '@/services/breez';
 import { BREEZ_CONFIG } from '@/config';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
@@ -77,7 +78,7 @@ export default function ReceiveScreen() {
       const addr = await getOnchainReceiveAddress();
       setOnchainAddress(addr);
     } catch (err) {
-      setOnchainError(err instanceof Error ? err.message : 'Failed to get address');
+      setOnchainError(formatSdkError(err));
       setOnchainAddress(null);
     } finally {
       setIsLoadingOnchain(false);
@@ -91,7 +92,7 @@ export default function ReceiveScreen() {
       const addr = await getSparkReceiveAddress();
       setSparkAddress(addr);
     } catch (err) {
-      setSparkError(err instanceof Error ? err.message : 'Failed to get Spark address');
+      setSparkError(formatSdkError(err));
       setSparkAddress(null);
     } finally {
       setIsLoadingSpark(false);
@@ -167,7 +168,7 @@ export default function ReceiveScreen() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Alert.alert(
                   'Claim failed',
-                  err instanceof Error ? err.message : 'Could not claim deposit. Try again later.'
+                  formatSdkError(err)
                 );
               } finally {
                 setClaimingTxid(null);
@@ -205,7 +206,7 @@ export default function ReceiveScreen() {
       setInvoice(newInvoice);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create invoice');
+      setError(formatSdkError(err));
     }
   };
 

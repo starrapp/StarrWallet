@@ -21,6 +21,7 @@ import * as Clipboard from 'expo-clipboard';
 import { ContentColumn } from '@/components';
 import { Button, Text } from '@/components/ui';
 import { useWalletSession } from '@/stores/walletSession';
+import { formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing, layout, typography } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -75,7 +76,7 @@ export default function ImportWalletScreen() {
       router.replace('/(tabs)');
     } catch (err) {
       console.error('[Import] Failed to import wallet:', err);
-      setError(err instanceof Error ? err.message : 'Failed to import wallet. Please try again.');
+      setError(formatSdkError(err));
     } finally {
       setIsLoading(false);
     }

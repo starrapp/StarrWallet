@@ -17,6 +17,7 @@ import { Button, Text } from '@/components/ui';
 import { ContentColumn } from '@/components';
 import { PaymentDetailsContent } from '@/components/wallet';
 import { useWalletStore } from '@/stores/walletStore';
+import { formatSdkError } from '@/services/breez';
 import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -51,7 +52,7 @@ export default function PaymentDetailScreen() {
       .catch((err) => {
         console.error('[Payment] Failed to load payment:', err);
         if (!cancelled) {
-          setFetchError(err instanceof Error ? err.message : 'Failed to load payment');
+          setFetchError(formatSdkError(err));
         }
       })
       .finally(() => {

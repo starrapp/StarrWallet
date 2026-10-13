@@ -39,7 +39,7 @@ import {
   NoWalletError,
   WalletKeyLostError,
 } from '@/services/keychain';
-import { BreezService } from '@/services/breez/BreezService';
+import { BreezService, formatSdkError } from '@/services/breez/BreezService';
 import { useWalletStore } from './walletStore';
 
 /** What the gate should be showing. The only part screens read. */
@@ -70,9 +70,6 @@ interface WalletSessionState {
 let opInFlight = false;
 let authPending = true;
 let appActive = true;
-
-const readableError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 export const useWalletSession = create<WalletSessionState>()((set, get) => {
   /** Claims the session for one operation. Called before the first `await`. */
@@ -151,7 +148,7 @@ export const useWalletSession = create<WalletSessionState>()((set, get) => {
           return;
         }
         const message =
-          error instanceof WalletKeyLostError ? error.message : readableError(error);
+          error instanceof WalletKeyLostError ? error.message : formatSdkError(error);
         set({
           status: 'locked',
           // A cancelled prompt speaks for itself.
@@ -220,7 +217,7 @@ export const useWalletSession = create<WalletSessionState>()((set, get) => {
           // A native failure is not a refusal, but it is still a reason to
           // remove nothing.
           console.error('[WalletSession] Could not authenticate for removal:', error);
-          abandon(previous, readableError(error));
+          abandon(previous, formatSdkError(error));
           throw error;
         }
         if (!authorized) {
@@ -240,7 +237,7 @@ export const useWalletSession = create<WalletSessionState>()((set, get) => {
           // the seed may still be there, so an unlock is the way back to a
           // working wallet.
           console.error('[WalletSession] Could not remove the wallet:', error);
-          set({ status: 'locked', message: readableError(error) });
+          set({ status: 'locked', message: formatSdkError(error) });
           throw error;
         } finally {
           set({ isRemoving: false });

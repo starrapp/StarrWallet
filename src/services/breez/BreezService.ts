@@ -40,6 +40,8 @@ import {
   PaymentType,
   PrepareLnurlPayRequest,
   ReceivePaymentMethod,
+  SdkError,
+  SdkError_Tags,
   Seed,
   SendPaymentMethod_Tags,
   SendPaymentOptions,
@@ -62,15 +64,58 @@ import {
 
 /** Extract a readable message from Breez SDK errors (SdkError / UniffiError). */
 export function formatSdkError(err: unknown): string {
-  if (err != null && typeof err === 'object') {
-    const e = err as Record<string, unknown>;
-    // SdkError has tag + inner[0] with the actual message
-    if (typeof e.tag === 'string' && Array.isArray(e.inner) && typeof e.inner[0] === 'string') {
-      return `${e.tag}: ${e.inner[0]}`;
-    }
+  if (err == null || !SdkError.instanceOf(err)) {
+    return err instanceof Error ? err.message : String(err);
   }
-  if (err instanceof Error) return err.message;
-  return String(err);
+  switch (err.tag) {
+    case SdkError_Tags.SparkError: {
+      const [message] = err.inner;
+      // Spark sends this when a payment for the same payment hash already exists.
+      if (message.includes('preimage request already exists')) {
+        return 'This invoice is already paid, or its payment is in progress.';
+      }
+      // The gRPC details and metadata are raw bytes and headers.
+      return `Spark error: ${message.split(', details: ')[0]}`;
+    }
+    case SdkError_Tags.InvalidInput:
+      return `Invalid input: ${err.inner[0]}`;
+    case SdkError_Tags.NetworkError:
+      return `Network error: ${err.inner[0]}`;
+    case SdkError_Tags.StorageError:
+      return `Storage error: ${err.inner[0]}`;
+    case SdkError_Tags.ChainServiceError:
+      return `Blockchain service error: ${err.inner[0]}`;
+    case SdkError_Tags.LnurlError:
+      return `LNURL error: ${err.inner[0]}`;
+    case SdkError_Tags.Signer:
+      return `Signing error: ${err.inner[0]}`;
+    case SdkError_Tags.InvalidUuid:
+      return `Invalid ID: ${err.inner[0]}`;
+    case SdkError_Tags.Generic:
+      return err.inner[0];
+    case SdkError_Tags.InsufficientFunds:
+      return 'Insufficient funds';
+    case SdkError_Tags.MaxDepositClaimFeeExceeded:
+      return `Fee too high (${err.inner.requiredFeeSats} sats required)`;
+    case SdkError_Tags.MissingUtxo:
+      return 'UTXO not found';
+    case SdkError_Tags.DepositClaimInProgress:
+      return 'Deposit claim already in progress';
+    case SdkError_Tags.RefundReplacementFeeTooLow:
+      return `A refund is already pending at ${err.inner.pendingFeeSats} sats: a replacement must pay at least ${err.inner.requiredFeeSats} sats`;
+    case SdkError_Tags.InsufficientCpfpFunds:
+      return `Insufficient CPFP funding: need at least ${err.inner.requiredSat} sats`;
+    case SdkError_Tags.CrossChainAmountOutOfRange:
+      return `Amount out of range: ${err.inner.reason}`;
+    case SdkError_Tags.CrossChainRouteUnavailable:
+      return err.inner.temporary
+        ? `Route temporarily unavailable: ${err.inner.reason}`
+        : `Route not supported: ${err.inner.reason}`;
+    case SdkError_Tags.OptimizationAlreadyRunning:
+      return 'Optimization is already in progress';
+    case SdkError_Tags.OptimizationCancelled:
+      return 'Optimization was cancelled';
+  }
 }
 
 export type PaymentEventHandler = (payment: LightningPayment) => void;
@@ -520,11 +565,10 @@ class BreezServiceImpl {
         vout,
         maxFee: maxFeeSats != null ? MaxFee.Fixed.new({ amount: maxFeeSats }) : undefined,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[BreezService] claimDeposit failed:', error);
       captureException(error);
-      const message = error?.inner?.[0] ?? error?.message ?? 'Unknown error';
-      throw new Error(message);
+      throw error;
     }
   }
 

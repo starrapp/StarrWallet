@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { ContentColumn } from '@/components';
 import { Button, Text, Card } from '@/components/ui';
 import { useWalletSession } from '@/stores/walletSession';
+import { formatSdkError } from '@/services/breez';
 import { consumeMnemonic } from '@/stores/onboardingStore';
 import { useColors } from '@/contexts';
 import { spacing, layout } from '@/theme';
@@ -70,7 +71,7 @@ export default function BackupVerificationScreen() {
         router.replace('/(tabs)');
       } catch (err) {
         console.error('[Backup] Failed to save wallet:', err);
-        setError(err instanceof Error ? err.message : 'Failed to save wallet. Please try again.');
+        setError(formatSdkError(err));
       }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
