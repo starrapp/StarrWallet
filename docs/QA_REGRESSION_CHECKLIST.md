@@ -49,6 +49,38 @@ Use this checklist with the original QA sheet to validate each bug on iOS and An
 - [ ] Deny location permission and confirm the screen explains the state
       instead of showing a wrong distance.
 
+## Lightning Address
+
+Set `EXPO_PUBLIC_BREEZ_LNURL_DOMAIN` before these tests. With an empty value, Settings and Receive show no Lightning Address controls.
+
+### A01 - Claim, change and remove
+- [ ] In Settings, open Lightning Address and type a name from `RESERVED_LIGHTNING_USERNAMES` in capital letters. Confirm "Not available" shows and Claim stays disabled.
+- [ ] Type a name that is taken. Confirm "Not available".
+- [ ] Type `bad/name`. Confirm the format error shows and Claim stays disabled.
+- [ ] Type a free name. Confirm "Available", then Claim. Confirm the address shows in Settings and in Receive > Lightning with a QR code.
+- [ ] Tap Change and type the current name. Confirm "This is your current name" and Claim stays disabled.
+- [ ] Change to a different free name. Confirm the new address shows.
+- [ ] Remove the address. Confirm Settings shows "Not set" and Receive shows "Get a Lightning Address".
+
+### A02 - Restore and load failure
+- [ ] Delete the wallet and import the same recovery phrase. Confirm the address comes back without a new claim.
+- [ ] Start the app with no network. Confirm Settings shows "Unavailable" and the Lightning Address screen shows Retry, not the claim form.
+
+### A03 - Payments
+- [ ] Pay the address from another wallet with a comment. Confirm History shows the comment and the payment details show it under "Comment".
+- [ ] Pay the address without a comment. Confirm History shows "Received via Lightning Address".
+- [ ] Send to a Lightning Address. Confirm the Send screen shows the description. After the send, confirm the payment details show "To", the description and your comment.
+- [ ] Send to an LNURL service that returns a success action. Confirm the message shows after the send and in the payment details.
+- [ ] Type a Cyrillic comment longer than half of the comment limit. Confirm "Comment is too long" and Continue stays disabled.
+- [ ] Type a comment, then change the recipient. Confirm the comment is cleared.
+
+### A04 - Confirmed payment is the one paid
+- [ ] Tap Continue, then change the address before the confirmation shows. Confirm no confirmation appears for the old address.
+- [ ] Tap Continue two times fast. Confirm the button shows a spinner and only one confirmation appears.
+- [ ] With the confirmation shown, scan a different QR code. Confirm the confirmation disappears.
+- [ ] Confirm the fee in History equals the fee on the confirmation, for LNURL, BOLT11 and on-chain sends.
+- [ ] Tap Send and turn on airplane mode at once. After the error, turn the network on and tap Send again. Confirm only one payment is made.
+
 ## Bug Validation
 
 ### B01 - Wallet currency set to Bitcoin still shows sats
