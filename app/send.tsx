@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useRoute } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,8 +28,8 @@ import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
 import { useResponsive } from '@/hooks';
 import { formatAmountStr, formatSats, msatToSatCeil } from '@/utils/format';
-import { safeReturnUrl } from '@/utils/deepLink';
-import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
+import { beginPayment, endPayment, hasPendingSend } from '@/stores/sendStore';
+import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay, SendRequest } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   bolt11_invoice: 'Lightning invoice',
@@ -42,14 +42,13 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 
 export default function SendScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ invoice?: string; returnUrl?: string; link?: string }>();
-  // App that deep-linked us here and wants to be reopened once we've paid
-  // (e.g. a Nostr client waiting to confirm a zap). Validated, never trusted.
-  const returnUrl = safeReturnUrl(params.returnUrl);
+  // Not useLocalSearchParams: it decodes the params a second time, which changes
+  // a percent-encoded URI (expo/expo#48421).
+  const request = useRoute().params as Partial<SendRequest> | undefined;
   const colors = useColors();
   const { isTabletWidth } = useResponsive();
-  const { balance, sendPayment, settings } = useWalletStore();
-  const [invoice, setInvoice] = useState(() => params.invoice?.trim() ?? '');
+  const { balance, sendPayment, settings, isInitialized } = useWalletStore();
+  const [invoice, setInvoice] = useState(() => request?.invoice?.trim() ?? '');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [parsed, setParsed] = useState<ParsedInput | null>(null);
@@ -68,36 +67,29 @@ export default function SendScreen() {
 
   const trimmedInvoice = invoice.trim();
   const isParsing = trimmedInvoice !== '' && parsedInput !== trimmedInvoice;
-
-  // Later invoice from scan / deep link, while the screen stays mounted.
-  // `link` changes on every incoming deep link, so reopening the same link
-  // still replaces whatever was typed since.
-  const invoiceParamKey = `${params.link ?? ''}|${params.invoice ?? ''}`;
-  const [prevInvoiceParamKey, setPrevInvoiceParamKey] = useState(invoiceParamKey);
-  if (invoiceParamKey !== prevInvoiceParamKey) {
-    setPrevInvoiceParamKey(invoiceParamKey);
-    const next = params.invoice?.trim();
-    if (next) {
-      setInvoice(next);
-      setComment('');
-    }
-  }
+  // App that deep-linked us here and wants to be reopened once we've paid
+  // (e.g. a Nostr client waiting to confirm a zap). Validated, never trusted.
+  // Only for its own request: another payment typed here is not one it waits for.
+  const returnUrl = trimmedInvoice === request?.invoice?.trim() ? request.returnUrl : undefined;
 
   if (trimmedInvoice === '' && parsed !== null) {
     setParsed(null);
     setParsedInput('');
   }
 
-  // Parse when input changes (debounced)
+  // Parse when input changes (debounced). A cold-start deep link opens Send
+  // before the unlock starts the SDK, so wait for it.
   useEffect(() => {
     const trimmed = invoice.trim();
-    if (!trimmed) return;
+    if (!trimmed || !isInitialized) return;
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
         const result = await BreezService.parse(trimmed);
         if (!cancelled) {
           setParsed(result);
+          // The amount a BIP 21 URI asks for.
+          if ('amountSats' in result && result.amountSats != null) setAmount(result.amountSats.toString());
         }
       } catch {
         if (!cancelled) setParsed({ type: 'unknown', raw: trimmed });
@@ -109,7 +101,7 @@ export default function SendScreen() {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [invoice]);
+  }, [invoice, isInitialized]);
 
   const handleInvoiceChange = useCallback((text: string) => {
     setInvoice(text);
@@ -149,8 +141,8 @@ export default function SendScreen() {
   const needsAmount =
     parsed?.type === 'bitcoin_address'
     || parsed?.type === 'spark_address'
-    || parsed?.type === 'spark_invoice'
     || parsed?.type === 'lnurl_pay'
+    || (parsed?.type === 'spark_invoice' && parsed.amount == null)
     || (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null);
 
   const handlePrepareAndConfirm = async () => {
@@ -163,8 +155,7 @@ export default function SendScreen() {
       setError('Unrecognized payment request');
       return;
     }
-    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
-    const amountSats = isFixedBolt11 ? undefined : getAmountSats();
+    const amountSats = needsAmount ? getAmountSats() : undefined;
     if (needsAmount && amountSats == null) {
       setError('Please enter an amount');
       return;
@@ -220,6 +211,7 @@ export default function SendScreen() {
       return;
     }
     setIsLoading(true);
+    beginPayment();
     try {
       const payment = await sendPayment(prepareResult);
       setPrepared(null);
@@ -240,14 +232,14 @@ export default function SendScreen() {
                 Linking.openURL(successUrl).catch((err) => {
                   console.error('[Send] Failed to open success action URL:', err);
                 });
-                handleCancel();
+                if (!endPayment()) handleCancel();
               },
             }]
             : []),
           {
             text: returnUrl ? 'Back to app' : 'OK',
             onPress: () => {
-              handleCancel();
+              if (!endPayment()) handleCancel();
               if (returnUrl) {
                 Linking.openURL(returnUrl).catch((err) => {
                   console.error('[Send] Failed to open return URL:', err);
@@ -261,7 +253,14 @@ export default function SendScreen() {
       console.error('[Send] Failed to send payment:', err);
       captureException(err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(formatSdkError(err));
+      const message = formatSdkError(err);
+      setError(message);
+      // A waiting request closes this screen, so the user must see the failure first.
+      if (hasPendingSend()) {
+        Alert.alert('Payment failed', message, [{ text: 'OK', onPress: endPayment }]);
+      } else {
+        endPayment();
+      }
     } finally {
       setIsLoading(false);
     }

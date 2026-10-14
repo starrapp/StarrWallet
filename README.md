@@ -7,6 +7,7 @@ A non-custodial Bitcoin Lightning wallet for iOS and Android.
 - ⚡ **Lightning payments** — send and receive over Lightning
 - 🔗 **On-chain and Spark** — receive to a Bitcoin address or a Spark address, send to both
 - 🔤 **LNURL-Pay** — pay Lightning addresses and LNURL-Pay links
+- 🔗 **Payment links** — pay `lightning:`, `bitcoin:` (BIP 21 / BIP 321) and `starr://send` links from other apps, then go back to the calling app. See [docs/DEEP_LINKS.md](./docs/DEEP_LINKS.md)
 - 🕓 **History** — payment list with filters, pagination and a detail screen
 - 🗺 **Merchant map** — nearby places that accept Bitcoin, from [BTC Map](https://btcmap.org)
 - 🔐 **Non-custodial** — the 24-word phrase stays in platform secure storage
@@ -140,12 +141,12 @@ StarrWallet/
 │   │   ├── breez/        # BreezService: the only SDK consumer
 │   │   ├── btcmap/       # BTC Map API client
 │   │   └── keychain/     # KeychainService: seed phrase storage
-│   ├── stores/            # walletStore, onboardingStore
+│   ├── stores/            # walletStore, walletSession, sendStore, onboardingStore
 │   ├── theme/             # colors, spacing, typography, layout
 │   ├── types/             # domain types
 │   └── utils/             # formatting and helpers
 ├── modules/               # local Expo modules
-├── docs/                  # payment status, QA checklist
+├── docs/                  # payment status, QA checklist, deep links
 └── assets/                # icons and splash images
 ```
 

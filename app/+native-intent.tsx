@@ -6,21 +6,35 @@
  * and QR code emits — into Starr's own Send route, so Starr can be chosen as
  * the system handler for Lightning payments, not only reached via starr://.
  */
-import { lightningUrlToSendPath } from '@/utils/deepLink';
+import { KeychainService } from '@/services/keychain';
+import { openSend, setPendingSend } from '@/stores/sendStore';
+import { parseSendLink } from '@/utils/deepLink';
+import type { SendRequest } from '@/types/wallet';
 
-const SEND_WITH_QUERY = /^(starr:\/\/|\/)send\?/i;
-
-// Send is a single screen (see app/_layout.tsx), so a repeat of the same link
-// would arrive with unchanged params and be ignored. Tagging each link makes
-// the Send screen apply it again.
-let linkCount = 0;
-
-export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
-  let next = path;
-  try {
-    next = lightningUrlToSendPath(path);
-  } catch {
-    return path;
+// Synchronous where it can be: a promise for the initial URL makes expo-router
+// update its state before it mounts.
+export function redirectSystemPath(
+  { path, initial }: { path: string; initial: boolean },
+): string | Promise<null> | null {
+  const request = parseSendLink(path);
+  // Starr has no other inbound links, and a wallet screen must not open
+  // without the wallet check in app/index.tsx.
+  if (!request) return initial ? '/' : null;
+  if (initial) {
+    // Go through app/index.tsx. It checks the wallet and opens Send on top of
+    // the tabs.
+    setPendingSend(request);
+    return '/';
   }
-  return SEND_WITH_QUERY.test(next) ? `${next}&link=${++linkCount}` : next;
+  return openIfWalletExists(request);
+}
+
+async function openIfWalletExists(request: SendRequest): Promise<null> {
+  // While onboarding runs, there is no wallet to pay from.
+  if (await KeychainService.isWalletCreated().catch(() => false)) {
+    // The router would only navigate. Open Send here so that the screens that
+    // are open close first.
+    openSend(request);
+  }
+  return null;
 }

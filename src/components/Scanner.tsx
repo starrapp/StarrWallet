@@ -21,6 +21,8 @@ import * as Clipboard from 'expo-clipboard';
 import { Text, Button } from '@/components/ui';
 import { useColors } from '@/contexts';
 import { runOsPrompt } from '@/utils/osPrompt';
+import { openSend } from '@/stores/sendStore';
+import { parseSendLink } from '@/utils/deepLink';
 import { darkColors } from '@/theme/colors';
 import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
@@ -160,40 +162,9 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
     setScanned(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Check if it's a Lightning invoice
-    const lowerData = data.toLowerCase();
-    if (lowerData.startsWith('lightning:') || lowerData.startsWith('lnbc') || lowerData.startsWith('lntb')) {
-      // Clean up the invoice
-      const invoice = lowerData.replace('lightning:', '');
-      router.replace({
-        pathname: '/send',
-        params: { invoice },
-      });
-    } else if (lowerData.startsWith('bitcoin:')) {
-      // Bitcoin URI (optional lightning= in query)
-      const queryString = data.split('?')[1];
-      if (queryString) {
-        const params = new URLSearchParams(queryString);
-        const lightning = params.get('lightning');
-        if (lightning) {
-          router.replace({
-            pathname: '/send',
-            params: { invoice: lightning },
-          });
-          return;
-        }
-      }
-      router.replace({
-        pathname: '/send',
-        params: { invoice: data },
-      });
-    } else {
-      // Assume it's an invoice
-      router.replace({
-        pathname: '/send',
-        params: { invoice: data },
-      });
-    }
+    // Same parsing as a link, so that `pop`/`returnUrl` also works from a QR code.
+    // The Breez SDK parses all other text.
+    openSend(parseSendLink(data) ?? { invoice: data });
   };
 
   const handleClose = () => {
@@ -205,10 +176,7 @@ export function Scanner({ bottomInset = 0 }: ScannerProps) {
       const text = await Clipboard.getStringAsync();
       if (text) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.replace({
-          pathname: '/send',
-          params: { invoice: text },
-        });
+        openSend(parseSendLink(text) ?? { invoice: text });
       } else {
         Alert.alert('Clipboard Empty', 'No text found in clipboard');
       }

@@ -10,15 +10,19 @@ import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { KeychainService } from '@/services/keychain';
 import { useColors } from '@/contexts';
+import { openSend, takePendingSend } from '@/stores/sendStore';
 
 export default function EntryScreen() {
   const router = useRouter();
   const colors = useColors();
 
   useEffect(() => {
+    // Without a wallet, drop the link: there is nothing to pay from.
+    const request = takePendingSend();
     KeychainService.isWalletCreated().then(
       (isCreated) => {
         router.replace(isCreated ? '/(tabs)' : '/onboarding');
+        if (isCreated && request) openSend(request);
         SplashScreen.hideAsync();
       },
       () => {
