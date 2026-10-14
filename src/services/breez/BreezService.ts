@@ -443,8 +443,8 @@ class BreezServiceImpl {
   ): Promise<PrepareSendResult> {
     const sdk = this.requireSdk();
     const seq = ++this.prepareSeq;
-    const raw = input.trim();
-    const parsed = await sdk.parse(raw);
+    // The SDK cannot prepare a BIP 21 URI, only one of its payment methods.
+    const { parsed, raw } = this.payableInput(await sdk.parse(input.trim()), input.trim());
     this.assertSendAmount(parsed, amountSats);
 
     // LNURL-Pay / Lightning Address → separate SDK prepare
@@ -799,13 +799,41 @@ class BreezServiceImpl {
     const amountRequired =
       parsed.tag === InputType_Tags.BitcoinAddress
       || parsed.tag === InputType_Tags.SparkAddress
-      || parsed.tag === InputType_Tags.SparkInvoice
+      || (parsed.tag === InputType_Tags.SparkInvoice && parsed.inner[0].amount == null)
       || parsed.tag === InputType_Tags.LnurlPay
       || parsed.tag === InputType_Tags.LightningAddress;
 
     if (amountRequired && amountSats == null) {
       throw new Error('Amount is required for this payment request');
     }
+  }
+
+  /**
+   * The payment method Starr pays for an input. A BIP 21 URI can have several:
+   * Spark is the cheapest for this wallet, then Lightning, then on-chain.
+   */
+  private payableInput(input: InputType, raw: string): { parsed: InputType; raw: string } {
+    if (input.tag !== InputType_Tags.Bip21) return { parsed: input, raw };
+    const methods = input.inner[0].paymentMethods;
+    const priority = [
+      InputType_Tags.SparkInvoice,
+      InputType_Tags.SparkAddress,
+      InputType_Tags.Bolt11Invoice,
+      InputType_Tags.BitcoinAddress,
+    ];
+    for (const tag of priority) {
+      const method = methods.find((m) => m.tag === tag);
+      switch (method?.tag) {
+        case InputType_Tags.SparkInvoice:
+          return { parsed: method, raw: method.inner[0].invoice };
+        case InputType_Tags.SparkAddress:
+        case InputType_Tags.BitcoinAddress:
+          return { parsed: method, raw: method.inner[0].address };
+        case InputType_Tags.Bolt11Invoice:
+          return { parsed: method, raw: method.inner[0].invoice.bolt11 };
+      }
+    }
+    return { parsed: input, raw };
   }
 
   private mapParsedInput(input: InputType, raw: string): ParsedInput {
@@ -836,6 +864,7 @@ class BreezServiceImpl {
         const details = input.inner[0];
         return {
           type: 'spark_invoice',
+          invoice: details.invoice,
           amount: details.amount,
           tokenIdentifier: details.tokenIdentifier,
           description: details.description,
@@ -867,14 +896,17 @@ class BreezServiceImpl {
         };
       }
       case InputType_Tags.Bip21: {
-        const details = input.inner[0];
-        for (const paymentMethod of details.paymentMethods) {
-          const mapped = this.mapParsedInput(paymentMethod, raw);
-          if (mapped.type !== 'unknown') {
-            return mapped;
-          }
-        }
-        return { type: 'unknown', raw };
+        const { parsed } = this.payableInput(input, raw);
+        if (parsed === input) return { type: 'unknown', raw };
+        const mapped = this.mapParsedInput(parsed, raw);
+        const amountSats = input.inner[0].amountSat;
+        // The URI amount is for a method without an amount of its own.
+        const hasNoAmount =
+          mapped.type === 'bitcoin_address'
+          || mapped.type === 'spark_address'
+          || (mapped.type === 'spark_invoice' && mapped.amount == null)
+          || (mapped.type === 'bolt11_invoice' && mapped.amountMsat == null);
+        return amountSats != null && hasNoAmount ? { ...mapped, amountSats } : mapped;
       }
       default:
         return { type: 'unknown', raw };

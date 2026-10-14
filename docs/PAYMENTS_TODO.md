@@ -24,6 +24,9 @@ All payment flows use the real SDK through
 | claim-1 | On-chain: unclaimed deposits list, manual claim with fee approval |
 | claim-2 | On-chain: max deposit claim fee in settings |
 | lnurl-pay | LNURL-Pay: parse, min/max sendable, optional comment, `prepareLnurlPay`, description, success action, recipient and comment in payment details |
+| links-1 | Payment links: `lightning:`, `bitcoin:` (BIP 21 / BIP 321) and `starr://send` from other apps, return to the calling app with `pop` / `returnUrl`. See [DEEP_LINKS.md](DEEP_LINKS.md) |
+| bip21-1 | BIP 21 URIs and BIP 353 addresses can be paid. See [DEEP_LINKS.md](DEEP_LINKS.md) |
+| send-5 | Send: a Spark invoice with an amount of its own needs no amount from the user |
 
 ## Open
 

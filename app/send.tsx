@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useRoute } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +28,9 @@ import { useColors } from '@/contexts';
 import { spacing } from '@/theme';
 import { useResponsive } from '@/hooks';
 import { formatAmountStr, formatSats, msatToSatCeil } from '@/utils/format';
-import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay } from '@/types/wallet';
+import { beginPayment, endPayment, hasPendingSend } from '@/stores/sendStore';
+import { safeReturnUrl } from '@/utils/deepLink';
+import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay, SendRequest } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   bolt11_invoice: 'Lightning invoice',
@@ -39,13 +41,32 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   unknown: 'Unknown',
 };
 
+// The destination that the payment goes to. For a BIP 21 URI it can differ from
+// the text in the field, so the user must see it before the payment.
+function recipientOf(parsed: ParsedInput | null): string | undefined {
+  switch (parsed?.type) {
+    case 'bitcoin_address':
+    case 'spark_address':
+      return parsed.address;
+    case 'spark_invoice':
+      return parsed.invoice;
+    case 'bolt11_invoice':
+      return parsed.payee;
+    case 'lnurl_pay':
+      return parsed.address ?? parsed.domain;
+  }
+  return undefined;
+}
+
 export default function SendScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ invoice?: string }>();
+  // Not useLocalSearchParams: it decodes the params a second time, which changes
+  // a percent-encoded URI (expo/expo#48421).
+  const request = useRoute().params as Partial<SendRequest> | undefined;
   const colors = useColors();
   const { isTabletWidth } = useResponsive();
-  const { balance, sendPayment, settings } = useWalletStore();
-  const [invoice, setInvoice] = useState(() => params.invoice?.trim() ?? '');
+  const { balance, sendPayment, settings, isInitialized } = useWalletStore();
+  const [invoice, setInvoice] = useState(() => request?.invoice?.trim() ?? '');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [parsed, setParsed] = useState<ParsedInput | null>(null);
@@ -64,33 +85,29 @@ export default function SendScreen() {
 
   const trimmedInvoice = invoice.trim();
   const isParsing = trimmedInvoice !== '' && parsedInput !== trimmedInvoice;
-
-  // Later invoice from scan / deep link, while the screen stays mounted.
-  const [prevInvoiceParam, setPrevInvoiceParam] = useState(params.invoice);
-  if (params.invoice !== prevInvoiceParam) {
-    setPrevInvoiceParam(params.invoice);
-    const next = params.invoice?.trim();
-    if (next) {
-      setInvoice(next);
-      setComment('');
-    }
-  }
+  // App that deep-linked us here and wants to be reopened once we've paid
+  // (e.g. a Nostr client waiting to confirm a zap). Validated, never trusted.
+  // Only for its own request: another payment typed here is not one it waits for.
+  const returnUrl = trimmedInvoice === request?.invoice?.trim() ? safeReturnUrl(request.returnUrl) : null;
 
   if (trimmedInvoice === '' && parsed !== null) {
     setParsed(null);
     setParsedInput('');
   }
 
-  // Parse when input changes (debounced)
+  // Parse when input changes (debounced). A cold-start deep link opens Send
+  // before the unlock starts the SDK, so wait for it.
   useEffect(() => {
     const trimmed = invoice.trim();
-    if (!trimmed) return;
+    if (!trimmed || !isInitialized) return;
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
         const result = await BreezService.parse(trimmed);
         if (!cancelled) {
           setParsed(result);
+          // The amount a BIP 21 URI asks for.
+          if ('amountSats' in result && result.amountSats != null) setAmount(result.amountSats.toString());
         }
       } catch {
         if (!cancelled) setParsed({ type: 'unknown', raw: trimmed });
@@ -102,7 +119,7 @@ export default function SendScreen() {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [invoice]);
+  }, [invoice, isInitialized]);
 
   const handleInvoiceChange = useCallback((text: string) => {
     setInvoice(text);
@@ -123,6 +140,10 @@ export default function SendScreen() {
     return undefined;
   }, [amount]);
 
+  const typeLabel = parsed?.type === 'lnurl_pay' && parsed.address
+    ? 'Lightning address'
+    : parsed && (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type);
+
   const commentAllowed = parsed?.type === 'lnurl_pay' ? parsed.commentAllowed : 0;
   const sentComment = commentAllowed > 0 ? comment : '';
   // The SDK limits the comment in UTF-8 bytes, not in characters.
@@ -142,8 +163,8 @@ export default function SendScreen() {
   const needsAmount =
     parsed?.type === 'bitcoin_address'
     || parsed?.type === 'spark_address'
-    || parsed?.type === 'spark_invoice'
     || parsed?.type === 'lnurl_pay'
+    || (parsed?.type === 'spark_invoice' && parsed.amount == null)
     || (parsed?.type === 'bolt11_invoice' && parsed.amountMsat == null);
 
   const handlePrepareAndConfirm = async () => {
@@ -156,8 +177,7 @@ export default function SendScreen() {
       setError('Unrecognized payment request');
       return;
     }
-    const isFixedBolt11 = parsed?.type === 'bolt11_invoice' && parsed.amountMsat != null;
-    const amountSats = isFixedBolt11 ? undefined : getAmountSats();
+    const amountSats = needsAmount ? getAmountSats() : undefined;
     if (needsAmount && amountSats == null) {
       setError('Please enter an amount');
       return;
@@ -213,6 +233,7 @@ export default function SendScreen() {
       return;
     }
     setIsLoading(true);
+    beginPayment();
     try {
       const payment = await sendPayment(prepareResult);
       setPrepared(null);
@@ -222,9 +243,11 @@ export default function SendScreen() {
       const successUrl = successAction?.url;
       Alert.alert(
         'Payment sent',
-        successAction
+        (successAction
           ? `Successfully sent ${sentAmount}\n\n${successAction.text}${successUrl ? `\n${successUrl}` : ''}`
-          : `Successfully sent ${sentAmount}`,
+          : `Successfully sent ${sentAmount}`)
+          // The button text hides the destination, so show it.
+          + (returnUrl ? `\n\nBack to app opens:\n${returnUrl}` : ''),
         [
           ...(successUrl
             ? [{
@@ -233,18 +256,35 @@ export default function SendScreen() {
                 Linking.openURL(successUrl).catch((err) => {
                   console.error('[Send] Failed to open success action URL:', err);
                 });
-                handleCancel();
+                if (!endPayment()) handleCancel();
               },
             }]
             : []),
-          { text: 'OK', onPress: handleCancel },
+          {
+            text: returnUrl ? 'Back to app' : 'OK',
+            onPress: () => {
+              if (!endPayment()) handleCancel();
+              if (returnUrl) {
+                Linking.openURL(returnUrl).catch((err) => {
+                  console.error('[Send] Failed to open return URL:', err);
+                });
+              }
+            },
+          },
         ]
       );
     } catch (err) {
       console.error('[Send] Failed to send payment:', err);
       captureException(err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(formatSdkError(err));
+      const message = formatSdkError(err);
+      setError(message);
+      // A waiting request closes this screen, so the user must see the failure first.
+      if (hasPendingSend()) {
+        Alert.alert('Payment failed', message, [{ text: 'OK', onPress: endPayment }]);
+      } else {
+        endPayment();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -369,18 +409,24 @@ export default function SendScreen() {
                     Type
                   </Text>
                   <Text variant="bodyMedium" color={colors.text.primary}>
-                    {parsed.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).address
-                      ? 'Lightning address'
-                      : (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type)}
+                    {typeLabel}
                   </Text>
                 </View>
+                {(parsed.type === 'bitcoin_address' || parsed.type === 'spark_address' || parsed.type === 'spark_invoice') && (
+                  <View style={styles.invoiceRow}>
+                    <Text variant="labelMedium" color={colors.text.muted}>To</Text>
+                    <Text variant="address" color={colors.text.secondary}>
+                      {recipientOf(parsed)}
+                    </Text>
+                  </View>
+                )}
                 {parsed.type === 'bolt11_invoice' && (
                   <>
                     {(parsed as ParsedBolt11).payee && (
                       <View style={styles.invoiceRow}>
                         <Text variant="labelMedium" color={colors.text.muted}>To</Text>
-                        <Text variant="address" color={colors.text.secondary} numberOfLines={1}>
-                          {(parsed as ParsedBolt11).payee!.substring(0, 24)}...
+                        <Text variant="address" color={colors.text.secondary}>
+                          {(parsed as ParsedBolt11).payee}
                         </Text>
                       </View>
                     )}
@@ -475,6 +521,18 @@ export default function SendScreen() {
                 <Text variant="labelMedium" color={colors.text.muted} style={styles.confirmTitle}>
                   Confirm payment
                 </Text>
+                <View style={styles.invoiceRow}>
+                  <Text variant="bodyMedium" color={colors.text.secondary}>Method</Text>
+                  <Text variant="bodyMedium" color={colors.text.primary}>{typeLabel}</Text>
+                </View>
+                {recipientOf(parsed) && (
+                  <View style={styles.invoiceRow}>
+                    <Text variant="bodyMedium" color={colors.text.secondary}>To</Text>
+                    <Text variant="address" color={colors.text.primary}>
+                      {recipientOf(parsed)}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.invoiceRow}>
                   <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
                   <View style={{ alignItems: 'flex-end' }}>

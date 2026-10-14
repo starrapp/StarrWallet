@@ -81,6 +81,44 @@ Set `EXPO_PUBLIC_BREEZ_LNURL_DOMAIN` before these tests. With an empty value, Se
 - [ ] Confirm the fee in History equals the fee on the confirmation, for LNURL, BOLT11 and on-chain sends.
 - [ ] Tap Send and turn on airplane mode at once. After the error, turn the network on and tap Send again. Confirm only one payment is made.
 
+## Payment Links
+
+Behavior and test commands: [DEEP_LINKS.md](DEEP_LINKS.md). Use a second wallet as the recipient. On regtest, Spark transfers work.
+
+### P01 - No wallet
+- [ ] Delete the wallet. Confirm onboarding opens.
+- [ ] Start the app with a `bitcoin:`, `lightning:` and `starr://receive` link. Confirm onboarding opens and no Send screen shows.
+- [ ] Open a payment link during onboarding (for example on Import). Confirm nothing changes.
+- [ ] Import the wallet. Open Send from the Wallet tab. Confirm the field is empty.
+
+### P02 - Links and navigation
+- [ ] Start the app with a payment link. After the unlock, confirm Send shows the request with its type.
+- [ ] With the app open, open `starr://send?invoice=`, `starr:///send/?invoice=` and `lightning:` links. Confirm each opens Send.
+- [ ] Type an amount, then open the same link again. Confirm a new Send screen with an empty amount.
+- [ ] Open a link while Scan is open over Send, while Receive is open and on the History tab. Confirm one Send screen opens and Cancel goes to the Wallet tab.
+- [ ] Open `starr://receive` with the app open. Confirm nothing changes.
+
+### P03 - Return to the calling app
+- [ ] Pay a link with `pop=https%3A%2F%2Fexample.com%2F%3Fa%3D1%2526b`. Confirm the alert shows "Back to app" and the URL, and the browser opens `https://example.com/?a=1%26b`.
+- [ ] Open the same link, put a different request in the field and pay. Confirm the alert shows "OK".
+- [ ] Pay a link with `pop=tel%3A%2B19005550100` and one with `pop=facetime%3A%2B19005550100`. Confirm the alert shows "OK" and no other app opens.
+- [ ] Open a `bitcoin:` link with `req-pop`. Confirm the type is Unknown and Continue shows "Unrecognized payment request".
+
+### P04 - Link during a payment
+- [ ] Tap Send and open a second link at once. Confirm the result alert of the first payment shows, and the second link opens after OK.
+- [ ] Turn off the network, tap Send and open a second link at once. Confirm the alert "Payment failed" with the reason, and the second link opens after OK. Turn on the network.
+- [ ] Turn off the network and tap Send with no second link. Confirm the error shows under the field and no alert shows.
+
+### P05 - BIP 21
+- [ ] Open `bitcoin:<address>?spark=<spark address>&amount=0.00001`. Confirm the type is Spark address, the amount is 1000, and the Send screen and the confirmation show the Spark address under "To".
+- [ ] Open `bitcoin:<address>?amount=0.00002`. Confirm the type is Bitcoin address, the amount is 2000 and Continue shows the fee.
+
+### P06 - Scanner and clipboard
+- [ ] Copy a `bitcoin:` link with `pop` and paste it on the Scan tab. Confirm Send has the type and the amount, and the alert after the payment shows "Back to app".
+- [ ] Paste a Spark address from Send > Scan QR Code. Confirm one Send screen opens and Cancel goes to the Wallet tab.
+- [ ] Paste a Bitcoin address, a `lightning:` and a `LIGHTNING:` string on the Scan tab. Confirm Send shows the type.
+- [ ] Close the scanner with the cross. Confirm it goes back to the screen that opened it.
+
 ## Bug Validation
 
 ### B01 - Wallet currency set to Bitcoin still shows sats

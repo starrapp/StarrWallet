@@ -81,6 +81,7 @@ export interface ParsedBolt11 {
   bolt11: string;
   paymentHash: string;
   amountMsat?: bigint;
+  amountSats?: bigint;
   description?: string;
   payee?: string;
   expiry?: number; // seconds from creation
@@ -89,16 +90,20 @@ export interface ParsedBolt11 {
 export interface ParsedBitcoinAddress {
   type: 'bitcoin_address';
   address: string;
+  amountSats?: bigint;
 }
 
 export interface ParsedSparkAddress {
   type: 'spark_address';
   address: string;
+  amountSats?: bigint;
 }
 
 export interface ParsedSparkInvoice {
   type: 'spark_invoice';
+  invoice: string;
   amount?: bigint;
+  amountSats?: bigint;
   tokenIdentifier?: string;
   description?: string;
   expiryTime?: bigint;
@@ -122,6 +127,11 @@ export type ParsedInput =
   | ParsedSparkInvoice
   | ParsedLnurlPay
   | { type: 'unknown'; raw: string };
+
+export interface SendRequest {
+  invoice: string;
+  returnUrl?: string;
+}
 
 // --- Prepare send payment (Breez SDK prepareSendPayment / prepareLnurlPay)
 export interface PrepareSendResult {

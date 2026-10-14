@@ -6,7 +6,7 @@
     "version": "2.2.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
-    "scheme": "starr",
+    "scheme": ["starr", "lightning", "bitcoin"],
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
