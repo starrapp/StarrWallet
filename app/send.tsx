@@ -29,6 +29,7 @@ import { spacing } from '@/theme';
 import { useResponsive } from '@/hooks';
 import { formatAmountStr, formatSats, msatToSatCeil } from '@/utils/format';
 import { beginPayment, endPayment, hasPendingSend } from '@/stores/sendStore';
+import { safeReturnUrl } from '@/utils/deepLink';
 import type { ParsedInput, PrepareSendResult, ParsedBolt11, ParsedLnurlPay, SendRequest } from '@/types/wallet';
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -39,6 +40,23 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   lnurl_pay: 'LNURL-Pay',
   unknown: 'Unknown',
 };
+
+// The destination that the payment goes to. For a BIP 21 URI it can differ from
+// the text in the field, so the user must see it before the payment.
+function recipientOf(parsed: ParsedInput | null): string | undefined {
+  switch (parsed?.type) {
+    case 'bitcoin_address':
+    case 'spark_address':
+      return parsed.address;
+    case 'spark_invoice':
+      return parsed.invoice;
+    case 'bolt11_invoice':
+      return parsed.payee;
+    case 'lnurl_pay':
+      return parsed.address ?? parsed.domain;
+  }
+  return undefined;
+}
 
 export default function SendScreen() {
   const router = useRouter();
@@ -70,7 +88,7 @@ export default function SendScreen() {
   // App that deep-linked us here and wants to be reopened once we've paid
   // (e.g. a Nostr client waiting to confirm a zap). Validated, never trusted.
   // Only for its own request: another payment typed here is not one it waits for.
-  const returnUrl = trimmedInvoice === request?.invoice?.trim() ? request.returnUrl : undefined;
+  const returnUrl = trimmedInvoice === request?.invoice?.trim() ? safeReturnUrl(request.returnUrl) : null;
 
   if (trimmedInvoice === '' && parsed !== null) {
     setParsed(null);
@@ -121,6 +139,10 @@ export default function SendScreen() {
     }
     return undefined;
   }, [amount]);
+
+  const typeLabel = parsed?.type === 'lnurl_pay' && parsed.address
+    ? 'Lightning address'
+    : parsed && (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type);
 
   const commentAllowed = parsed?.type === 'lnurl_pay' ? parsed.commentAllowed : 0;
   const sentComment = commentAllowed > 0 ? comment : '';
@@ -221,9 +243,11 @@ export default function SendScreen() {
       const successUrl = successAction?.url;
       Alert.alert(
         'Payment sent',
-        successAction
+        (successAction
           ? `Successfully sent ${sentAmount}\n\n${successAction.text}${successUrl ? `\n${successUrl}` : ''}`
-          : `Successfully sent ${sentAmount}`,
+          : `Successfully sent ${sentAmount}`)
+          // The button text hides the destination, so show it.
+          + (returnUrl ? `\n\nBack to app opens:\n${returnUrl}` : ''),
         [
           ...(successUrl
             ? [{
@@ -385,18 +409,24 @@ export default function SendScreen() {
                     Type
                   </Text>
                   <Text variant="bodyMedium" color={colors.text.primary}>
-                    {parsed.type === 'lnurl_pay' && (parsed as ParsedLnurlPay).address
-                      ? 'Lightning address'
-                      : (PAYMENT_TYPE_LABELS[parsed.type] ?? parsed.type)}
+                    {typeLabel}
                   </Text>
                 </View>
+                {(parsed.type === 'bitcoin_address' || parsed.type === 'spark_address' || parsed.type === 'spark_invoice') && (
+                  <View style={styles.invoiceRow}>
+                    <Text variant="labelMedium" color={colors.text.muted}>To</Text>
+                    <Text variant="address" color={colors.text.secondary}>
+                      {recipientOf(parsed)}
+                    </Text>
+                  </View>
+                )}
                 {parsed.type === 'bolt11_invoice' && (
                   <>
                     {(parsed as ParsedBolt11).payee && (
                       <View style={styles.invoiceRow}>
                         <Text variant="labelMedium" color={colors.text.muted}>To</Text>
-                        <Text variant="address" color={colors.text.secondary} numberOfLines={1}>
-                          {(parsed as ParsedBolt11).payee!.substring(0, 24)}...
+                        <Text variant="address" color={colors.text.secondary}>
+                          {(parsed as ParsedBolt11).payee}
                         </Text>
                       </View>
                     )}
@@ -491,6 +521,18 @@ export default function SendScreen() {
                 <Text variant="labelMedium" color={colors.text.muted} style={styles.confirmTitle}>
                   Confirm payment
                 </Text>
+                <View style={styles.invoiceRow}>
+                  <Text variant="bodyMedium" color={colors.text.secondary}>Method</Text>
+                  <Text variant="bodyMedium" color={colors.text.primary}>{typeLabel}</Text>
+                </View>
+                {recipientOf(parsed) && (
+                  <View style={styles.invoiceRow}>
+                    <Text variant="bodyMedium" color={colors.text.secondary}>To</Text>
+                    <Text variant="address" color={colors.text.primary}>
+                      {recipientOf(parsed)}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.invoiceRow}>
                   <Text variant="bodyMedium" color={colors.text.secondary}>Amount</Text>
                   <View style={{ alignItems: 'flex-end' }}>

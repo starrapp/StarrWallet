@@ -99,9 +99,9 @@ Behavior and test commands: [DEEP_LINKS.md](DEEP_LINKS.md). Use a second wallet 
 - [ ] Open `starr://receive` with the app open. Confirm nothing changes.
 
 ### P03 - Return to the calling app
-- [ ] Pay a link with `pop=https%3A%2F%2Fexample.com%2F%3Fa%3D1%2526b`. Confirm the alert shows "Back to app" and the browser opens `https://example.com/?a=1%26b`.
+- [ ] Pay a link with `pop=https%3A%2F%2Fexample.com%2F%3Fa%3D1%2526b`. Confirm the alert shows "Back to app" and the URL, and the browser opens `https://example.com/?a=1%26b`.
 - [ ] Open the same link, put a different request in the field and pay. Confirm the alert shows "OK".
-- [ ] Pay a link with `pop=tel%3A%2B19005550100`. Confirm the alert shows "OK" and no dialer opens.
+- [ ] Pay a link with `pop=tel%3A%2B19005550100` and one with `pop=facetime%3A%2B19005550100`. Confirm the alert shows "OK" and no other app opens.
 - [ ] Open a `bitcoin:` link with `req-pop`. Confirm the type is Unknown and Continue shows "Unrecognized payment request".
 
 ### P04 - Link during a payment
@@ -110,7 +110,7 @@ Behavior and test commands: [DEEP_LINKS.md](DEEP_LINKS.md). Use a second wallet 
 - [ ] Turn off the network and tap Send with no second link. Confirm the error shows under the field and no alert shows.
 
 ### P05 - BIP 21
-- [ ] Open `bitcoin:<address>?spark=<spark address>&amount=0.00001`. Confirm the type is Spark address and the amount is 1000.
+- [ ] Open `bitcoin:<address>?spark=<spark address>&amount=0.00001`. Confirm the type is Spark address, the amount is 1000, and the Send screen and the confirmation show the Spark address under "To".
 - [ ] Open `bitcoin:<address>?amount=0.00002`. Confirm the type is Bitcoin address, the amount is 2000 and Continue shows the fee.
 
 ### P06 - Scanner and clipboard

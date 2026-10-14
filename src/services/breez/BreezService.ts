@@ -864,6 +864,7 @@ class BreezServiceImpl {
         const details = input.inner[0];
         return {
           type: 'spark_invoice',
+          invoice: details.invoice,
           amount: details.amount,
           tokenIdentifier: details.tokenIdentifier,
           description: details.description,

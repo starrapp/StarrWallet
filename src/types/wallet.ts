@@ -101,6 +101,7 @@ export interface ParsedSparkAddress {
 
 export interface ParsedSparkInvoice {
   type: 'spark_invoice';
+  invoice: string;
   amount?: bigint;
   amountSats?: bigint;
   tokenIdentifier?: string;

@@ -6,7 +6,7 @@ Other apps can hand Starr a payment to make. Three forms are accepted:
 |---|---|
 | `starr://send?invoice=<payload>&pop=<url>` | Starr's own scheme. `payload` is anything the Send screen accepts: BOLT11 invoice, LNURL-pay, Lightning address, Bitcoin or Spark address. |
 | `lightning:<payload>?pop=<url>` / `lightning://<payload>?pop=<url>` | The generic Lightning URI used by QR codes and most wallets. |
-| `bitcoin:[<address>]?lightning=<bolt11>&spark=<address>&amount=<btc>&pop=<url>` | BIP 21 / BIP 321. Starr gives the full URI to the Breez SDK, which parses it. If the URI has more than one payment method, Starr pays with Spark, then Lightning, then on-chain. |
+| `bitcoin:[<address>]?lightning=<bolt11>&spark=<address>&amount=<btc>&pop=<url>` | BIP 21 / BIP 321. Starr gives the full URI to the Breez SDK, which parses it. If the URI has more than one payment method, Starr pays with Spark, then Lightning, then on-chain. The Send screen and the confirmation show the payment method and the recipient that Starr pays, because they can differ from the text in the field. |
 
 All query values must be percent-encoded (RFC 3986). Starr decodes each value one time. Parameter names are case-insensitive.
 
@@ -32,9 +32,9 @@ The `amount` of a `bitcoin:` URI goes into the amount field when the payment met
 
 The two names are synonyms for the BIP 321 "Proof of Payment" parameter `pop`. It is optional.
 
-After the payment succeeds, the confirm button of the success alert reads **Back to app**. When the user taps it, Starr opens the URL as it is. Starr does not add payment information to the URL: BIP 321 makes this optional. The calling app must confirm the payment through its own channel (for Nostr zaps, the kind-9735 receipt on the relays).
+After the payment succeeds, the confirm button of the success alert reads **Back to app**, and the alert shows the URL. When the user taps the button, Starr opens the URL as it is. Starr does not add payment information to the URL: BIP 321 makes this optional. The calling app must confirm the payment through its own channel (for Nostr zaps, the kind-9735 receipt on the relays).
 
-Starr does not open a URL with a scheme that can execute code, read local data, start a system action, or open Starr again (`javascript:`, `file:`, `data:`, `blob:`, `content:`, `intent:`, `tel:`, `sms:`, `mailto:`, `itms-services:`, `itms-apps:`, `app-settings:`, `starr:`, `lightning:`, `bitcoin:`). Starr then makes the payment but does not open the URL.
+Starr does not open a URL with a scheme that can execute code, read local data, start a system action, or open Starr again (`javascript:`, `file:`, `data:`, `blob:`, `content:`, `intent:`, `tel:`, `telprompt:`, `sms:`, `smsto:`, `mmsto:`, `mailto:`, `facetime:`, `facetime-audio:`, `facetime-prompt:`, `facetime-audio-prompt:`, `itms-services:`, `itms-apps:`, `app-settings:`, `shortcuts:`, and each scheme of Starr in `app.json`). Starr then makes the payment but does not open the URL.
 
 In a `bitcoin:` URI, the Breez SDK does not accept a `req-` parameter that it does not support, as BIP 321 specifies. This includes `req-pop`: it requires payment information, which Starr does not return. The Send screen then shows an unrecognized payment request.
 

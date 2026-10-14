@@ -12,22 +12,27 @@
  * app (e.g. a Nostr client sending a zap) come back to the foreground.
  */
 
+import Constants from 'expo-constants';
 import type { SendRequest } from '@/types/wallet';
 
 const RETURN_URL_SCHEME = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
 
 // Schemes we will never hand to Linking.openURL from a third-party parameter.
+// The schemes of Starr also come from app.json, so that a new one is blocked too.
 const BLOCKED_RETURN_SCHEMES = new Set([
   'javascript', 'file', 'data', 'blob', 'content', 'intent',
-  'tel', 'sms', 'mailto', 'itms-services', 'itms-apps', 'app-settings',
+  'tel', 'telprompt', 'sms', 'smsto', 'mmsto', 'mailto',
+  'facetime', 'facetime-audio', 'facetime-prompt', 'facetime-audio-prompt',
+  'itms-services', 'itms-apps', 'app-settings', 'shortcuts',
   'starr', 'lightning', 'bitcoin',
+  ...[Constants.expoConfig?.scheme ?? []].flat().map((scheme) => scheme.toLowerCase()),
 ]);
 
 /**
  * A return URL supplied by another app, or null when it is not safe to open.
  * Any app scheme (nostrage://, damus://, https://…) is fine; what we refuse is
  * anything that could execute code, read local files, start a system action
- * (call, message, app install, settings), or loop back into Starr.
+ * (call, message, app install, settings, automation), or loop back into Starr.
  */
 export function safeReturnUrl(value?: string | null): string | null {
   const raw = value?.trim();
