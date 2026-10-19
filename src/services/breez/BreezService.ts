@@ -62,6 +62,19 @@ import {
   type SuccessActionProcessed,
 } from '@breeztech/breez-sdk-spark-react-native';
 
+// Spark returns these errors only as text, so match the message.
+function formatKnownSparkError(message: string): string | undefined {
+  // Spark sends this when a payment for the same payment hash already exists.
+  if (message.includes('preimage request already exists')) {
+    return 'This invoice is already paid, or its payment is in progress.';
+  }
+  // Spark sends this when the deposit amount minus the claim fee is too small.
+  if (message.includes('Credit amount after fees is below dust limit')) {
+    return 'This deposit is too small to claim: after the network fee, the amount left is below the minimum. Try again when fees are lower.';
+  }
+  return undefined;
+}
+
 /** Extract a readable message from Breez SDK errors (SdkError / UniffiError). */
 export function formatSdkError(err: unknown): string {
   if (err == null || !SdkError.instanceOf(err)) {
@@ -70,12 +83,8 @@ export function formatSdkError(err: unknown): string {
   switch (err.tag) {
     case SdkError_Tags.SparkError: {
       const [message] = err.inner;
-      // Spark sends this when a payment for the same payment hash already exists.
-      if (message.includes('preimage request already exists')) {
-        return 'This invoice is already paid, or its payment is in progress.';
-      }
       // The gRPC details and metadata are raw bytes and headers.
-      return `Spark error: ${message.split(', details: ')[0]}`;
+      return formatKnownSparkError(message) ?? `Spark error: ${message.split(', details: ')[0]}`;
     }
     case SdkError_Tags.InvalidInput:
       return `Invalid input: ${err.inner[0]}`;
@@ -597,7 +606,7 @@ class BreezServiceImpl {
       case DepositClaimError_Tags.MissingUtxo:
         return 'UTXO not found';
       case DepositClaimError_Tags.Generic:
-        return error.inner.message;
+        return formatKnownSparkError(error.inner.message) ?? error.inner.message;
       default:
         return 'Unknown claim error';
     }
