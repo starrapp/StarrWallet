@@ -72,7 +72,7 @@ We welcome feature suggestions! Please open an issue with:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22.13+ or 24.3+
 - Xcode (iOS) or Android Studio (Android)
 - Git
 

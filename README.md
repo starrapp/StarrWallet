@@ -32,7 +32,7 @@ satoshis everywhere.
 
 ## Tech Stack
 
-- **React Native** 0.86 with **Expo** SDK 57
+- **React Native** 0.88 with **Expo** SDK 58
 - **Breez SDK Spark** for Lightning, on-chain and Spark payments
 - **Zustand** for state, **Expo Router** for navigation
 - **TypeScript**
@@ -41,7 +41,7 @@ satoshis everywhere.
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22.13+ or 24.3+
 - Xcode (iOS) or Android Studio (Android)
 - An EAS account for cloud builds
 
