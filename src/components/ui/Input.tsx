@@ -74,8 +74,7 @@ export const Input: React.FC<InputProps> = ({
         <TextInput
           style={[
             styles.input,
-            typography.bodyLarge,
-            props.multiline && styles.inputMultiline,
+            props.multiline ? styles.inputMultiline : typography.bodyLarge,
             { color: colors.text.primary },
             style,
           ]}
@@ -266,12 +265,15 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
   },
+  // No lineHeight: an iOS text input puts the text at the bottom of a line that is higher
+  // than the font. Do not set it to undefined, because Android then sets the line height to 0.
   inputMultiline: {
+    fontFamily: typography.bodyLarge.fontFamily,
+    fontSize: typography.bodyLarge.fontSize,
+    letterSpacing: typography.bodyLarge.letterSpacing,
     height: 'auto',
     // Android adds its own padding to a text input.
     paddingVertical: 0,
-    // An iOS text input puts the text at the bottom of a line that is higher than the font.
-    lineHeight: undefined,
   },
   icon: {
     marginRight: spacing.sm,
