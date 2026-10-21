@@ -61,7 +61,8 @@ export const Input: React.FC<InputProps> = ({
       <View
         style={[
           styles.inputContainer,
-          { 
+          props.multiline && styles.inputContainerMultiline,
+          {
             borderColor: getBorderColor(),
             backgroundColor: getBackgroundColor(),
           },
@@ -74,6 +75,7 @@ export const Input: React.FC<InputProps> = ({
           style={[
             styles.input,
             typography.bodyLarge,
+            props.multiline && styles.inputMultiline,
             { color: colors.text.primary },
             style,
           ]}
@@ -81,6 +83,9 @@ export const Input: React.FC<InputProps> = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           selectionColor={colors.gold.pure}
+          // A reused view can keep the line height of its previous input.
+          // This prop sets a paragraph style that prevents it: https://github.com/react/react-native/issues/59132
+          lineBreakModeIOS={props.multiline ? 'wordWrapping' : 'tail'}
           {...props}
         />
         
@@ -250,9 +255,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: spacing.md,
   },
+  // The multiline input grows with its text. With one line it has the same height as the
+  // single-line input.
+  inputContainerMultiline: {
+    height: 'auto',
+    minHeight: layout.inputHeight,
+    paddingVertical: spacing.sm,
+  },
   input: {
     flex: 1,
     height: '100%',
+  },
+  inputMultiline: {
+    height: 'auto',
+    // Android adds its own padding to a text input.
+    paddingVertical: 0,
+    // An iOS text input puts the text at the bottom of a line that is higher than the font.
+    lineHeight: undefined,
   },
   icon: {
     marginRight: spacing.sm,

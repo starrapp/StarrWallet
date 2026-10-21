@@ -434,6 +434,10 @@ class BreezServiceImpl {
   async parse(input: string): Promise<ParsedInput> {
     const raw = input.trim();
     if (!raw) return { type: 'unknown', raw: '' };
+    // SDK 0.26.1 stops the app when a multi-byte character crosses the end of a prefix it checks.
+    // The longest prefix is 10 bytes ("lightning:"). No supported format starts with a non-ASCII
+    // character. Remove after the update to an SDK release with breez/spark-sdk@e58d86d8e.
+    if (/[^\x00-\x7F]/.test(raw.slice(0, 10))) return { type: 'unknown', raw };
 
     const sdk = this.requireSdk();
 

@@ -515,6 +515,9 @@ export default function MapScreen() {
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
+            // A reused multiline view can give the placeholder a wrong line height.
+            // This prop sets a paragraph style that prevents it: https://github.com/react/react-native/issues/59132
+            lineBreakModeIOS="tail"
           />
           {query.length > 0 && (
             <TouchableOpacity
