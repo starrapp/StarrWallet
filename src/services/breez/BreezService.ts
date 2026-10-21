@@ -501,14 +501,14 @@ class BreezServiceImpl {
     }
 
     if (method.tag === SendPaymentMethod_Tags.BitcoinAddress) {
-      const feeQuote = method.inner.feeQuote?.speedMedium?.userFeeSat;
+      const feeQuote = method.inner.feeQuote?.speedMedium;
       if (feeQuote == null) {
         throw new Error('Could not estimate on-chain fee. Please try again.');
       }
       return this.storePrepared(sdk, seq, { standard: prepareResponse }, {
         paymentMethod: 'onchain',
         amountSats: prepareResponse.amount,
-        feeSats: feeQuote,
+        feeSats: feeQuote.userFeeSat + feeQuote.l1BroadcastFeeSat,
       });
     }
 
