@@ -15,15 +15,16 @@ import { spacing, layout } from '@/theme';
 import { useResponsive } from '@/hooks';
 
 // Decorative only. Generated once so the stars keep their position between renders.
+// The stars stay in the side bands so that they do not cover the logo and the app name.
 const STAR_DECORATIONS: {
   size: number;
   top: DimensionValue;
   left: DimensionValue;
   opacity: number;
-}[] = Array.from({ length: 12 }, () => ({
+}[] = Array.from({ length: 12 }, (_, i) => ({
   size: 8 + Math.random() * 8,
   top: `${Math.random() * 100}%`,
-  left: `${Math.random() * 100}%`,
+  left: `${(i % 2 ? 75 : 0) + Math.random() * 20}%`,
   opacity: 0.2 + Math.random() * 0.5,
 }));
 
