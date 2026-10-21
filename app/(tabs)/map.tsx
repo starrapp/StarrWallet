@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Keyboard,
   Platform,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
@@ -407,6 +408,7 @@ export default function MapScreen() {
   );
 
   const handleSearch = useCallback(() => {
+    Keyboard.dismiss();
     const name = query.trim();
     // `queryHint` already says why, and it is derived from the field, so a
     // stored message cannot outlive the text it talks about.
@@ -476,6 +478,7 @@ export default function MapScreen() {
                 : { width, height }
             );
           }}
+          onPress={Keyboard.dismiss}
           onRegionChangeStart={cancelFit}
           onRegionChangeComplete={setRegion}
           showsUserLocation={permissionStatus === Location.PermissionStatus.GRANTED}
