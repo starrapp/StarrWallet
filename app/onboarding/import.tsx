@@ -126,7 +126,8 @@ export default function ImportWalletScreen() {
           marginBottom: spacing.lg,
         },
         wordInput: {
-          width: '30%',
+          flexBasis: isCompactScreen ? '45%' : '30%',
+          flexGrow: 1,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: colors.background.secondary,

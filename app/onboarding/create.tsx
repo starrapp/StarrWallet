@@ -86,13 +86,17 @@ export default function CreateWalletScreen() {
           gap: spacing.sm,
         },
         wordItem: {
-          width: '30%',
+          flexBasis: isCompactScreen ? '45%' : '30%',
+          flexGrow: 1,
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing.xs,
           padding: spacing.sm,
           backgroundColor: colors.background.tertiary,
           borderRadius: layout.radius.sm,
+        },
+        wordNumber: {
+          width: 20,
         },
         checkboxContainer: { gap: spacing.sm },
         checkItem: {
@@ -202,7 +206,7 @@ export default function CreateWalletScreen() {
               <View style={styles.mnemonicGrid}>
                 {mnemonic.map((word, index) => (
                   <View key={index} style={styles.wordItem}>
-                    <Text variant="labelSmall" color={colors.text.muted}>
+                    <Text variant="labelSmall" color={colors.text.muted} style={styles.wordNumber}>
                       {index + 1}
                     </Text>
                     <Text variant="titleSmall" color={colors.text.primary}>
