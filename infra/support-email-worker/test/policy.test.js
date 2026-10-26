@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isAutomated, dmarcVerdict, replySubject, rejectReason } from "../src/policy.js";
+import { isAutomated, dmarcVerdict, replySubject, rejectReason, parseAddresses } from "../src/policy.js";
 
 const h = (obj) => new Headers(obj);
 
@@ -33,4 +33,9 @@ test("reply subject", () => {
 
 test("reject reason carries the portal link", () => {
   assert.match(rejectReason("https://support.starr.app"), /https:\/\/support\.starr\.app/);
+});
+
+test("handled addresses", () => {
+  assert.deepEqual(parseAddresses("support@starr.app, Info@Starr.app ,"), ["support@starr.app", "info@starr.app"]);
+  assert.deepEqual(parseAddresses(undefined), []);
 });

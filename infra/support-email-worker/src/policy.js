@@ -26,6 +26,11 @@ export function dmarcVerdict(headers) {
   return null;
 }
 
+// Comma-separated list from the SUPPORT_ADDRESSES variable, lower-cased.
+export function parseAddresses(list) {
+  return (list || "").split(",").map((a) => a.trim().toLowerCase()).filter(Boolean);
+}
+
 export function rejectReason(portalUrl) {
   return `This address does not accept email. Open a support ticket at ${portalUrl}`;
 }

@@ -1,6 +1,6 @@
-# support@starr.app email Worker
+# support@ / info@ email Worker
 
-Mail to support@starr.app never becomes a ticket. Instead:
+Mail to support@starr.app and info@starr.app (the `SUPPORT_ADDRESSES` list in `wrangler.jsonc`) never becomes a ticket. Replies come from the address that was written to. Instead:
 
 | Incoming mail | What happens |
 |---|---|
@@ -20,7 +20,7 @@ Cloudflare itself refuses to send a reply to mail without valid DMARC, so even i
 3. `npx wrangler kv namespace create REPLIED` and paste the printed `id` into `wrangler.jsonc`.
 4. Check `PORTAL_URL` in `wrangler.jsonc`, then run `npx wrangler deploy`.
 5. In the Cloudflare dashboard, go to **starr.app → Email → Email Routing → Routing rules**:
-   - Edit the custom address **support@starr.app** and set its action to **Send to a Worker → starr-support-email**. This replaces the current forward, which is what has been creating tickets from email.
+   - For each address in `SUPPORT_ADDRESSES` (support@ and info@), create a custom address rule with the action **Send to a Worker → starr-support-email**.
    - Check the **catch-all** rule. If it forwards everything, spam to random addresses still gets through. Set it to **Drop**, or send it to this Worker too: anything not addressed to support@ is rejected with the portal message.
 6. Test it:
    - From a Gmail account, email support@starr.app. You should get the auto-reply.

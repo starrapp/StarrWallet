@@ -5,7 +5,8 @@
   // mimetext needs Node.js built-ins.
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "SUPPORT_ADDRESS": "support@starr.app",
+    // Addresses that get the portal auto-reply. Each needs its own Email Routing rule.
+    "SUPPORT_ADDRESSES": "support@starr.app,info@starr.app",
     "PORTAL_URL": "https://support.starr.app"
   },
   // One auto-reply per sender per day. Create it with:

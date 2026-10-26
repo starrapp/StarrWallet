@@ -1,18 +1,19 @@
 import { EmailMessage } from "cloudflare:email";
 import { createMimeMessage } from "mimetext";
-import { isAutomated, dmarcVerdict, rejectReason, replySubject, replyText } from "./policy.js";
+import { isAutomated, dmarcVerdict, rejectReason, replySubject, replyText, parseAddresses } from "./policy.js";
 
 const DAY_SECONDS = 24 * 60 * 60;
 
 export default {
   async email(message, env, ctx) {
     const reject = (why) => {
-      console.log(JSON.stringify({ action: "reject", why, from: message.from }));
+      console.log(JSON.stringify({ action: "reject", why, to: message.to, from: message.from }));
       message.setReject(rejectReason(env.PORTAL_URL));
     };
 
-    // Anything not addressed to the support address (if this Worker is bound to more routes).
-    if (message.to.toLowerCase() !== env.SUPPORT_ADDRESS.toLowerCase()) return reject("other-recipient");
+    // Anything not addressed to one of the handled addresses (e.g. if the catch-all routes here).
+    const to = message.to.toLowerCase();
+    if (!parseAddresses(env.SUPPORT_ADDRESSES).includes(to)) return reject("other-recipient");
     if (isAutomated(message.headers, message.from)) return reject("automated");
 
     // Cloudflare's own verdict when present; reply() enforces DMARC again below.
@@ -24,7 +25,7 @@ export default {
 
     const messageId = message.headers.get("message-id");
     const mime = createMimeMessage();
-    mime.setSender({ name: "Starr Support", addr: env.SUPPORT_ADDRESS });
+    mime.setSender({ name: "Starr Support", addr: to });
     mime.setRecipient(message.from);
     mime.setSubject(replySubject(message.headers.get("subject")));
     if (messageId) {
@@ -36,7 +37,7 @@ export default {
     mime.addMessage({ contentType: "text/plain", data: replyText(env.PORTAL_URL) });
 
     try {
-      await message.reply(new EmailMessage(env.SUPPORT_ADDRESS, message.from, mime.asRaw()));
+      await message.reply(new EmailMessage(to, message.from, mime.asRaw()));
     } catch (err) {
       // Cloudflare refuses replies to mail without valid DMARC (and other limits): treat as spam.
       console.log(JSON.stringify({ action: "reply-refused", error: String(err), from: message.from }));
@@ -44,6 +45,6 @@ export default {
     }
 
     ctx.waitUntil(env.REPLIED.put(sender, "1", { expirationTtl: DAY_SECONDS }));
-    console.log(JSON.stringify({ action: "replied", from: message.from }));
+    console.log(JSON.stringify({ action: "replied", to, from: message.from }));
   },
 };
