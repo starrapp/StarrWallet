@@ -12,6 +12,6 @@
   //   npx wrangler kv namespace create REPLIED
   // and paste the id it prints below.
   "kv_namespaces": [
-    { "binding": "REPLIED", "id": "PASTE_KV_NAMESPACE_ID_HERE" }
+    { "binding": "REPLIED", "id": "3fb10c9166ae47f48b5f8ae9b4990326" }
   ]
 }
