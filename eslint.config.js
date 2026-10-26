@@ -10,6 +10,8 @@ module.exports = defineConfig([
       'web-build/**',
       'android/**',
       'ios/**',
+      // Standalone Cloudflare Workers with their own dependencies.
+      'infra/**',
     ],
   },
   ...expoConfig,

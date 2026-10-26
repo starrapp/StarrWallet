@@ -1,0 +1,17 @@
+{
+  "name": "starr-support-email",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  // mimetext needs Node.js built-ins.
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "SUPPORT_ADDRESS": "support@starr.app",
+    "PORTAL_URL": "https://support.starr.app"
+  },
+  // One auto-reply per sender per day. Create it with:
+  //   npx wrangler kv namespace create REPLIED
+  // and paste the id it prints below.
+  "kv_namespaces": [
+    { "binding": "REPLIED", "id": "PASTE_KV_NAMESPACE_ID_HERE" }
+  ]
+}

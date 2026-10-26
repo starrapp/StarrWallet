@@ -1,0 +1,15 @@
+{
+  "name": "starr-support-email-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "mimetext": "3.0.28"
+  },
+  "devDependencies": {
+    "wrangler": "4.153.0"
+  }
+}
